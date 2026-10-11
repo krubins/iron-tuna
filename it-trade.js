@@ -598,6 +598,40 @@
   }
   // What actually changes in a lineup: who starts now that did not before, and
   // who stops. This is the sentence a reader can take to the other manager.
+  // One proposed trade, judged. findTrades only ever shows swaps that clear the
+  // floor for both sides; a reader who brings their own offer needs the other
+  // answers too ("you lose", "they would refuse"), so each side gets a call:
+  // 'gain' at or above minGain per week, 'loss' at or below minus it, 'even'
+  // between. Same lineup fill, same per-week scale, same horizons per team.
+  //   a, b        indexes of the two teams in `teams`
+  //   giveA/giveB the players each side sends (objects from that team's roster)
+  //   slots, points, weeks, horizon, minGain as in findTrades
+  function evaluateTrade(teams, opts) {
+    var o = opts || {};
+    var S = normSlots(o.slots);
+    var points = o.points, weeks = o.weeks || function () { return 1; }, horizonOf = o.horizon || function () { return 'ros'; };
+    var minGain = isFinite(Number(o.minGain)) ? Number(o.minGain) : 0.75;
+    var memo = {};
+    function pt(p, h) {
+      var k = idOf(p) + '|' + h;
+      if (memo[k] === undefined) { var v = Number(points(p, h)); memo[k] = isFinite(v) ? v : 0; }
+      return memo[k];
+    }
+    function side(i, give, get) {
+      var t = teams[i] || {}, h = horizonOf(i);
+      var roster = (t.players || []).map(function (r) { return r.p || r; }).filter(function (p) { return SFLEX_ELIG[String(p.pos || '').toUpperCase()]; });
+      var T = { name: t.name, h: h, wk: Math.max(1, Number(weeks(h)) || 1), roster: roster, slots: S };
+      var ln = lines(T, give, get, pt);
+      var gain = (ln.after - ln.before) / T.wk;
+      return { name: t.name, h: h, weeks: T.wk, perWeek: ln.before / T.wk, gain: gain, lines: ln,
+               call: gain >= minGain ? 'gain' : gain <= -minGain ? 'loss' : 'even' };
+    }
+    var giveA = (o.giveA || []).filter(Boolean), giveB = (o.giveB || []).filter(Boolean);
+    var A = side(o.a, giveA, giveB), B = side(o.b, giveB, giveA);
+    return { a: o.a, b: o.b, giveA: giveA, giveB: giveB, A: A, B: B, minGain: minGain,
+             both: A.call === 'gain' && B.call === 'gain' };
+  }
+
   function lines(T, give, get, pt) {
     var before = lineupValue(T.roster, T.slots, function (p) { return pt(p, T.h); });
     var after = lineupValue(without(T.roster, give).concat(get), T.slots, function (p) { return pt(p, T.h); });
@@ -613,6 +647,6 @@
 
   return {
     fold: fold, makePool: makePool, resolve: resolve, suggest: suggest, parseRosters: parseRosters, isNoise: isNoise,
-    lineupValue: lineupValue, normSlots: normSlots, findTrades: findTrades, BENCH_W: BENCH_W
+    lineupValue: lineupValue, normSlots: normSlots, findTrades: findTrades, evaluateTrade: evaluateTrade, BENCH_W: BENCH_W
   };
 });

@@ -30,14 +30,14 @@ the same `LEGACY_CONTENT` table so the two cannot disagree.
 |---|---|---|---|---|---|
 | `team-recaps` | Mon 7 AM | one recap per club | weekly | **RETIRE** | its per-club usage data feeds **What Sunday Taught Us**; the spec forbids conventional recaps |
 | `mnf-breakdown` | Tue 7 AM | Monday game, what we learned | weekly | **MERGE** | **Rest-of-Season Rankings** (Tue) carries a "what Monday night changed" section |
-| `what-they-arent-telling-you` | Tue 7 AM | insight-engine feature | weekly | **MERGE** | **Most Underrated Player: What the Experts Aren't Telling You** (Thu, Vega) |
+| `what-they-arent-telling-you` | Tue 7 AM | insight-engine feature | weekly | **MERGE** | **Most Underrated Player: What the Experts Aren't Telling You** (Thu, Market Desk) |
 | `opportunity-report` | Wed 7 AM | usage risers/fallers, targets, backfields | weekly | **MERGE** | **Wideout Wednesday** (targets) and **Tailback Tuesday** (backfields) |
 | `rankings-update` | Wed 7 AM | ROS/next-3/playoffs movers | weekly | **MERGE** | **Rest-of-Season Rankings** (Tue) |
 | `final-read` | Thu 7 AM | market vs consensus, start/sit pressure | weekly | **MERGE** | **Weekend Preview** (Fri) |
-| `tnf-preview` | Thu 7 AM | Thursday game preview | weekly | **RETAIN, MODIFY** | **Thursday Night Football Preview** (Thu, Dalton) with a DFS showdown lens |
-| `tnf-aftermath` | Fri 7 AM | Thursday game, what we learned | weekly | **MERGE** | **Thursday Night: What Matters** (Fri, Raines) |
+| `tnf-preview` | Thu 7 AM | Thursday game preview | weekly | **RETAIN, MODIFY** | **Thursday Night Football Preview** (Thu, Quarterback Desk) with a DFS showdown lens |
+| `tnf-aftermath` | Fri 7 AM | Thursday game, what we learned | weekly | **MERGE** | **Thursday Night: What Matters** (Fri, Usage Desk) |
 | `weekend-game-plan` | Fri 7 AM | one card per game | weekly | **MERGE** | **Weekend Preview** (Fri) |
-| `what-changed-today` | Sun 8 PM | Sunday games final by then | weekly | **MERGE** | **What Sunday Taught Us** (Sun 7:30 PM, Mercer) |
+| `what-changed-today` | Sun 8 PM | Sunday games final by then | weekly | **MERGE** | **What Sunday Taught Us** (Sun 7:30 PM, Editorial Desk) |
 | `snf-what-we-learned` | Mon 1 AM | the Sunday night game | weekly | **MERGE** | a live **update** of What Sunday Taught Us once the night game is final, not a second story |
 
 ### 1c. Claude Routines (outside the repository)
@@ -45,14 +45,14 @@ the same `LEGACY_CONTENT` table so the two cannot disagree.
 | Routine (trigger id) | Schedule | Purpose | Audience | Disposition | Reason / destination |
 |---|---|---|---|---|---|
 | Iron Tuna camp & preseason desk (`trig_013vFwxbbFTQNwCpxLbv5FqY`) | daily 15:00Z | publishes `auction-watch-YYYY-MM-DD.html`, the front page's Training Camp & Preseason desk | draft | **RETIRE** | camp is over; its injury and role tracking is carried by `availability-refresh`, `depth-charts`, **Last-Minute Intel** and the breaking-news workflow |
-| Iron Tuna — Play-Caller Premium daily entries (`trig_015MJSf2RFwE89n8Hua3oSG8`) | daily 12:00Z, hard stop 2026-09-13 | coaching-tendency column priced against auction values | draft | **RETIRE** | its concept (coaching and scheme) is Chris Dalton's beat in **Quarterback Monday** and the passing-game analysis |
-| Iron Tuna — The Pick (daily story) (`trig_016JAiJJMZi2jtZDmZS1QPNK`) | daily 13:00Z | one themed story a day from the season projection set, ending in a player and a price | draft | **RETIRE** | duplicate of the next row; the one-player-a-day idea is **Most Underrated Player** (Thu, Vega) |
+| Iron Tuna — Play-Caller Premium daily entries (`trig_015MJSf2RFwE89n8Hua3oSG8`) | daily 12:00Z, hard stop 2026-09-13 | coaching-tendency column priced against auction values | draft | **RETIRE** | its concept (coaching and scheme) is Quarterback Desk's beat in **Quarterback Monday** and the passing-game analysis |
+| Iron Tuna — The Pick (daily story) (`trig_016JAiJJMZi2jtZDmZS1QPNK`) | daily 13:00Z | one themed story a day from the season projection set, ending in a player and a price | draft | **RETIRE** | duplicate of the next row; the one-player-a-day idea is **Most Underrated Player** (Thu, Market Desk) |
 | The Pick (Story) - Updated (`trig_01K2obtrMAKiwGn3N4UroTEv`) | daily 12:00Z | the same column, a second Routine | draft | **RETIRE** | two Routines publishing one column (HANDOFF §47, §57) is exactly the duplication this migration removes |
 | Iron Tuna — lead story refresh (every 6h) (`trig_011LYewcPUQikF8izFsN2LAr`) | `58 */6 * * *` | rebuilds the auction from the day's lines and writes a `lead_story` row that becomes the front page lead | draft | **RETIRE** | the lead is now the newest in-season desk piece (`/api/lead-story` switches in the regular season); the archive at `/lead/<slug>` stays readable |
 | Iron Tuna: watch for empty lead-story slots (`trig_01WTgFuRik7kDWJHJv5pDwgQ`) | daily 14:15Z, already paused | watches the retired Routine above | draft | **RETIRE** | nothing left to watch |
 | Projections update — daily (Aug–Sep, draft season) (`trig_01PMc44HMe6Z5yjaGGK64ZXv`) | `0 10 * 8,9 *` | refreshes the committed season projection set from three feeds | both | **RETAIN** (data job, not a story) | the ROS and playoff boards price off this set; its own prompt says to stop after September 10, and the cron ends with September. Recommendation in the final report: a weekly Monday cadence through Week 17 |
 | Projections update — weekly (Mondays, July) (`trig_01HwcprHsvuAe233Bxx4Jqfk`) | `0 10 * 7 1` | the same job, July only | draft | **RETAIN** (dormant until July 2027) | fires nothing this season |
-| Iron Tuna — The Tell (weekly column) (`trig_01LvL8PwjZ89dkhKq7gSaVGS`) | Tue 14:00Z | a hand-voiced weekly column arguing with the ranking's composition | weekly | **RETAIN** | distinct editorial function (rank versus projection composition); nothing in the new calendar duplicates it. It is registered on Evan Brooks's desk in the analyst system; see the open item in §5 |
+| Iron Tuna — The Tell (weekly column) (`trig_01LvL8PwjZ89dkhKq7gSaVGS`) | Tue 14:00Z | a hand-voiced weekly column arguing with the ranking's composition | weekly | **RETAIN** | distinct editorial function (rank versus projection composition); nothing in the new calendar duplicates it. It is registered on the Rankings Desk in the analyst system; see the open item in §5 |
 | Iron Tuna daily audit 09-09 (`trig_017eMPVFmgrCz27djUckQRkS`) | one-shot 2026-09-09 | an owner-created audit of the lead-story desk | n/a | **LEAVE** | not editorial; owner's own tool |
 
 ### 1d. Static columns and one-off pages that the front page promotes
@@ -75,23 +75,23 @@ same facts.
 
 | Kind | Slot (ET) | Primary analyst | Market / DFS voice | Lens | Absorbs |
 |---|---|---|---|---|---|
-| `last-minute-intel` | Sun 12:15 PM, live updates to kickoff | Mike Raines | Lena Park | both | camp desk's injury tracking |
-| `what-sunday-taught-us` | Sun 7:30 PM, updated as late games go final | Jack Mercer | Lena Park | both | `what-changed-today`, `snf-what-we-learned`, `team-recaps` data |
-| `mnf-preview` | Mon 6 AM | Chris Dalton | Chris Dalton (showdown) | both | — |
-| `what-tuna-got-right` | Mon 6 AM, only when a call landed (board or story) | Jack Mercer | Lena Park | both | `early-rankings` (retired September 14; the Tuesday ROS rankings carry next week) |
-| `quarterback-monday` | Mon 7 AM, only when there is a story | Chris Dalton | Lena Park | both | Play-Caller Premium's scheme beat |
-| `ros-rankings` | Tue 7 AM | Evan Brooks | Nate Vega | weekly only (no DFS lens; season-long product) | `rankings-update`, `mnf-breakdown`, `early-rankings` |
-| `tailback-tuesday` | Tue 8 AM, only when there is a story | Evan Brooks | Lena Park | both | `opportunity-report` (backfields) |
-| `pickup-advisor` | Wed 6 AM | Tyler Grant | Lena Park (First-Look DFS Value & Leverage) | both | Waiver Watch |
-| `wideout-wednesday` | Wed 8 AM, only when there is a story | Mike Raines | Lena Park | both | `opportunity-report` (targets) |
-| `tnf-preview` | Thu 6 AM | Chris Dalton | Chris Dalton (showdown) | both | itself, re-bylined |
-| `underrated` | Thu 7 AM | Nate Vega | Nate Vega | both | `what-they-arent-telling-you`, The Pick |
-| `trade-desk` | Thu 8 AM | Evan Brooks | Nate Vega | both (DFS: attack / fade) | — |
-| `tight-end-thursday` | Thu 9 AM, only when there is a story | Evan Brooks | Lena Park | both | — |
-| `tnf-what-matters` | Fri 6 AM | Mike Raines | Lena Park | both | `tnf-aftermath` |
-| `weekend-preview` | Fri 7 AM | Sam Porter | Lena Park | both | `final-read`, `weekend-game-plan` |
-| `kickers-defenses` | Fri 8 AM | Sam Porter | Lena Park | both (DFS: DST only) | — |
-| `breaking` | unscheduled, significance-scored | Jack Mercer | Lena Park | both | — |
+| `last-minute-intel` | Sun 12:15 PM, live updates to kickoff | Usage Desk | DFS Desk | both | camp desk's injury tracking |
+| `what-sunday-taught-us` | Sun 7:30 PM, updated as late games go final | Editorial Desk | DFS Desk | both | `what-changed-today`, `snf-what-we-learned`, `team-recaps` data |
+| `mnf-preview` | Mon 6 AM | Quarterback Desk | Quarterback Desk (showdown) | both | — |
+| `what-tuna-got-right` | Mon 6 AM, only when a call landed (board or story) | Editorial Desk | DFS Desk | both | `early-rankings` (retired September 14; the Tuesday ROS rankings carry next week) |
+| `quarterback-monday` | Mon 7 AM, only when there is a story | Quarterback Desk | DFS Desk | both | Play-Caller Premium's scheme beat |
+| `ros-rankings` | Tue 7 AM | Rankings Desk | Market Desk | weekly only (no DFS lens; season-long product) | `rankings-update`, `mnf-breakdown`, `early-rankings` |
+| `tailback-tuesday` | Tue 8 AM, only when there is a story | Rankings Desk | DFS Desk | both | `opportunity-report` (backfields) |
+| `pickup-advisor` | Wed 6 AM | Waiver Desk | DFS Desk (First-Look DFS Value & Leverage) | both | Waiver Watch |
+| `wideout-wednesday` | Wed 8 AM, only when there is a story | Usage Desk | DFS Desk | both | `opportunity-report` (targets) |
+| `tnf-preview` | Thu 6 AM | Quarterback Desk | Quarterback Desk (showdown) | both | itself, re-bylined |
+| `underrated` | Thu 7 AM | Market Desk | Market Desk | both | `what-they-arent-telling-you`, The Pick |
+| `trade-desk` | Thu 8 AM | Rankings Desk | Market Desk | both (DFS: attack / fade) | — |
+| `tight-end-thursday` | Thu 9 AM, only when there is a story | Rankings Desk | DFS Desk | both | — |
+| `tnf-what-matters` | Fri 6 AM | Usage Desk | DFS Desk | both | `tnf-aftermath` |
+| `weekend-preview` | Fri 7 AM | Matchups Desk | DFS Desk | both | `final-read`, `weekend-game-plan` |
+| `kickers-defenses` | Fri 8 AM | Matchups Desk | DFS Desk | both (DFS: DST only) | — |
+| `breaking` | unscheduled, significance-scored | Editorial Desk | DFS Desk | both | — |
 
 ## 3. Scheduler changes
 
@@ -123,12 +123,12 @@ same facts.
    `update_trigger`) are listed in the final report with the exact ids; the
    worker-side changes make their output harmless either way, but they should
    be disabled in the Routines UI.
-2. The Tell is bylined to a pen name, Artie Kesselman. The analyst roster in
-   the specification has eight names and no ninth. The column is registered
-   on Evan Brooks's desk (it argues about what is inside a ranking); re-
-   bylining it to Brooks means editing `tools/the-tell-routine-prompt.md`,
-   the page's method box and the Routine prompt, which were written by the
-   owner hours before this migration and are left as they are pending that
-   decision.
+2. The Tell was bylined to a pen name. The analyst roster in the
+   specification has eight names and no ninth. The column is registered on
+   the Rankings Desk (it argues about what is inside a ranking). **Resolved
+   2026-10-10:** every fictional byline on the site was retired, the pen name
+   with them, and the column now runs under the Rankings Desk byline
+   (`tools/the-tell-routine-prompt.md`, the page's method box). The Routine
+   prompt outside the repository must be updated to match.
 3. The season projection Routine stops after September. The ROS boards keep
    pricing off the committed set until it is next refreshed.

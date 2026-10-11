@@ -38,6 +38,13 @@ const ok = (name, cond, extra = '') => {
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
 const POSITIONS = ['qb', 'rb', 'wr', 'te', 'flex', 'k', 'dst'];
+// The pooled board. A page like the seven above, asked for as ALL; not a
+// position, so the front page does not tile it. The hub opens on the first
+// position rather than on this (10 Oct 2026: a reader landing on "this week's
+// rankings" met QB1, RB1, WR1, TE1 and D1 interleaved, and wanted quarterbacks).
+const OVERALL = 'overall';
+const HUB_POS = POSITIONS[0];
+const BOARDS = POSITIONS.concat(OVERALL);
 const CATS = [
   { slug: 'weekly', horizon: 'week', weeks: '0' },
   { slug: 'season-long', horizon: 'ros', weeks: '1' },
@@ -45,36 +52,59 @@ const CATS = [
 const LANES = ['stats.html', 'hidden-value.html', 'previews.html'];
 const pageFile = (c, p) => `${c.slug}-${p}-rankings.html`;
 const hubFile = (c) => `${c.slug}-rankings.html`;
-const allBoards = CATS.flatMap((c) => [hubFile(c), ...POSITIONS.map((p) => pageFile(c, p))]);
+const allBoards = CATS.flatMap((c) => [hubFile(c), ...BOARDS.map((p) => pageFile(c, p))]);
 
 // ── the pages exist and ask for the right board ──────────────────────────────
 console.log('\nevery position in the menu has a page of its own');
 {
   const missing = allBoards.filter((f) => !fs.existsSync(path.join(ROOT, f)));
-  ok('all sixteen rankings pages exist', missing.length === 0, missing.join(', '));
+  ok('all eighteen rankings pages exist', missing.length === 0, missing.join(', '));
 
+  // The hub asks for the first position's board; the pooled page asks for ALL.
+  const wantPos = (p) => p === null ? HUB_POS.toUpperCase() : p === OVERALL ? 'ALL' : p.toUpperCase();
   const wrong = [];
   for (const c of CATS) {
-    for (const p of [null, ...POSITIONS]) {
+    for (const p of [null, ...BOARDS]) {
       const f = p ? pageFile(c, p) : hubFile(c);
       if (!fs.existsSync(path.join(ROOT, f))) continue;
       const h = read(f);
       const mount = (h.match(/<div class="rk-board"[\s\S]*?><\/div>/) || [''])[0];
       const attr = (k) => (mount.match(new RegExp(`data-rk-${k}="([^"]*)"`)) || [, ''])[1];
       if (attr('horizon') !== c.horizon) wrong.push(`${f}: horizon=${attr('horizon')} want ${c.horizon}`);
-      if (attr('pos') !== (p ? p.toUpperCase() : 'ALL')) wrong.push(`${f}: pos=${attr('pos')}`);
+      if (attr('pos') !== wantPos(p)) wrong.push(`${f}: pos=${attr('pos')} want ${wantPos(p)}`);
       if (attr('weeks') !== c.weeks) wrong.push(`${f}: weeks=${attr('weeks')} want ${c.weeks}`);
     }
   }
   ok('each one asks the board for its own horizon and position', wrong.length === 0, wrong.slice(0, 4).join('; '));
+  ok('and the hubs open on ' + HUB_POS.toUpperCase() + ', not on the pooled board',
+    CATS.every((c) => fs.existsSync(path.join(ROOT, hubFile(c))) && new RegExp(`data-rk-pos="${HUB_POS.toUpperCase()}"`).test(read(hubFile(c)))));
+
+  // The chip row is the touch path between the boards: every position, then
+  // the pooled board last, and the chip marked on a page is the board it shows
+  // — on the hub, that is the first position's chip.
+  const chipsWrong = [];
+  for (const c of CATS) {
+    for (const p of [null, ...BOARDS]) {
+      const f = p ? pageFile(c, p) : hubFile(c);
+      if (!fs.existsSync(path.join(ROOT, f))) continue;
+      const nav = (read(f).match(/<nav class="rk-chips"[\s\S]*?<\/nav>/) || [''])[0];
+      const hrefs = [...nav.matchAll(/href="([^"]*)"/g)].map((m) => m[1]);
+      const want = BOARDS.map((b) => `/${c.slug}-${b}-rankings`);
+      if (hrefs.join(',') !== want.join(',')) chipsWrong.push(`${f}: ${hrefs.join(',')}`);
+      const on = [...nav.matchAll(/<a class="rkc-chip on" href="([^"]*)"/g)].map((m) => m[1]);
+      const wantOn = `/${c.slug}-${p === null ? HUB_POS : p}-rankings`;
+      if (on.join(',') !== wantOn) chipsWrong.push(`${f}: on=${on.join(',')} want ${wantOn}`);
+    }
+  }
+  ok('every page carries the same chip row, with the board it shows marked on', chipsWrong.length === 0, chipsWrong.slice(0, 3).join('; '));
 
   // Only the season-long boards can open a row: "this week" is one week, and a
   // drawer holding a single row is a control that does nothing.
-  const weekOpens = CATS[0] && [hubFile(CATS[0]), ...POSITIONS.map((p) => pageFile(CATS[0], p))]
+  const weekOpens = CATS[0] && [hubFile(CATS[0]), ...BOARDS.map((p) => pageFile(CATS[0], p))]
     .filter((f) => fs.existsSync(path.join(ROOT, f)) && /data-rk-weeks="1"/.test(read(f)));
   ok('no weekly board offers a week-by-week drawer', weekOpens.length === 0, weekOpens.join(', '));
 
-  const noDrawer = [hubFile(CATS[1]), ...POSITIONS.map((p) => pageFile(CATS[1], p))]
+  const noDrawer = [hubFile(CATS[1]), ...BOARDS.map((p) => pageFile(CATS[1], p))]
     .filter((f) => fs.existsSync(path.join(ROOT, f)) && !/data-rk-weeks="1"/.test(read(f)));
   ok('every season-long board does', noDrawer.length === 0, noDrawer.join(', '));
 
@@ -93,7 +123,7 @@ const carriers = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && RIB.t
   // asked which game they play before they are offered a board.
   ok('the ribbon is off the front page', !carriers.includes('front.html'));
   ok('on the full rankings tool', carriers.includes('rankings.html'));
-  ok('on all sixteen rankings pages', allBoards.every((f) => carriers.includes(f)));
+  ok('on all eighteen rankings pages', allBoards.every((f) => carriers.includes(f)));
   ok('and on the three other destinations', LANES.every((f) => carriers.includes(f)));
 
   // Byte for byte, once the one legitimate per-page difference — which item is
@@ -117,24 +147,29 @@ const carriers = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && RIB.t
   ok('two of them drop down', menus.length === 2, String(menus.length));
   for (const [i, c] of CATS.entries()) {
     const hrefs = [...(menus[i] || '').matchAll(/href="([^"]*)"/g)].map((m) => m[1]);
-    const want = ['/' + c.slug + '-rankings', ...POSITIONS.map((p) => `/${c.slug}-${p}-rankings`)];
-    ok(`the ${c.slug} menu drops every position`, hrefs.join(',') === want.join(','), hrefs.join(','));
+    // The trigger above the menu is the hub, which opens on the first position,
+    // so the menu is the positions and then the pooled board; the hub itself is
+    // not repeated inside it.
+    const want = BOARDS.map((p) => `/${c.slug}-${p}-rankings`);
+    ok(`the ${c.slug} menu drops every position, the pooled board last`, hrefs.join(',') === want.join(','), hrefs.join(','));
   }
 }
 
 // ── what sits under the front page's hero ────────────────────────────────────
 console.log('\nwhat sits under the front page\u2019s hero');
 {
+  // October 2026: the hero is the first section and the position tiles are
+  // the second; the choose-your-game band went with the lane cards. Each tile
+  // links a weekly position page, which is this section's own job.
   const front = read('front.html');
-  const heroStart = front.indexOf('<section class="hero-band"');
+  const heroStart = front.indexOf('<section class="hero-band');
   const heroEnd = front.indexOf('</section>', heroStart);
-  const bandAt = front.indexOf('<div class="hm-choose">');
+  const tilesAt = front.indexOf('<section class="hm-sec" id="positions"');
   const nextSec = front.indexOf('<section', heroEnd);
-  ok('the hero band is still the first section', heroStart > 0);
-  ok('the choose-your-game band is after it', bandAt > heroEnd, `hero ends ${heroEnd}, band at ${bandAt}`);
-  ok('and before anything else on the page', bandAt < nextSec, `next section at ${nextSec}`);
-  ok('it states the question and nothing else',
-     /<span class="hm-choose-k">Choose your game<\/span>/.test(front));
+  ok('the hero band is still the first section', heroStart > 0 && heroStart === front.indexOf('<section'));
+  ok('the position tiles are the section after it', tilesAt > heroEnd && tilesAt === nextSec, `hero ends ${heroEnd}, tiles at ${tilesAt}, next ${nextSec}`);
+  ok('and every weekly position page is a tile',
+     POSITIONS.filter((p) => p !== 'flex').every((p) => front.includes('href="/weekly-' + p + '-rankings"')));
   // The homepage's own in-page anchor ribbon — the sticky bar of lane tabs and
   // section jumps — came off with the sections it pointed at in the September
   // 2026 rewrite, and the generated rankings ribbon came off this slot after
@@ -195,13 +230,21 @@ console.log('\nthe board prints the consensus against the odds');
 {
   const js = read('it-ranks.js');
   ok('the two column groups are named in full',
-    js.includes('>Fantasy Consensus<') && js.includes('>Betting Odds<'));
+    js.includes("'Fantasy Consensus'") && js.includes("'Betting Odds'"));
+  ok('and each group name sorts the board on its own rank column',
+    /grp\('crank', 'Fantasy Consensus'/.test(js) && /grp\('vrank', 'Betting Odds'/.test(js) &&
+    /function grp\(key, text, cls\)[\s\S]*?data-key="' \+ key/.test(js));
   ok('the fantasy side reads the consensus block', /p\.consensus\s*\?\s*p\.consensus\.points/.test(js));
   ok('the market side reads the vegas block', /p\.vegas\s*\?\s*p\.vegas\.points/.test(js));
   ok('and prints what the odds are built from, every row', js.includes('rk-basis'));
   ok('the gap comes from the worker\'s own classification, not a rule invented here',
     js.includes('p.marketDelta') && js.includes('d.classification') && !/strongRank|leanRank/.test(js));
   ok('a missing number is a dash, never a zero', js.includes("'—'"));
+  ok('rest of season ranks by total points or by the average per game',
+    js.includes("'Total points'") && js.includes("'Per game'") && /horizon === 'ros'/.test(js));
+  ok('and the averages are the worker\'s, ranked and graded there, not divided here',
+    js.includes('p.perGame') && !/points\s*\/\s*(p\.)?games/.test(js));
+  ok('the choice is in the shared URL', /put\('rank'/.test(js) && /qs\.get\('rank'\)/.test(js));
   ok('the week drawer prints both columns per week',
     js.includes('w.consensusPts') && js.includes('w.vegasPts'));
   ok('a bye and an absence are printed, not skipped', js.includes('w.bye') && js.includes('w.out'));
@@ -256,7 +299,11 @@ console.log('\nevery row says what the player is and what is in front of him');
   ok('and the far end of it does not', /depth|deep-league|waiver/.test(H.tierOf('WR', 90)));
   ok('an unranked player gets no tier at all, rather than the bottom one', H.tierOf('WR', null) === '');
   ok('every horizon either board can ask for has words of its own',
-    ['week', 'next3', 'ros', 'playoffs'].every((k) => H.HZ[k] && H.HZ[k].when && H.HZ[k].slate));
+    ['week', 'next', 'next3', 'untilPlayoffs', 'ros', 'playoffs'].every((k) => H.HZ[k] && H.HZ[k].when && H.HZ[k].slate));
+  ok('and the five the /rankings row offers are the five the worker knows',
+    (() => { const row = read('rankings.html').match(/id="rkHorizon"[\s\S]*?<\/div>/)[0];
+             const keys = [...row.matchAll(/data-horizon="(\w+)"/g)].map((m) => m[1]);
+             return keys.join() === 'week,next,untilPlayoffs,playoffs,ros' && keys.every((k) => H.HZ[k]); })());
 
   // The function's own body, not a window of N characters after its name: a
   // window is a test that fails the next time the function grows a comment.
@@ -421,7 +468,7 @@ console.log('\nevery row says what the player is and what is in front of him');
   }
 
   const noRead = allBoards.filter((f) => !read(f).includes('How to read the two lines under a name'));
-  ok('and all sixteen pages tell the reader what the two lines are', noRead.length === 0, noRead.join(', '));
+  ok('and all eighteen pages tell the reader what the two lines are', noRead.length === 0, noRead.join(', '));
   ok('so does the tool', /the two lines under a name/i.test(tool));
 }
 

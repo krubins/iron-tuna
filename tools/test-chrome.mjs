@@ -79,6 +79,15 @@ console.log('\nevery destination is reachable from every page');
   }
   ok('the nav reaches both lanes, the articles, how it works and search', badNav.length === 0, badNav.slice(0, 6).join('; '));
   ok('the footer reaches privacy, terms, support and the data inventory', badFoot.length === 0, badFoot.slice(0, 6).join('; '));
+
+  // THE OPERATOR'S WAY IN. front.html carried a quiet Admin link in its own
+  // footer; the 2026-10-08 design pass moved the page onto the shared chrome,
+  // which had never had one, and the only link into /admin from the site went
+  // with it. It rides the legal line (not the link row, so the ten-item shape
+  // below holds) with rel=nofollow, because /admin is noindex.
+  const noAdmin = allPages.filter((f) => !/<p class="foot-legal">[\s\S]*?<a class="foot-admin" href="\/admin" rel="nofollow">Admin<\/a>/.test(footer(read(f))));
+  ok('every footer carries the Admin link, nofollow, on the legal line', noAdmin.length === 0, noAdmin.slice(0, 6).join(', '));
+  ok('and the homepage at / has it', /<a class="foot-admin" href="\/admin" rel="nofollow">Admin<\/a>/.test(read('front.html')));
 }
 
 console.log('\nthe chrome leads with two lanes and nothing else');
@@ -327,10 +336,10 @@ console.log('\nthe visual zones are the ones the site says it has');
   const shared = read('site.css');
   const bg = (shared.match(/--bg:\s*(#[0-9a-fA-F]{3,6})/) || [])[1] || '';
   ok(`site.css --bg is a light surface (${bg})`, Boolean(bg) && lum(bg) > 0.8, bg || 'token missing');
-  // #2dd4a3 is about 1.9:1 on white, so the shared accent has to be the darker
-  // green or every link on the site fails contrast.
+  // The one accent is the October 2026 teal, #0b4f6c, about 8.6:1 on white.
+  // #2dd4a3 is about 1.9:1 and every link on the site would fail contrast.
   const teal = (shared.match(/--teal:\s*(#[0-9a-fA-F]{3,6})/) || [])[1] || '';
-  ok(`site.css uses the white-safe accent (${teal})`, teal.toLowerCase() === '#0e7c63', teal || 'token missing');
+  ok(`site.css uses the white-safe accent (${teal})`, teal.toLowerCase() === '#0b4f6c', teal || 'token missing');
   // And no content page may redefine the palette back to dark, which is how the
   // inline-:root drift started in the first place.
   const dark = pages.filter((f) => {

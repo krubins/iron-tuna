@@ -189,7 +189,7 @@ function fakeModel(body) {
   modelLog.push({ kind, retry });
   // The writer sees the facts, not the checker's allowed list: names and
   // numbers come out of the packet's own fields, as a model would read them.
-  const names = [...new Set([...ptxt.matchAll(/"(?:name|player|absent|replaces)":"([A-Z][a-z]+ [A-Z][a-z]+)"/g)].map(m => m[1]))].filter(n => !/^(Iron Tuna|Jack Mercer|Nate Vega|Evan Brooks|Mike Raines|Chris Dalton|Tyler Grant|Sam Porter|Lena Park)$/.test(n));
+  const names = [...new Set([...ptxt.matchAll(/"(?:name|player|absent|replaces)":"([A-Z][a-z]+ [A-Z][a-z]+)"/g)].map(m => m[1]))].filter(n => !/^(Iron Tuna|Editorial Desk|Market Desk|Rankings Desk|Usage Desk|Quarterback Desk|Waiver Desk|Matchups Desk|DFS Desk)$/.test(n));
   const nums = [...new Set([...ptxt.matchAll(/:(\d{2,4}(?:\.\d)?)[,}\]]/g)].map(m => m[1]))].filter(n => Number(n) > 20);
   const nm = i => names[i % names.length] || names[0] || 'The desk';
   const nu = i => nums[i % nums.length] || '';
@@ -223,7 +223,7 @@ function fakeModel(body) {
   // check holds a both-lens draft without it, so the model this simulation
   // stands in for has to produce it or the whole week comes back held.
   if (S.dfs) { out.dfs = fill('dfs'); out.dfsHeadline = nm(0) + ' is the price to pay on this slate'; out.dfsDek = 'What ' + nm(0) + ' costs against what he returns.'; }
-  if (packet.rivalry) { const line = 'Brooks has ' + packet.rivalry.player + ' at ' + packet.rivalry.position + packet.rivalry.brooks.rank + '; Vega, reading the market, has him ' + packet.rivalry.position + packet.rivalry.vega.rank + '.'; out.rivalryLine = line; out.weekly[lensKeys('weekly')[0]].push(line); }
+  if (packet.rivalry) { const line = 'The Rankings Desk has ' + packet.rivalry.player + ' at ' + packet.rivalry.position + packet.rivalry.brooks.rank + '; the Market Desk, reading the market, has him ' + packet.rivalry.position + packet.rivalry.vega.rank + '.'; out.rivalryLine = line; out.weekly[lensKeys('weekly')[0]].push(line); }
   return JSON.stringify(out);
 }
 const fakeFetch = async (url, opts) => {
@@ -367,7 +367,7 @@ for (const r of P.filter(x => x.status === 'held')) console.log('  HELD ' + r.ki
   ok('every published piece passed the fact check', pub.every(r => JSON.parse(r.violations).length === 0));
   const riv = pub.filter(r => r.rivalry);
   ok('the rivalry surfaced in at most one in five eligible pieces, and only on eligible kinds', riv.length <= Math.max(1, Math.ceil(pub.filter(r => H.CONTENT_KINDS[r.kind].rivalry).length * 0.2)) && riv.every(r => H.CONTENT_KINDS[r.kind].rivalry), riv.map(r => r.kind).join());
-  ok('a rivalry piece carries one line naming both ranks', riv.every(r => { const rv = JSON.parse(r.rivalry); return rv.line && /Brooks/.test(rv.line) && /Vega/.test(rv.line); }));
+  ok('a rivalry piece carries one line naming both ranks', riv.every(r => { const rv = JSON.parse(r.rivalry); return rv.line && /Rankings Desk/.test(rv.line) && /Market Desk/.test(rv.line); }));
   ok('analyst calls were recorded for published pieces with the byline on them', db.T.analyst_calls.length >= pub.length - 2 && db.T.analyst_calls.every(c => c.analyst && c.player), String(db.T.analyst_calls.length) + ' calls for ' + pub.length + ' pieces');
   const later = pub.filter(r => JSON.parse(r.brief).priorCalls && JSON.parse(r.brief).priorCalls.length);
   ok('later packets carry the desk\'s prior calls on the players they name', later.length >= 1);
@@ -416,6 +416,21 @@ console.log('\nthe feeds and the front page');
   ok('what happened stays: the Week 1 recaps and What Sunday Taught Us are still listed', all.pieces.some(p => p.kind === 'game-recap' && p.week === 1) && all.pieces.some(p => p.kind === 'what-sunday-taught-us' && p.week === 1));
   ok('a Week 2 piece still ahead of its games is listed', all.pieces.some(p => p.week === 2 && p.kind === 'weekend-preview'));
   ok('the feed says how many it held back', Number.isFinite(all.expired) && all.expired >= 3, String(all.expired));
+  {
+    // The front page asks for a floor of three. When expiry leaves the feed
+    // short of the floor, the newest spent GAME RECAPS top it up, marked
+    // expired, and nothing else does; without a floor the feed is unchanged.
+    // Read on the Tuesday after Week 2, when the Week 1 recaps are spent.
+    const t0 = clock.t, d0 = Date.now;
+    clock.t = ET(2026, 9, 22, 7, 0); Date.now = () => clock.t;
+    try {
+      const bare = await H.newsroomFeedPayload(env, 'weekly', 60);
+      const live = bare.pieces.length, floor = Math.min(6, live + 2);
+      const topped = await H.newsroomFeedPayload(env, 'weekly', 60, floor);
+      const extra = topped.pieces.filter(p => p.expired);
+      ok('a floor tops a short feed up with spent game recaps only, marked expired', topped.ok && extra.length >= 1 && extra.length <= floor - live && extra.every(p => p.kind === 'game-recap') && !bare.pieces.some(p => p.expired), live + ' -> ' + topped.pieces.length + ' ' + extra.map(p => p.kind).join());
+    } finally { clock.t = t0; Date.now = d0; }
+  }
   ok('the front-page lead and its column carry none of them', (() => { const l = [movedLead.story].concat(movedLead.recent); return !l.some(r => FORWARD.some(k => r.slug.startsWith('desk:' + k + ':1:') || r.slug === 'desk:' + k + ':1') || r.slug.startsWith('desk:tnf-preview:2')); })(), JSON.stringify([movedLead.story].concat(movedLead.recent).map(r => r.slug)));
   // ── one row per story, an honest edition, and a draft not rewritten forever ──
   {
@@ -452,7 +467,7 @@ console.log('\nthe feeds and the front page');
      && idx.pieces.filter(r => r.kind === 'game-recap' || r.kind === 'what-sunday-taught-us' || (r.week === 2 && r.kind === 'weekend-preview')).every(r => r.expired === false), JSON.stringify(idx.pieces.map(r => [r.kind, r.week, r.expired])));
   ok('the desk index is an archive and still lists every one of them', idx.ok && FORWARD.filter(k => db.T.content_pieces.some(r => r.kind === k && r.week === 1 && r.status === 'published')).every(k => idx.pieces.some(r => r.kind === k && r.week === 1 && r.status === 'published')));
   const piece = await H.contentPiecePayload(env, 'ros-rankings', 2026, 2);
-  ok('the rest-of-season piece payload is weekly-only: one lens, its sections, the byline and the disclosure, no DFS body, no DFS title', piece.ok && piece.lens === 'weekly' && piece.body.weekly && !piece.body.dfs && piece.sections.weekly.length && piece.sections.dfs.length === 0 && piece.dfsTitle === null && piece.byline.name === 'Evan Brooks' && /AI-powered/.test(piece.disclosure), JSON.stringify([piece.lens, piece.dfsTitle, Object.keys(piece.body || {})]));
+  ok('the rest-of-season piece payload is weekly-only: one lens, its sections, the byline and the disclosure, no DFS body, no DFS title', piece.ok && piece.lens === 'weekly' && piece.body.weekly && !piece.body.dfs && piece.sections.weekly.length && piece.sections.dfs.length === 0 && piece.dfsTitle === null && piece.byline.name === 'Rankings Desk' && /AI-powered/.test(piece.disclosure), JSON.stringify([piece.lens, piece.dfsTitle, Object.keys(piece.body || {})]));
   {
     // A row stored while the kind still carried a DFS lens (the live Week 2
     // piece) is served weekly-only: the desk page keys its Weekly / DFS tab
@@ -467,7 +482,7 @@ console.log('\nthe feeds and the front page');
     Object.assign(old, stash);
   }
   const both = await H.contentPiecePayload(env, 'pickup-advisor', 2026, 2);
-  ok('a both-lens piece payload still carries both lenses, the sections for each and the DFS byline', both.ok && both.body.weekly && both.body.dfs && both.sections.weekly.length && both.sections.dfs.length && both.byline.dfsName === 'Lena Park', JSON.stringify([both.ok, Object.keys(both.body || {})]));
+  ok('a both-lens piece payload still carries both lenses, the sections for each and the DFS byline', both.ok && both.body.weekly && both.body.dfs && both.sections.weekly.length && both.sections.dfs.length && both.byline.dfsName === 'DFS Desk', JSON.stringify([both.ok, Object.keys(both.body || {})]));
   ok('the piece page gets the published title with no edition trailer, which the page prints itself', piece.title === 'Rest-of-Season Rankings', JSON.stringify(piece.title));
   ok('the packet the page shows hides the allowed list and the index', piece.brief && !piece.brief.allowed && !piece.brief.playerIndex && piece.brief.freshness);
   const a = await H.analystPayload(env, 'brooks');

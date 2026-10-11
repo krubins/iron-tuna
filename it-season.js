@@ -1,7 +1,9 @@
-/* Iron Tuna — the NFL clock, on every in-season page.
+/* Iron Tuna — the NFL week, shared by every in-season page.
  *
  * One answer to "what week is it", fetched once and shared, so no two pages on
- * this site can disagree about the week a reader is in. The answer itself is
+ * this site can disagree about the week a reader is in. The visible clock strip
+ * this file used to paint on each page came off on 2026-10-10 (Ken: remove the
+ * NFL clock); what stays is the one read the page scripts date themselves by. The answer itself is
  * computed in the worker off the real schedule (see the season section in
  * _worker.js): a week is current until its OWN last game has finished, which is
  * the only rule that survives Thursday openers, 9:30am London kickoffs,
@@ -14,11 +16,10 @@
  * on the page.
  *
  * Usage:
- *   <div data-season-strip></div>           auto-rendered on DOMContentLoaded
  *   ITSeason.load(function (s, err) { … })  the raw payload
  *   ITSeason.get()                          the payload once loaded, else null
  */
-(function (root, doc) {
+(function (root) {
   'use strict';
 
   var API = '/api/season';
@@ -74,71 +75,14 @@
                        postponed: 'Postponed', canceled: 'Canceled' };
   function statusLabel(s) { return STATUS_LABEL[s] || s; }
 
-  // The one line every in-season page opens with: what part of the season it
-  // is, which week, and where that week stands.
-  function strip(s) {
-    if (!s) {
-      return '<span class="its-phase its-off">NFL clock unavailable</span>' +
-             '<span class="its-note">The schedule feed has not answered. Nothing on this page is dated until it does.</span>';
-    }
-    var w = s.week || {};
-    var bits = [];
-    bits.push('<span class="its-phase">' + esc(s.phaseLabel || s.phase || '') + '</span>');
-    if (w.label) bits.push('<span class="its-week">' + esc(w.label) + '</span>');
-    if (w.status === 'active') {
-      var live = (s.counts && s.counts.inProgress) || 0;
-      bits.push('<span class="its-state' + (live ? ' its-live' : '') + '">' +
-        (live ? live + ' game' + (live === 1 ? '' : 's') + ' in progress' : 'Under way') + '</span>');
-    } else if (w.status === 'upcoming' && w.firstKickoff) {
-      bits.push('<span class="its-state">Kicks off ' + esc(kickoff(w.firstKickoff)) + '</span>');
-    } else if (s.seasonComplete) {
-      bits.push('<span class="its-state">Season complete</span>');
-    }
-    var c = s.counts || {};
-    if (w.games) {
-      bits.push('<span class="its-counts">' + (c.completed || 0) + ' final &middot; ' +
-        (c.inProgress || 0) + ' live &middot; ' + (c.upcoming || 0) + ' to come</span>');
-    }
-    if (s.nextGame && s.nextGame.kickoff) {
-      bits.push('<span class="its-next">Next: ' + esc(s.nextGame.away + ' at ' + s.nextGame.home) +
-        ' ' + esc(until(s.nextGame.kickoff, s.now)) + '</span>');
-    }
-    return bits.join('');
-  }
-
   function esc(v) {
     return String(v == null ? '' : v)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // Every page can style itself by season phase: html[data-season="in"] is
-  // the regular season, which is how the front page hides its draft-season
-  // bands without a second feed read.
-  function stamp(s) {
-    try {
-      var h = doc.documentElement;
-      if (s && s.phase) { h.setAttribute('data-phase', s.phase); h.setAttribute('data-season', s.phase === 'regular' ? 'in' : s.phase === 'postseason' ? 'post' : 'off'); }
-    } catch (e) {}
-  }
-  function render(el, s) {
-    if (!el) return;
-    el.innerHTML = strip(s);
-    el.setAttribute('data-season-ready', s ? '1' : '0');
-    if (s && s.phase) el.setAttribute('data-phase', s.phase);
-  }
-
-  function boot() {
-    var els = [].slice.call(doc.querySelectorAll('[data-season-strip]'));
-    if (!els.length) return;
-    els.forEach(function (el) { if (!el.innerHTML.trim()) el.innerHTML = '<span class="its-note">Reading the NFL schedule&hellip;</span>'; });
-    load(function (s) { stamp(s); els.forEach(function (el) { render(el, s); }); });
-  }
-
   root.ITSeason = {
     load: load, get: get, error: error,
     kickoff: kickoff, dayLabel: dayLabel, until: until,
-    statusLabel: statusLabel, strip: strip, render: render, esc: esc
+    statusLabel: statusLabel, esc: esc
   };
-  if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', boot);
-  else boot();
-})(window, document);
+})(window);

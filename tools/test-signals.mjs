@@ -193,6 +193,40 @@ console.log('\na game that has kicked off leaves Vegas Edge');
   ok('no schedule, no judgement', H.buildVegasEdge(WEEK, WEEK_MARKETS, GAME_MARKETS, { ok: false }, { insights: [] }).vsExperts.buys[0].name === 'Big Riser');
 }
 
+console.log('\nVegas Edge: the season to date against the price');
+{
+  // Steady Man is priced at 9.0 this week. Each variant sets his season line.
+  const withForm = (form, extra) => ({ ...WEEK, players: WEEK.players.map(p => p.name === 'Steady Man' ? { ...p, form, ...(extra || {}) } : p) });
+  const run = (form, extra) => H.buildVegasEdge(withForm(form, extra), {}, {}, STATE, { insights: [] }).seasonForm;
+  const hot = run({ games: 5, ppg: 15.4 });
+  ok('averaging 15.4 against a 9.0 price is an overperformer, with the gap and the games on him',
+     hot.over.length === 1 && hot.over[0].name === 'Steady Man' && hot.over[0].formGap === 6.4 && hot.over[0].seasonPpg === 15.4 && hot.over[0].seasonGames === 5 && hot.under.length === 0,
+     JSON.stringify(hot));
+  ok('and he carries the brief the weekly lists carry', hot.over[0].consensusPoints === 9 && hot.over[0].vegasPoints === 9.2 && typeof hot.over[0].ironTunaRank === 'number');
+  const cold = run({ games: 5, ppg: 4.0 });
+  ok('averaging 4.0 against 9.0 is overvalued', cold.under.length === 1 && cold.under[0].formGap === -5 && cold.over.length === 0, JSON.stringify(cold));
+  ok('a gap under the floor is neither', (() => { const r = run({ games: 5, ppg: 10.0 }); return r.over.length === 0 && r.under.length === 0; })());
+  ok('two games is not a season', run({ games: 2, ppg: 25 }).over.length === 0);
+  ok('a player listed Out is not an overperformer', run({ games: 5, ppg: 25 }, { injury: { status: 'Out', gamesOut: 1 } }).over.length === 0);
+  ok('but Probable is a designation that says he plays', run({ games: 5, ppg: 25 }, { injury: { status: 'Probable', gamesOut: 0 } }).over.length === 1);
+  {
+    const stale = H.buildVegasEdge({ ...WEEK, players: WEEK.players.map(p => p.name === 'Steady Man' ? { ...p, consensus: { ...p.consensus, points: 0.6 }, form: { games: 3, ppg: 18.8 } } : p) }, {}, {}, STATE, { insights: [] }).seasonForm;
+    ok('a consensus under the floor is a stale line, and no price to beat', stale.over.length === 0 && stale.under.length === 0, JSON.stringify(stale));
+  }
+  ok('no season line, no row', run(null).over.length === 0 && run(null).under.length === 0);
+  ok('the floor rides on the payload', hot.minGames === 3);
+  // The forward pair. Steady Man's Iron Tuna projection (9.1) sits over his
+  // consensus (9.0): it backs a call to outperform and contradicts one to
+  // underperform, until it is moved under.
+  ok('an overperformer Iron Tuna projects over his consensus is a long term overperform call',
+     hot.likelyOver.length === 1 && hot.likelyOver[0].name === 'Steady Man' && hot.likelyOver[0].formGap === 6.4 && hot.likelyUnder.length === 0, JSON.stringify(hot));
+  ok('an underperformer Iron Tuna projects over his consensus is on the record but no call', cold.under.length === 1 && cold.likelyUnder.length === 0, JSON.stringify(cold));
+  const tunaLow = { ironTuna: { ...WEEK.players.find(p => p.name === 'Steady Man').ironTuna, points: 8.5 } };
+  ok('Iron Tuna under his consensus makes the underperformer a call', run({ games: 5, ppg: 4.0 }, tunaLow).likelyUnder.length === 1);
+  ok('and leaves the overperformer on the record only', (() => { const r = run({ games: 5, ppg: 15.4 }, tunaLow); return r.over.length === 1 && r.likelyOver.length === 0; })());
+  ok('no season line, no call', run(null).likelyOver.length === 0 && run(null).likelyUnder.length === 0);
+}
+
 console.log('\nWednesday movers');
 {
   const prev = { rank: 12, injury: null, roleTrend: { label: 'flat', pct: 2 }, games: 10, delta: { classification: 'MARKET AGREES' }, scheduleDifficulty: { label: 'Average' }, ppg: 14.2 };

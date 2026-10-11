@@ -14,7 +14,6 @@
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
 <title>Season Long Fantasy Football: The Odds Makers’ Edge | Iron Tuna</title>
 <meta name="description" content="Season long fantasy football read off the betting market first: weekly rankings, a rest-of-season board, the next five weeks, the week’s start/sit call and the signal engine’s own read — all restated at your league’s scoring.">
 <link rel="canonical" href="https://irontuna.com/fantasy">
@@ -33,6 +32,7 @@
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+<link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <style>
 body{overflow-x:hidden}
@@ -57,7 +57,7 @@ section{margin:0 0 var(--space-6)}
    .sl-* IN site.css, because /dfs wears the same one. What stays here is
    this page’s own: the standing argument and the tool shelf. */
 
-/* Vega vs. Brooks. Not a table of gaps: two columns, five picks each, each man
+/* Market Desk vs. Rankings Desk. Not a table of gaps: two columns, five picks each, each desk
    arguing the players he expects to beat the other man's ranking on. The ranks
    ride above each pitch as a chip for scanning and inside the pitch as well,
    so a paragraph read on its own still says what it is arguing. */
@@ -67,8 +67,8 @@ section{margin:0 0 var(--space-6)}
 .fn-riv-av{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;font-size:var(--fs-3xs);flex:none}
 .fn-riv-head b{display:block;font-size:20px;line-height:1.2}
 .fn-riv-head a{color:inherit}
-.fn-riv-head small{display:block;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal)}
-.fn-riv-rec{margin-left:auto;text-align:right;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);line-height:1.35}
+.fn-riv-head small{display:block;font-size:var(--fs-2xs);font-weight:700;color:var(--teal)}
+.fn-riv-rec{margin-left:auto;text-align:right;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.04em;color:var(--muted);line-height:1.35}
 .fn-riv-rec b{display:block;font-size:var(--fs-md);letter-spacing:0;color:var(--text)}
 .fn-riv-stand{margin:var(--space-3) 0 0;font-size:var(--fs-md);line-height:1.55;font-style:italic;color:var(--muted)}
 .fn-riv-foot{grid-column:1/-1;border-top:1px solid var(--line);padding-top:var(--space-3);font-size:var(--fs-md);line-height:1.55;color:var(--sec)}
@@ -76,7 +76,7 @@ section{margin:0 0 var(--space-6)}
 .fn-riv-pick{padding:var(--space-3) 0;border-top:1px solid var(--line)}
 .fn-riv-pick h3{margin:0;font-size:20px;line-height:1.3}
 .fn-riv-pick h3 small{font-weight:400;font-size:var(--fs-2xs);color:var(--muted);margin-left:6px}
-.fn-riv-ranks{margin:2px 0 4px;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.fn-riv-ranks{margin:2px 0 4px;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.04em;color:var(--muted)}
 .fn-riv-ranks b{color:var(--text)}.fn-riv-ranks i{font-style:normal;font-weight:400;margin:0 5px}
 .fn-riv-pick p{margin:0;font-size:var(--fs-md);line-height:1.55;color:var(--sec)}
 /* Two columns of five picks do not fit a 640px reading column, so the rivalry
@@ -86,7 +86,7 @@ section{margin:0 0 var(--space-6)}
 .fn-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(214px,1fr));gap:var(--space-3)}
 .fn-tool{display:block;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-md);
   padding:var(--space-4) var(--space-5);color:var(--sec);transition:border-color .12s ease,box-shadow .12s ease}
-.fn-tool:hover{border-color:var(--teal);text-decoration:none;box-shadow:0 6px 18px rgba(15,23,25,.05)}
+.fn-tool:hover{border-color:var(--teal);text-decoration:none;}
 .fn-tool b{display:block;color:var(--text);font-size:19px;margin-bottom:4px}
 .fn-tool span{display:block;font-size:var(--fs-sm);line-height:1.55}
 .fn-side .is-card{margin-bottom:0}
@@ -107,7 +107,7 @@ section{margin:0 0 var(--space-6)}
 body.fn-page .is-plate{border-radius:var(--sl-r);border-color:var(--line2);background:var(--bg);
   margin:var(--space-3) 0 var(--space-5)}
 body.fn-page .is-plate-head{background:var(--elev);border-bottom-color:var(--line2);
-  font-family:var(--font-body);font-size:var(--fs-3xs);letter-spacing:.09em}
+  font-family:var(--font-body);font-size:var(--fs-3xs);}
 /* Not a flex row. The label is a text run and a <b> — "This week's board —
    RB" — and flex both drops the whitespace between them and refuses to let
    the <b> wrap with the text, which on a phone left "RB" stranded at the
@@ -121,8 +121,8 @@ body.fn-page .is-plate-head>div{padding:0;border-left-color:var(--line2)}
    internet switches a position filter. */
 body.fn-page .is-seg{border:0;border-radius:0;background:transparent;align-self:stretch}
 body.fn-page .is-seg label{border-left:0;border-bottom:3px solid transparent;padding:0 13px;
-  min-height:40px;font-size:var(--fs-3xs);font-weight:800;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--muted);background:transparent}
+  min-height:40px;font-size:var(--fs-3xs);font-weight:800;
+  color:var(--muted);background:transparent}
 body.fn-page .is-seg label:hover{background:transparent;color:var(--text)}
 body.fn-page .is-seg label:has(input:checked){background:transparent;color:var(--text);
   border-bottom-color:var(--teal)}
@@ -138,7 +138,7 @@ body.fn-page .is-plate-foot{padding:10px var(--space-4);border-top-color:var(--l
   background:var(--panel);gap:var(--space-3) var(--space-4)}
 body.fn-page .is-plate-foot p{font-size:var(--fs-2xs);line-height:1.5}
 body.fn-page .is-plate-foot .is-btn{padding:7px 13px;border-radius:4px;font-size:var(--fs-3xs);
-  font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+  font-weight:800;}
 body.fn-page .is-plate-state{padding:var(--space-5) var(--space-4);font-size:var(--fs-sm)}
 
 /* ── 5 · the deck ───────────────────────────────────────────────────────── */
@@ -155,14 +155,14 @@ body.fn-page .is-act{border-radius:var(--sl-r);border-color:var(--line2);border-
   padding:var(--space-4);gap:6px}
 body.fn-page .is-act.gold{border-top-color:var(--gold)}
 body.fn-page .is-act.flat{border-top-color:var(--line2)}
-body.fn-page .is-act-k{font-size:10.5px;letter-spacing:.12em}
+body.fn-page .is-act-k{font-size:10.5px;}
 body.fn-page .is-act-h{font-size:18px;line-height:1.24}
 body.fn-page .is-act p{font-size:var(--fs-sm);line-height:1.45}
-body.fn-page .is-act-go{font-size:10.5px;letter-spacing:.09em}
+body.fn-page .is-act-go{font-size:10.5px;}
 body.fn-page .sl-main .is-band{padding:var(--space-4) var(--space-5) var(--space-5);
   border-radius:var(--sl-r);border-color:var(--line2);margin:var(--space-5) 0}
 body.fn-page .sl-edge{border-radius:var(--sl-r);padding:var(--space-5)}
-body.fn-page .sl-edge-k{font-family:var(--font-body);font-size:11px;letter-spacing:.11em}
+body.fn-page .sl-edge-k{font-family:var(--font-body);font-size:11px;}
 body.fn-page .sl-edge h3{font-size:clamp(21px,2.1vw,25px);line-height:1.22;margin-bottom:var(--space-3)}
 body.fn-page .sl-edge p{font-size:var(--fs-sm);line-height:1.6;margin-bottom:var(--space-3)}
 body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-2xs);line-height:1.5}
@@ -170,7 +170,7 @@ body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-2xs);line-height:1.5}
 /* ── 7 · the standing argument, and the shelf ───────────────────────────── */
 body.fn-page .fn-riv{gap:var(--space-4) var(--space-5);padding:var(--space-4) var(--space-5)}
 body.fn-page .fn-riv-head b{font-size:17px}
-body.fn-page .fn-riv-head small{font-size:10.5px;letter-spacing:.1em}
+body.fn-page .fn-riv-head small{font-size:10.5px;}
 body.fn-page .fn-riv-av{width:26px;height:26px;font-size:11px}
 body.fn-page .fn-riv-stand{font-size:var(--fs-sm);line-height:1.5;margin-top:var(--space-2)}
 body.fn-page .fn-riv-pick{padding:var(--space-3) 0}
@@ -198,13 +198,66 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
   body.fn-page .sl-shell{grid-template-columns:212px minmax(0,1fr) 296px;column-gap:var(--space-6)}
 }
 @media(min-width:1400px){body.fn-page .sl-shell{column-gap:var(--space-7)}}
+/* ══ THE PAPER PASS — THIS PAGE'S OWN HALF (2026-10-10) ═══════════════════
+   The shared half sits at the foot of the scoreboard dress in site.css and
+   says why: the homepage moved onto paper on 2026-10-08 and this page still
+   wore the September dress. An inline sheet outranks site.css at equal
+   specificity, so the objects only this page has the markup for — the
+   plates, the deck, the AI Edge card, the rivalry columns and the tool
+   shelf — are restated here in the homepage's materials: 10px corners,
+   hairlines, 600 where the dress said 800, no coloured rule on a card, no
+   italic, 19px headings over 16px text. Nothing here moves markup or a
+   control. */
+/* the plates: white, a hairline, the head and foot on the same white */
+body.fn-page .is-plate{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--bg)}
+body.fn-page .is-plate-head{background:var(--bg);border-bottom-color:var(--line)}
+body.fn-page .is-plate-head>span{font-weight:600;font-size:var(--fs-16)}
+body.fn-page .is-plate-head>span b{font-weight:600;color:var(--text)}
+body.fn-page .is-plate-head>div{border-left-color:var(--line)}
+body.fn-page .is-seg label{font-weight:600;font-size:var(--fs-14)}
+body.fn-page .is-plate-foot{background:var(--bg);border-top-color:var(--line)}
+body.fn-page .is-plate-foot p{font-size:var(--fs-14)}
+body.fn-page .is-plate-foot .is-btn{font-weight:600;font-size:var(--fs-14)}
+/* the deck: four outlined cards, no top rule in any colour */
+body.fn-page .is-deck{gap:var(--space-5);margin:var(--space-5) 0 0}
+body.fn-page .is-act{border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-5);gap:var(--space-2)}
+body.fn-page .is-act.gold,body.fn-page .is-act.flat{border-top-color:var(--line)}
+body.fn-page .is-act-k{font-size:var(--fs-13)}
+body.fn-page .is-act-h{font-size:var(--fs-19);line-height:1.3}
+body.fn-page .is-act p{font-size:var(--fs-16);line-height:1.5}
+body.fn-page .is-act-go{font-size:var(--fs-14)}
+/* the bands this page wraps the deck and the argument in: gone */
+body.fn-page .sl-main .is-band{margin:0;padding:0;border:0;border-radius:0;background:none}
+/* AI Edge */
+body.fn-page .sl-edge{border-radius:var(--radius-md);border-color:var(--line);padding:var(--space-5)}
+body.fn-page .sl-edge-k{font-size:var(--fs-13)}
+body.fn-page .sl-edge h3{font-size:var(--fs-23)}
+body.fn-page .sl-edge p{font-size:var(--fs-16);line-height:1.5}
+body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14)}
+/* Market Desk vs. Rankings Desk: the heads on a hairline, the initials on the grey the
+   homepage uses for a face with no photograph, the standing line in roman */
+body.fn-page .fn-riv-head{border-bottom:1px solid var(--line)}
+body.fn-page .fn-riv-head b{font-size:var(--fs-19)}
+body.fn-page .fn-riv-av{background:var(--elev);color:var(--text);font-weight:600;font-size:var(--fs-13)}
+body.fn-page .fn-riv-head small{color:var(--muted);font-weight:400;font-size:var(--fs-13)}
+body.fn-page .fn-riv-rec{letter-spacing:0;font-weight:400;font-size:var(--fs-13)}
+body.fn-page .fn-riv-stand{font-style:normal;font-size:var(--fs-16);line-height:1.5}
+body.fn-page .fn-riv-ranks{letter-spacing:0;font-weight:400;font-size:var(--fs-13)}
+body.fn-page .fn-riv-pick h3{font-size:var(--fs-19)}
+body.fn-page .fn-riv-pick p,body.fn-page .fn-riv-foot{font-size:var(--fs-16);line-height:1.5}
+/* the shelf: outlined cards at the deck's own weight */
+body.fn-page .fn-tools{gap:var(--space-5)}
+body.fn-page .fn-tool{border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-5);transition:none}
+body.fn-page .fn-tool:hover{border-color:var(--line2)}
+body.fn-page .fn-tool b{font-size:var(--fs-19);margin-bottom:var(--space-2)}
+body.fn-page .fn-tool span{font-size:var(--fs-16);line-height:1.5}
 </style>
 
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://irontuna.com/fantasy","name":"Season Long Fantasy Football: The Odds Makers’ Edge","description":"Season long fantasy football read off the betting market first: weekly rankings, a rest-of-season board, the next five weeks, the week’s start/sit call and the signal engine’s own read — all restated at your league’s scoring.","url":"https://irontuna.com/fantasy","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/fantasy"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Season Long Fantasy Football: The Odds Makers’ Edge"}]}]}</script>
 </head>
 <body class="fn-page sl-dress">
 <a class="skip-link" href="#main">Skip to content</a>
-<header class="site"><div class="wrap">
+<header class="site"><!--chrome:line--><p class="site-line" aria-hidden="true"></p><!--/chrome:line--><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
   <!--chrome:nav-->
     <nav class="nav" id="sitenav" aria-label="Main">
@@ -219,7 +272,15 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
       <span class="nav-toggle-bars"><span></span></span>Menu
     </button>
     <!--/chrome:nav-->
-</div></header>
+</div><!--chrome:tabbar-->
+  <nav class="tabbar" aria-label="Sections">
+    <a href="/fantasy" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h16M12 4v16"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Fantasy</a>
+    <a href="/dfs"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19h16M6 15l4-5 4 3 4-7"/></svg>DFS</a>
+    <a href="/in-season/desk"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 4h14v16H5zM8 9h8M8 13h8M8 17h5"/></svg>Articles</a>
+    <a href="/my-league#settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>My league</a>
+  </nav>
+<!--/chrome:tabbar-->
+</header>
 <main id="main">
 
 <!-- ── the nameplate ──────────────────────────────────────────────────────
@@ -227,7 +288,8 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
      re-scored every week", a 52px headline, a lede at full measure, two
      buttons and a how-it-works link. Ken, 2026-09-21: remove the whole box.
 
-     The lane's name, what the lane is FOR, and the NFL clock as the dateline.
+     The lane's name and what the lane is FOR. The NFL clock that used to ride
+     the dateline came off on 2026-10-10 (Ken: remove the NFL clock).
      The one action the page improves with rides under it, and the scoring
      note that has to sit beside it (the script hides the button for a reader
      who has already saved a league) rides with it. -->
@@ -235,7 +297,6 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
   <div class="sl-in">
     <p class="sl-date">
       <span class="is-eyebrow">In-Season &middot; Season Long</span>
-      <span class="its-strip" data-season-strip></span>
     </p>
     <h1>Season Long: <em>the odds makers&rsquo; edge</em> to pickups, trades and lineup decisions</h1>
     <p class="sl-deck">Every player priced off the betting market first and the consensus projections second, then restated at your league&rsquo;s scoring &mdash; so the claim, the deal and the flex call all come off one number.</p>
@@ -254,11 +315,14 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
 <div class="sl-shell">
 
 <!-- ── the left rail ──────────────────────────────────────────────────────
-     The page's whole-page control, and the ribbon's replacement. Five
+     The page's whole-page control, and the ribbon's replacement. Seven
      destinations, in the order a manager works: what is happening this week,
      what the season looks like, the window a pickup has to pay back inside,
-     the lineup call, and the machine's own read. Two of them leave the page
-     and say so with an arrow. -->
+     the lineup call, the machine's own read, and then the two tools the
+     rosters unlock. Ken, 2026-10-10: the Trade Tools and the Waiver Advisor
+     were only reachable from the "Do this now" deck and the tool grid at the
+     foot; they belong on the rail too. Four of the seven leave the page and
+     say so with an arrow. -->
 <aside class="sl-left">
   <nav class="sl-nav" aria-label="Season Long">
     <p class="sl-nav-h">Season Long</p>
@@ -268,12 +332,14 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
       <li><a href="#next5"><b>Next 5 Weeks</b><span>The window a claim or a deal has to pay back in</span></a></li>
       <li><a href="#startsit"><b>Start / Sit</b><span>The week&rsquo;s two calls, and the clock they run against</span></a></li>
       <li><a href="#aiedge"><b>AI Edge</b><span>The week written out of the signal engine</span></a></li>
+      <li><a class="sl-out" href="/trade-finder"><b>Trade Tools</b><span>Judge the deal on the table, or find one both sides say yes to</span></a></li>
+      <li><a class="sl-out" href="/faab"><b>Waiver Advisor</b><span>What a claim is worth in your league&rsquo;s dollars</span></a></li>
     </ul>
     <div class="sl-nav-more">
       <p>Also here</p>
       <a href="#desk">The Newsroom</a>
       <a href="#now">Do this now</a>
-      <a href="#disagree">Vega vs. Brooks</a>
+      <a href="#disagree">Market vs. Rankings</a>
       <a href="#tools">Every tool</a>
     </div>
   </nav>
@@ -353,10 +419,10 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
     <span class="is-act-go">Open the FAAB Advisor &rarr;</span>
   </a>
   <a class="is-act flat" href="/trade-finder">
-    <span class="is-act-k">Trades</span>
-    <span class="is-act-h">The trades that improve <em>both</em> lineups</span>
-    <p>Paste the two rosters. Every combination is scored on each side&rsquo;s own horizon, so a trade worth proposing is one the other manager can also say yes to.</p>
-    <span class="is-act-go">Open the Trade Finder &rarr;</span>
+    <span class="is-act-k">Trade Tools</span>
+    <span class="is-act-h">Judge the trade on the table, <em>or find one</em></span>
+    <p>The Trade Evaluator scores a deal for every team in it, rosters optional. The Trade Finder takes the rosters and returns the trades the other manager can also say yes to.</p>
+    <span class="is-act-go">Open the Trade Tools &rarr;</span>
   </a>
 </div>
 </div>
@@ -404,7 +470,7 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
      numbers it actually added up. A bye inside the window is a week with no
      points in it and is counted as such, which is the whole reason a
      five-week total is worth printing next to a per-game one. -->
-<div class="is-sec" id="next5"><div class="is-sec-top"><span class="is-sec-n">03</span><h2>Next 5 weeks</h2><a class="is-sec-more" href="/rankings#horizon=next3">All four horizons &rarr;</a></div>
+<div class="is-sec" id="next5"><div class="is-sec-top"><span class="is-sec-n">03</span><h2>Next 5 weeks</h2><a class="is-sec-more" href="/rankings#horizon=untilPlayoffs">All five horizons &rarr;</a></div>
   <p>The window a waiver claim or a trade actually has to pay back inside. Byes and an expected absence are already out of the total, so a man with four games in the window is ranked on four.</p></div>
 <section>
   <div class="is-plate">
@@ -502,8 +568,8 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
      when the route has nothing, like every module on this page. -->
 <div class="is-band">
 <div class="wrap">
-  <div class="is-sec" id="disagree"><div class="is-sec-top"><span class="is-sec-n">06</span><h2>Vega vs. Brooks</h2><a class="is-sec-more" href="/rankings#blend=50">Slide between them &rarr;</a></div>
-    <p>The desk&rsquo;s one standing argument. <a href="/analysts/vega">Market Intelligence</a> and <a href="/analysts/brooks">Fantasy Analysis</a> take five players each every week, the ones each of them expects to beat the other one&rsquo;s ranking, and make the case from the same board.</p></div>
+  <div class="is-sec" id="disagree"><div class="is-sec-top"><span class="is-sec-n">06</span><h2>Market Desk vs. Rankings Desk</h2><a class="is-sec-more" href="/rankings#blend=50">Slide between them &rarr;</a></div>
+    <p>The desk&rsquo;s one standing argument. <a href="/analysts/market">Market Intelligence</a> and <a href="/analysts/rankings">Fantasy Analysis</a> take five players each every week, the ones each of them expects to beat the other one&rsquo;s ranking, and make the case from the same board.</p></div>
   <section>
     <div class="is-plate">
       <div class="fn-riv" id="fnDisWrap" hidden></div>
@@ -528,7 +594,7 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
     <a class="fn-tool" href="/weekly-intel#startsit"><b>Start / Sit</b><span>Your lineup at your settings, with the week&rsquo;s scoring environment priced off the market.</span></a>
     <a class="fn-tool" href="/depth-charts"><b>Depth Charts</b><span>Every club&rsquo;s published order, refreshed daily, with each man&rsquo;s injury designation on his name.</span></a>
     <a class="fn-tool" href="/waivers"><b>Waivers</b><span>Why the price is the whole decision in a FAAB league.</span></a>
-    <a class="fn-tool" href="/trade-finder"><b>Trade Finder</b><span>Paste the rosters; get the trades that improve both lineups on their own horizons.</span></a>
+    <a class="fn-tool" href="/trade-finder"><b>Trade Tools</b><span>The Trade Evaluator judges a deal you have in hand; the Trade Finder finds one both lineups gain from.</span></a>
     <a class="fn-tool" href="/my-league"><b>Roster Audit</b><span>What each player cost you against what he has returned.</span></a>
     <a class="fn-tool" href="/weekly-intel"><b>Weekly Intel</b><span>The week, the byes, the slate, and every tool in one place.</span></a>
     <a class="fn-tool" href="/game-intel"><b>Game Intel</b><span>Every game with its line, total and the points each offense is implied to score.</span></a>
@@ -559,7 +625,7 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
   <div class="foot-note">
    <p>Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.</p>
    <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site — projections, odds, salaries and contract prices alike — is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-MY-RESET</b>.</p>
-   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span></p>
+   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span><a class="foot-admin" href="/admin" rel="nofollow">Admin</a></p>
   </div>
   <!--/chrome:foot-->
 </div></footer>
@@ -941,8 +1007,8 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
     var kicker = function (p) { return e(p.title) + ' &middot; Week ' + e(p.week); };
     var byline = function (p) {
       var by = p.byline || {};
-      return '<span class="nr-by"><span class="nr-av">' + e(av(by.name)) + '</span><a href="/analysts/' + e(by.analyst) + '">' + e(by.name) + '</a>' +
-        (p.rivalry ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') +
+      return '<span class="nr-by"><span class="nr-av">' + e(av(by.name)) + '</span><a href="' + e(by.url || '/analysts/' + (by.analyst || '')) + '">' + e(by.name) + '</a>' +
+        (p.rivalry ? '<span class="nr-riv">Market vs. Rankings</span>' : '') +
         (p.publishedAt ? '<span class="nr-time">' + e(ago(p.publishedAt)) + '</span>' : '') + '</span>';
     };
     // THE BOAST. The desk may open a headline with "YOU'RE WELCOME:" only
@@ -1001,11 +1067,11 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
           var best = w.best ? ' ' + e(w.best.player) + ' finished ' + e(w.best.position + w.best.finish) + ' against ' + e(w.best.position + w.best.theirs) + '.' : '';
           return '<b>' + e(name) + ' went ' + e(w.hit) + ' of ' + e(w.of) + '</b>' + (w.push ? ' (' + e(w.push) + ' pushed)' : '') + '.' + best;
         };
-        var v = line('vega', 'Vega'), b = line('brooks', 'Brooks');
+        var v = line('vega', 'The Market Desk'), b = line('brooks', 'The Rankings Desk');
         if (v || b) told = '<p>Week ' + e(lw.week) + ', settled on the real finishes: ' + [v, b].filter(Boolean).join(' ') + '</p>';
       }
       return '<div class="fn-riv-foot">' + told + '<p>' + (j.locked
-        ? 'These ten picks were locked before kickoff and go on each man&rsquo;s record: a pick is a hit only if the player finishes ahead of the rank the other one gave him.'
+        ? 'These ten picks were locked before kickoff and go on each desk&rsquo;s record: a pick is a hit only if the player finishes ahead of the rank the other one gave him.'
         : 'This week&rsquo;s column is a live read of the two boards. It locks on Thursday morning, before the first kickoff, and only then does it go on the record.') + '</p></div>';
     };
     $('fnDisWrap').innerHTML = wrote.map(function (k) {

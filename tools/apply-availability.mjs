@@ -3,6 +3,11 @@
 // (injured reserve, PUP, suspension, the commissioner's exempt list), from the
 // hand-kept list in tools/availability.json.
 //
+// Each entry may carry its own asOf, the date the absence began. The worker's
+// week boards count an entry's games out from the week that date falls in, so
+// a player placed on IR in Week 4 is out from Week 4, not from Week 1. An entry
+// without one takes the file's asOf (every preseason entry does).
+//
 //   node tools/apply-availability.mjs            apply: rewrite the rows, the
 //                                                AVAILABILITY block in _worker.js,
 //                                                the INJURIES fallback in index.html,
@@ -65,6 +70,11 @@ const seen = new Set();
 for (const e of entries) {
   if (!e.name || !e.position || !e.status || !Number.isFinite(e.gamesOut)) problem(`malformed entry ${JSON.stringify(e)}`);
   if (e.gamesOut < 0 || e.gamesOut > GAMES) problem(`${e.name}: gamesOut ${e.gamesOut} outside 0..${GAMES}`);
+  // An entry's asOf is the week its absence starts in (buildBoards' weekOf),
+  // so a mid-season placement must carry its own date rather than inherit
+  // the file's: inheriting a later file date would push every preseason
+  // entry's first missed week forward with it.
+  if (e.asOf != null && !/^\d{4}-\d{2}-\d{2}$/.test(String(e.asOf))) problem(`${e.name}: asOf ${JSON.stringify(e.asOf)} is not YYYY-MM-DD`);
   const k = norm(e.name) + '|' + String(e.position).toUpperCase();
   if (seen.has(k)) problem(`${e.name} (${e.position}) listed twice`);
   seen.add(k);
@@ -126,7 +136,7 @@ if (bad) process.exit(1);
 const availObj = {};
 for (const e of entries) {
   availObj[norm(e.name) + '|' + String(e.position).toUpperCase()] =
-    { status: e.status, gamesOut: e.gamesOut, note: e.note || '', asOf: file.asOf || '' };
+    { status: e.status, gamesOut: e.gamesOut, note: e.note || '', asOf: e.asOf || file.asOf || '' };
 }
 const availLines = Object.entries(availObj)
   .map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)}`)

@@ -36,7 +36,7 @@ const harness = new Function('PROJECTIONS', '_xb64encode', 'PROJ_KEY', 'fetch', 
   let _PROJ_ENC = null;
   ${section}
   return { AVAILABILITY, AVAILABILITY_GAMES, AVAIL_MIN_MATCHED, AVAIL_MIN_TEAMS, AVAIL_MIN_GAMES, AVAIL_RESERVE_MIN,
-           AVAIL_FEED_URL, _oddsNorm, _oddsRound, _availF, _availStatusOf, _availKickoff, _availGamesOut,
+           AVAIL_FEED_URL, AVAIL_SEASON_ENDING, AVAIL_MAX_AGE_MS, _oddsNorm, _oddsRound, _availF, _availStatusOf, _availKickoff, _availWeekAt, _availGamesOut,
            _availBoardIndex, buildAvailabilityOverlay, availabilityMerge, availabilityTable, _availTable,
            _availFactor, _availRowFactor, applyAvailability, blendProjections, _withAvailability, _availPool,
            availabilityCacheRead, availabilityCacheWrite, runAvailabilityRefresh, availabilityReport,
@@ -203,6 +203,83 @@ console.log('\nstatus mapping on a stub feed');
     entry('Healthy Back', 'RB', 'Injured Reserve', 'IR-R', iso(kickoff + 31 * day), { short: 'Back will miss the season opener and three more.' })
   ]));
   ok('a comment about the season opener does not zero a line', opener.players['healthyback|RB'].gamesOut === 4);
+}
+
+console.log('\nmid-season: the week the pull falls in');
+{
+  ok('before kickoff is Week 1, and so is nonsense', W._availWeekAt(kickoff - 10 * day, kickoff) === 1 && W._availWeekAt(NaN, kickoff) === 1);
+  ok('kickoff Thursday through Monday night is Week 1; the Tuesday after is Week 2',
+    W._availWeekAt(kickoff, kickoff) === 1 && W._availWeekAt(kickoff + 4 * day, kickoff) === 1 && W._availWeekAt(kickoff + 5 * day, kickoff) === 2);
+  ok('7 Oct 2026 is Week 5', W._availWeekAt(Date.UTC(2026, 9, 7, 19), kickoff) === 5, String(W._availWeekAt(Date.UTC(2026, 9, 7, 19), kickoff)));
+  // A reserve placement with no return date, pulled in Week 5. gamesOut
+  // counts from Week 1, so the four-game floor has to count from NOW: out
+  // through Week 8. Read as "Weeks 1-4" he was back on the board that day.
+  const wk5 = feedOf([
+    entry('Fresh Injury', 'WR', 'Injured Reserve', 'IR-R', undefined),
+    entry('Healthy Back', 'RB', 'Injured Reserve', 'IR-R', iso(kickoff + 31 * day)),   // a date still speaks for itself
+    entry('Kicker Man', 'PK', 'Out', undefined, undefined)
+  ]);
+  wk5.timestamp = '2026-10-07T11:00:00Z';
+  const built = W.buildAvailabilityOverlay(wk5);
+  ok('IR with no date in Week 5 is the four-game floor from Week 5: out through Week 8',
+    built.players['freshinjury|WR'] && built.players['freshinjury|WR'].gamesOut === 8, JSON.stringify(built.players['freshinjury|WR']));
+  ok('a return date is still weeks from kickoff', built.players['healthyback|RB'].gamesOut === 4);
+  ok('a plain Out with no date is still no season line change', !built.players['kickerman|K'] && built.weekly['kickerman|K'].status === 'Out');
+  const late = feedOf([entry('Fresh Injury', 'WR', 'Injured Reserve', 'IR-R', undefined)]);
+  late.timestamp = '2027-01-05T11:00:00Z';   // Week 18
+  ok('the floor never runs past the season', W.buildAvailabilityOverlay(late).players['freshinjury|WR'].gamesOut === G);
+  const pre = W.buildAvailabilityOverlay(feedOf([entry('Fresh Injury', 'WR', 'Injured Reserve', 'IR-R', undefined)]));
+  ok('a preseason pull is unchanged: the floor from Week 1', pre.players['freshinjury|WR'].gamesOut === W.AVAIL_RESERVE_MIN);
+}
+
+console.log('\nseason-ending phrasing');
+{
+  const says = t => W.AVAIL_SEASON_ENDING.test(t);
+  const ends = ['Dart will miss the rest of the regular season', 'out for the rest of the regular season', 'out for the season',
+    'is expected to miss the remainder of the 2026 season', 'season-ending knee surgery', 'will miss the entire 2026 season',
+    'the injury ends his season', 'out for the year', 'miss the rest of his season'];
+  ok('the pattern reads the phrasings the clubs and the wires use', ends.every(says), ends.filter(t => !says(t)).join(' | '));
+  const not = ['will miss the season opener', 'questionable for Sunday', 'placed on injured reserve Tuesday', 'the regular season is half over', 'returns this season'];
+  ok('and not the ones that do not end a year', not.every(t => !says(t)), not.filter(says).join(' | '));
+}
+
+console.log('\ncarry: what the feed stopped mentioning');
+{
+  // The last row the pull wrote. ESPN's report is the week's news, not a
+  // register of who is on reserve: a season-ender drops off it once the news
+  // is old, and the row used to forget him the same day.
+  const prior = {
+    'freshinjury|WR':  { name: 'Fresh Injury', position: 'WR', team: 'BBB', status: 'IR', gamesOut: G, note: 'Knee: out for the season', source: 'ESPN injury feed 2026-09-23', asOf: '2026-09-23' },
+    'healthyback|RB':  { name: 'Healthy Back', position: 'RB', team: 'AAA', status: 'IR', gamesOut: 4, note: 'Ankle', source: 'ESPN injury feed 2026-09-02', asOf: '2026-09-02' },
+    'kickerman|K':     { name: 'Kicker Man', position: 'K', team: 'CCC', status: 'IR', gamesOut: 8, note: 'Hip', source: 'ESPN injury feed 2026-09-02', asOf: '2026-09-02' },
+    'dandresuffix|TE': { name: "D'Andre Suffix Jr.", position: 'TE', team: 'DDD', status: 'PUP', gamesOut: 6, note: 'Neck', source: 'ESPN injury feed 2026-09-02', asOf: '2026-09-02' },
+    'nobodyatall|RB':  { name: 'Nobody At All', position: 'RB', team: 'ZZZ', status: 'IR', gamesOut: G, note: '', source: '', asOf: '2026-09-02' }
+  };
+  const feed = feedOf([
+    entry('Kicker Man', 'PK', 'Active', undefined, undefined, { short: 'Man was activated from injured reserve Saturday.' }),
+    entry("D'Andre Suffix Jr.", 'TE', 'Injured Reserve', 'IR-R', '2026-11-15')
+  ]);
+  feed.timestamp = '2026-10-07T11:00:00Z';   // Week 5
+  const built = W.buildAvailabilityOverlay(feed, prior);
+  const P = built.players;
+  ok('a season-ender the feed no longer mentions is carried',
+    P['freshinjury|WR'] && P['freshinjury|WR'].gamesOut === G && P['freshinjury|WR'].carried === true, JSON.stringify(P['freshinjury|WR']));
+  ok('the carried entry keeps its own status, note, source and date',
+    P['freshinjury|WR'].status === 'IR' && /out for the season/.test(P['freshinjury|WR'].note) && /2026-09-23/.test(P['freshinjury|WR'].source) && P['freshinjury|WR'].asOf === '2026-09-23');
+  ok('a window that has closed is not carried: out through Week 4, and it is Week 5', !P['healthyback|RB']);
+  ok("a man the feed lists again, in any status, is the feed's call: Active drops him", !P['kickerman|K']);
+  ok('...and a fresh reserve entry replaces the old one rather than carrying it',
+    P['dandresuffix|TE'] && !P['dandresuffix|TE'].carried && P['dandresuffix|TE'].gamesOut === 9 && /2026-10-07/.test(P['dandresuffix|TE'].source), JSON.stringify(P['dandresuffix|TE']));
+  ok('a name no longer on the board is not carried', !P['nobodyatall|RB']);
+  ok('matched counts the feed alone; carries are reported beside it', built.matched === 1 && built.carried.join() === 'freshinjury|WR', JSON.stringify([built.matched, built.carried]));
+  // The committed block at gamesOut 0 is a hand reinstatement, and ends the carry.
+  W.AVAILABILITY['freshinjury|WR'] = { status: 'IR', gamesOut: 0, note: 'reinstated', asOf: '2026-10-01' };
+  const after = W.buildAvailabilityOverlay(feed, prior);
+  delete W.AVAILABILITY['freshinjury|WR'];
+  ok('a hand entry at gamesOut 0 ends a carry', !after.players['freshinjury|WR'] && after.carried.length === 0, JSON.stringify(after.carried));
+  ok('with no prior row nothing is carried', W.buildAvailabilityOverlay(feed).carried.length === 0 && W.buildAvailabilityOverlay(feed, null).matched === 1);
+  const open = W.buildAvailabilityOverlay(feed, { 'healthyback|RB': { ...prior['healthyback|RB'], gamesOut: 5 } });
+  ok('out through Week 5 in Week 5 is still out, and carried', open.players['healthyback|RB'] && open.players['healthyback|RB'].carried === true);
 }
 
 console.log('\nmatching');
@@ -519,6 +596,46 @@ const realPool = (() => {
   }
   return out;
 })();
+
+console.log('\ncarry: through the row the pull writes');
+{
+  // The last good row seeds the next pull. Fresh Injury is a season-ender the
+  // feed lists; Two Ways is one it has stopped mentioning.
+  const priorPlayers = {
+    'twoways|RB': { name: 'Two Ways', position: 'RB', team: 'EEE', status: 'IR', gamesOut: G, note: 'Knee: out for the season', source: 'ESPN injury feed 2026-08-30', asOf: '2026-08-30' }
+  };
+  const seed = (ageMs) => ({ '3': { payload: JSON.stringify({ asOf: '2026-08-30T11:00:00.000Z', players: priorPlayers, weekly: {} }),
+                                    provider: 'espn-injuries', matched: 1, updated_at: Date.now() - ageMs } });
+  {
+    const db = mockDb(seed(3600000));
+    const R = harness(STUB, () => 'ENC', 'k', feedFetch(goodFeed()));
+    const r = await R.runAvailabilityRefresh({ LEADS_DB: db });
+    const payload = JSON.parse(db.rows['3'].payload);
+    ok('the pull reads the last row before it writes', r.ok === true && db.reads >= 1 && db.writes.length === 1);
+    ok('a man the feed stopped mentioning rides into the new row, marked', payload.players['twoways|RB'] && payload.players['twoways|RB'].carried === true && payload.players['twoways|RB'].gamesOut === G,
+      JSON.stringify(payload.players['twoways|RB']));
+    ok('the result names him and matched still counts the feed alone', r.carried.join() === 'twoways|RB' && r.matched === 6, JSON.stringify([r.carried, r.matched]));
+    const back = await R.availabilityCacheRead({ LEADS_DB: db });
+    ok('the strict reader accepts the carried entry', back && back.players['twoways|RB'] && back.players['twoways|RB'].gamesOut === G);
+    const table = await R.availabilityTable({ LEADS_DB: db });
+    ok('and the served table has him, live', table['twoways|RB'] && table['twoways|RB'].live && table['twoways|RB'].carried === true && table['twoways|RB'].gamesOut === G);
+    ok('the report says where he came from', (await R.availabilityReport({ LEADS_DB: db })).affected.find(a => a.key === 'twoways|RB').from === 'carried');
+  }
+  {
+    const db = mockDb(seed(W.AVAIL_MAX_AGE_MS + 60000));
+    const R = harness(STUB, () => 'ENC', 'k', feedFetch(goodFeed()));
+    const r = await R.runAvailabilityRefresh({ LEADS_DB: db });
+    ok('a row too old to serve is too old to carry from', r.ok === true && r.carried.length === 0 && !JSON.parse(db.rows['3'].payload).players['twoways|RB']);
+  }
+  {
+    // The feed lists him again, Active: the carry ends on the feed's word.
+    const db = mockDb(seed(3600000));
+    const again = goodFeed(); again.injuries[0].injuries.push(entry('Two Ways', 'RB', 'Active', undefined, undefined, { short: 'Ways was activated from injured reserve.' }));
+    const R = harness(STUB, () => 'ENC', 'k', feedFetch(again));
+    const r = await R.runAvailabilityRefresh({ LEADS_DB: db });
+    ok('a man the feed lists Active again is not carried', r.ok === true && r.carried.length === 0 && !JSON.parse(db.rows['3'].payload).players['twoways|RB']);
+  }
+}
 
 console.log('\nlive ESPN injury feed (real network)');
 {

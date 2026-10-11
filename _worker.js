@@ -84,9 +84,10 @@ const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/r
   '/fantasy', '/stats', '/hidden-value', '/previews', '/the-line', '/weekly-wrap', '/value-coach',
   '/weekly-rankings', '/weekly-qb-rankings', '/weekly-rb-rankings', '/weekly-wr-rankings',
   '/weekly-te-rankings', '/weekly-flex-rankings', '/weekly-k-rankings', '/weekly-dst-rankings',
+  '/weekly-overall-rankings',
   '/season-long-rankings', '/season-long-qb-rankings', '/season-long-rb-rankings',
   '/season-long-wr-rankings', '/season-long-te-rankings', '/season-long-flex-rankings',
-  '/season-long-k-rankings', '/season-long-dst-rankings']);
+  '/season-long-k-rankings', '/season-long-dst-rankings', '/season-long-overall-rankings']);
 // The HUB is never in that set: it is the page a closed route serves in place of
 // itself, so gating it would be a loop. /post-draft is the name the hub used to
 // carry and 301s here — see the redirect at the top of fetch().
@@ -140,7 +141,8 @@ const WA_MARKET_BLOCKED_HTML = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>Betting Market Intel is not available in Washington | Iron Tuna</title>
-<link rel="icon" href="/tuna-mark.png">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/site.css">
 </head>
 <body>
@@ -167,7 +169,14 @@ function postDraftPreview(env, url, request) {
   if (adminOk(env, url.searchParams.get('preview'))) return true;
   try { return adminOk(env, parseCookie(request.headers.get('Cookie'))['it_pd_preview']); } catch (e) { return false; }
 }
-function adminOk(env, key) { return !!env.LEADS_EXPORT_KEY && timingSafeEq(String(key || ''), env.LEADS_EXPORT_KEY); }
+// The one gate in front of every /api/admin/* route, the ?preview= escape hatch
+// and the market refresh. Two credentials open it: LEADS_EXPORT_KEY, the long
+// owner secret the automations use, and ADMIN_PASSWORD, a short word set in
+// wrangler.jsonc so /admin can be opened from a phone without pasting a key
+// (added 2026-10-10). Either one alone is enough; an unset credential never
+// matches, so an empty env still refuses everything. One line on purpose:
+// tools/test-league-sync.mjs lifts this function out of the source by line.
+function adminOk(env, key) { const k = String(key || ''); return !!k && ((!!env.LEADS_EXPORT_KEY && timingSafeEq(k, String(env.LEADS_EXPORT_KEY))) || (!!env.ADMIN_PASSWORD && timingSafeEq(k, String(env.ADMIN_PASSWORD)))); }
 let _GITHUB_OIDC_KEYS = null;
 let _GITHUB_OIDC_KEYS_AT = 0;
 const _b64urlBytes = value => Uint8Array.from(atob(String(value || '').replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(String(value || '').length / 4) * 4, '=')), c => c.charCodeAt(0));
@@ -302,7 +311,7 @@ const PROJECTIONS = [
   { name: "Joe Burrow", position: "QB", team: "CIN", projectedStats: { passYd: 4132, passTD: 33, passInt: 10.9, rushYd: 189, rushTD: 2.1, fumLost: 2.9 }},
   { name: "Jalen Hurts", position: "QB", team: "PHI", projectedStats: { passYd: 3779, passTD: 23.5, passInt: 9.2, rushYd: 438, rushTD: 9.1, fumLost: 4.1 }},
   { name: "Trevor Lawrence", position: "QB", team: "JAX", projectedStats: { passYd: 3932, passTD: 24.9, passInt: 13, rushYd: 335, rushTD: 4.8, fumLost: 3.8 }},
-  { name: "Jaxson Dart", position: "QB", team: "NYG", projectedStats: { passYd: 3685, passTD: 20.8, passInt: 10.1, rushYd: 552, rushTD: 6.5, fumLost: 3.7 }},
+  { name: "Jaxson Dart", position: "QB", team: "NYG", projectedStats: { passYd: 0, passTD: 0, passInt: 0, rushYd: 0, rushTD: 0, fumLost: 0 }},
   { name: "Brock Purdy", position: "QB", team: "SF", projectedStats: { passYd: 4181, passTD: 27.1, passInt: 13.9, rushYd: 277, rushTD: 3.5, fumLost: 3.7 }},
   { name: "Patrick Mahomes", position: "QB", team: "KC", projectedStats: { passYd: 4001, passTD: 26.4, passInt: 11.7, rushYd: 327, rushTD: 3.3, fumLost: 3 }},
   { name: "Matthew Stafford", position: "QB", team: "LAR", projectedStats: { passYd: 4282, passTD: 34.9, passInt: 9.7, rushYd: 39, fumLost: 3.5 }},
@@ -2071,6 +2080,7 @@ const AVAILABILITY = {
   "devinneal|RB": {"status":"IR","gamesOut":17,"note":"Hamstring; placed on injured reserve without a return designation, out for the season.","asOf":"2026-09-02"},
   "tychandler|RB": {"status":"IR","gamesOut":17,"note":"Season-ending knee injury in the Aug. 22 preseason game against the Rams.","asOf":"2026-09-02"},
   "calvinaustin|WR": {"status":"IR","gamesOut":17,"note":"Torn ACL at the Aug. 25 practice; out for the 2026 season.","asOf":"2026-09-02"},
+  "jaxsondart|QB": {"status":"IR","gamesOut":17,"note":"Left knee injury on the opening drive of the Week 3 Monday night game at the Rams (Sept. 21); surgery and injured reserve, out for the rest of the regular season. ESPN's feed dropped him after the surgery, so the live list cannot carry him.","asOf":"2026-09-23"},
   "joshjacobs|RB": {"status":"Exempt","gamesOut":6,"note":"Commissioner's exempt list since Aug. 30 after misdemeanor charges from a May arrest. No timeline: he stays off until the commissioner removes him, and the first court date is Nov. 17. Six games is a working estimate, revisit weekly.","asOf":"2026-09-02"},
   "jordyntyson|WR": {"status":"IR","gamesOut":8,"note":"Recurring right hamstring; IR with a return designation, roughly two months out, Week 9 return most likely.","asOf":"2026-09-02"},
   "jamesconner|RB": {"status":"IR","gamesOut":4,"note":"Foot complications from the 2025 injury; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
@@ -2099,7 +2109,10 @@ const AVAILABILITY = {
 //     (the feed's return dates are placeholders — Jacobs' exempt-list entry says
 //     Week 3 while the file's considered number is six).
 //   - a player only in the committed block: kept as is. The feed dropping him is
-//     not evidence he plays; ESPN clears reserve designations in bulk.
+//     not evidence he plays; ESPN clears reserve designations in bulk. The same
+//     holds for the live row's own entries: one the feed stops mentioning is
+//     carried from the previous row while his games out still cover the current
+//     week (buildAvailabilityOverlay), and marked `carried`.
 //   - a player only in the live row: a placement the file has not caught up
 //     with. His committed PROJECTIONS row is still the full-season line, so it is
 //     pro-rated on the way out (_withAvailability) and the odds overlay by the
@@ -2118,7 +2131,10 @@ const AVAIL_MAX_AGE_MS = 14 * 86400000; // a live row older than this is ignored
 const AVAIL_MEMO_MS = 900000;           // per-isolate memo of the merged table (one D1 read behind it)
 const AVAIL_MIN_GAMES = 2;              // a one-game absence is not a season line change (§48)
 const AVAIL_RESERVE_MIN = 4;            // IR / reserve-PUP / reserve-NFI: at least four games by rule
-const AVAIL_SEASON_ENDING = /season-ending|out for the (rest of the )?(season|year)|(rest|remainder) of the (\d{4} )?season|(entire|whole) (\d{4} )?season/i;
+// "miss the rest of the regular season" (the Giants on Dart, 23 Sep 2026) is
+// the club's phrasing for a placement that ends a year, and the first draft
+// of this pattern required "rest of the season" with nothing in between.
+const AVAIL_SEASON_ENDING = /season-ending|out for the (rest of the )?(regular )?(season|year)|(rest|remainder) of (the |his )?(\d{4} )?(regular )?(season|year)|(entire|whole) (\d{4} )?season|end(s|ed|ing)? his (\d{4} )?season/i;
 
 const _availF = g => Math.max(0, Math.min(1, 1 - (Number(g) || 0) / AVAILABILITY_GAMES));
 // Feed status -> the vocabulary tools/availability.json uses. ESPN's top-level
@@ -2168,18 +2184,32 @@ function _availKickoff(year) {
   const first = new Date(Date.UTC(year, 8, 1)).getUTCDay();
   return Date.UTC(year, 8, 1 + ((8 - first) % 7) + 3);
 }
+// The regular-season week a moment falls in, counted the way gamesOut is
+// read everywhere (Weeks 1..gamesOut are the weeks missed): the week turns on
+// the Tuesday after Monday night, so a Tuesday IR placement is in the week
+// AFTER the game just played. Before kickoff it is Week 1.
+function _availWeekAt(ms, kickoff) {
+  if (!Number.isFinite(ms)) return 1;
+  return Math.max(1, Math.floor((ms - (kickoff - 2 * 86400000)) / (7 * 86400000)) + 1);
+}
 // Games missed: whole weeks between kickoff and ESPN's return date, never below
 // the list's own minimum, 17 when the return date is past the season or the
 // comment says season-ending. Bye weeks are ignored on purpose — the file's
 // own convention is "first eligible Week 5" = 4. Returns 0 to say "not a
 // season line change" (a return inside AVAIL_MIN_GAMES, or a plain "Out" with
 // no date to go on).
-function _availGamesOut(entry, kickoff, m) {
+//
+// gamesOut counts from Week 1, so a reserve placement with no return date is
+// the list's minimum counted from the week the feed was pulled in, not from
+// kickoff: a Week 5 IR placement is out through Week 8 at least, and until
+// 7 Oct 2026 it was read as "out Weeks 1-4", which put a man placed on IR
+// that morning back on the week board at his full line the same afternoon.
+function _availGamesOut(entry, kickoff, m, nowMs) {
   const text = String((entry && entry.shortComment) || '') + ' ' + String((entry && entry.longComment) || '');
   if (AVAIL_SEASON_ENDING.test(text)) return AVAILABILITY_GAMES;
   const ret = Date.parse(String(((entry && entry.details) || {}).returnDate || ''));
   const weeks = Number.isFinite(ret) ? Math.floor((ret - kickoff) / (7 * 86400000)) : null;
-  if (weeks === null) return m.needsDate ? 0 : m.min;
+  if (weeks === null) return m.needsDate ? 0 : Math.min(AVAILABILITY_GAMES, _availWeekAt(nowMs, kickoff) - 1 + m.min);
   if (weeks >= AVAILABILITY_GAMES) return AVAILABILITY_GAMES;
   if (m.reserve) return Math.max(m.min, weeks);
   return weeks >= m.min ? weeks : 0;
@@ -2197,15 +2227,32 @@ function _availBoardIndex() {
 }
 // The feed, reduced to board players on a reserve list. Same shape per entry as
 // a tools/availability.json row, keyed like AVAILABILITY.
-function buildAvailabilityOverlay(feed) {
+//
+// `prior` is the live row the last pull wrote. ESPN's report is a list of men
+// with something to say about them this week, not a register of who is on
+// reserve: a player whose placement ended his year drops off it once the
+// news is old (Jaxson Dart, IR on 23 Sep 2026, was gone from the feed by
+// 7 Oct with Jameis Winston listed Active in his place), and every one of
+// the four preseason season-enders in tools/availability.json is "not on the
+// injury report" by October. The row used to be rebuilt from the feed alone,
+// so the day ESPN stopped mentioning Dart the live list forgot him and the
+// week board had him back at QB10 on a full line. Now a prior entry the feed
+// no longer MENTIONS AT ALL is carried while its window is open (he is out
+// through Week gamesOut and it is not past that week). An entry the feed
+// still lists in any status -- Active, Questionable, back on IR-R -- is the
+// feed's to decide, exactly as before. A hand entry at gamesOut 0 in the
+// committed block is an explicit reinstatement and ends a carry.
+function buildAvailabilityOverlay(feed, prior) {
   const teams = feed && Array.isArray(feed.injuries) ? feed.injuries : [];
   const stamp = Date.parse(String((feed && feed.timestamp) || ''));
   const asOf = new Date(Number.isFinite(stamp) ? stamp : Date.now()).toISOString();
+  const nowMs = Date.parse(asOf);
   const year = Number(feed && feed.season && feed.season.year) || Number(asOf.slice(0, 4));
   const kickoff = _availKickoff(year);
   const board = _availBoardIndex();
   const players = {};
   const weekly = {};
+  const mentioned = new Set();
   const skipped = { unlisted: 0, weekToWeek: 0, short: 0 };
   let entries = 0;
   for (const t of teams) for (const e of (t && Array.isArray(t.injuries)) ? t.injuries : []) {
@@ -2215,6 +2262,7 @@ function buildAvailabilityOverlay(feed) {
     const key = _oddsNorm(a.displayName) + '|' + pos;
     const p = board.get(key);
     if (!p) { skipped.unlisted++; continue; }
+    mentioned.add(key);
     const type = String((e.details || {}).type || '').trim();
     const note = ((type && !/^(Undisclosed|Suspension|Personal)$/i.test(type) ? type + ': ' : '') + String(e.shortComment || '').trim()).slice(0, 160);
     // This week first, and independently: a Questionable tag reaches no other
@@ -2225,13 +2273,25 @@ function buildAvailabilityOverlay(feed) {
     }
     const m = _availStatusOf(e);
     if (!m) { skipped.weekToWeek++; continue; }
-    const gamesOut = _availGamesOut(e, kickoff, m);
+    const gamesOut = _availGamesOut(e, kickoff, m, nowMs);
     if (!gamesOut) { skipped.short++; continue; }
     if (players[key] && players[key].gamesOut >= gamesOut) continue;   // two entries for one man: the longer absence
     players[key] = { name: p.name, position: p.position, team: p.team, status: m.status, gamesOut, note,
                      source: 'ESPN injury feed ' + asOf.slice(0, 10), asOf: asOf.slice(0, 10) };
   }
-  return { players, weekly, matched: Object.keys(players).length, weeklyMatched: Object.keys(weekly).length,
+  const matched = Object.keys(players).length;   // the feed's own count: a carry never makes a thin pull look whole
+  const carried = [];
+  const week = _availWeekAt(nowMs, kickoff);
+  for (const [key, c] of Object.entries(prior || {})) {
+    if (players[key] || mentioned.has(key) || !board.get(key)) continue;
+    const g = Number(c && c.gamesOut) || 0;
+    if (g < week) continue;                                            // out through Week g, and that week has passed
+    const hand = AVAILABILITY[key];
+    if (hand && !(Number(hand.gamesOut) > 0)) continue;                 // reinstated by hand
+    players[key] = { ...c, gamesOut: g, carried: true };
+    carried.push(key);
+  }
+  return { players, weekly, matched, carried, weeklyMatched: Object.keys(weekly).length,
            teams: teams.length, entries, skipped, asOf };
 }
 // committed ∪ live, live winning per player except downward on gamesOut (see the
@@ -2243,7 +2303,8 @@ function availabilityMerge(committed, live) {
   for (const [k, l] of Object.entries(live || {})) {
     const cg = out[k] ? out[k].committedGamesOut : 0;
     out[k] = { status: l.status, gamesOut: Math.max(Number(l.gamesOut) || 0, cg), note: l.note || '',
-               asOf: l.asOf || '', source: l.source || '', live: true, committedGamesOut: cg };
+               asOf: l.asOf || '', source: l.source || '', live: true, committedGamesOut: cg,
+               ...(l.carried ? { carried: true } : {}) };   // the feed stopped mentioning him; see buildAvailabilityOverlay
   }
   return out;
 }
@@ -4143,10 +4204,14 @@ async function runAvailabilityRefresh(env) {
   let feed;
   try { feed = await fetchInjuriesEspn(); }
   catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
+  // The last good row, so a man the feed has stopped mentioning is not
+  // forgotten while he is still out (see buildAvailabilityOverlay). A row
+  // too old to serve is too old to carry, which availabilityCacheRead decides.
+  const prior = await availabilityCacheRead(env);
   let built;
-  try { built = buildAvailabilityOverlay(feed); }
+  try { built = buildAvailabilityOverlay(feed, prior && prior.players); }
   catch (e) { return { ok: false, error: 'build failed: ' + ((e && e.message) || 'failed') }; }
-  const info = { teams: built.teams, entries: built.entries, matched: built.matched, weeklyMatched: built.weeklyMatched, skipped: built.skipped, asOf: built.asOf };
+  const info = { teams: built.teams, entries: built.entries, matched: built.matched, carried: built.carried, weeklyMatched: built.weeklyMatched, skipped: built.skipped, asOf: built.asOf };
   if (built.teams < AVAIL_MIN_TEAMS) return { ok: false, error: 'thin_feed', ...info };
   if (built.matched < AVAIL_MIN_MATCHED) return { ok: false, error: 'insufficient_coverage', ...info };
   await availabilityCacheWrite(env, built);
@@ -4172,7 +4237,7 @@ async function availabilityReport(env) {
     const p = byKey.get(key) || {};
     return { key, name: p.name || key.split('|')[0], position: p.position || key.split('|')[1], team: p.team || '',
              status: a.status, gamesOut: a.gamesOut, committedGamesOut: a.committedGamesOut,
-             from: a.live ? 'live' : 'committed', asOf: a.asOf || '',
+             from: a.carried ? 'carried' : a.live ? 'live' : 'committed', asOf: a.asOf || '',
              factor: +_availF(a.gamesOut).toFixed(3), rowFactor: +_availRowFactor(key).toFixed(3), note: a.note || '' };
   }).sort((x, y) => x.position.localeCompare(y.position) || x.name.localeCompare(y.name));
   return {
@@ -5696,7 +5761,7 @@ async function _marketHistoryGamesRead(env, ids) {
 // isolate paid them again every five minutes, every cold isolate paid them on
 // arrival, and the quarter-hour cron paid them on every tick. One warm isolate
 // alone could spend the day's allowance; the account did, three times in
-// twelve days (HANDOFF §120, §125, §127), and when D1 refused reads the
+// twelve days (HANDOFF §120, §125, §130), and when D1 refused reads the
 // schedule row went with it and every in-season page read "The board did not
 // answer."
 //
@@ -6868,9 +6933,15 @@ function scoreAny(stats, position, rules, games, opts) {
 const BOARDS_CONTRACT = 1;
 const ROS_LAST_WEEK_DEFAULT = 17;          // Week 18 is out unless the league says otherwise
 const PLAYOFF_WEEKS = [15, 16, 17];
+// Two more on 10 Oct 2026 for /rankings, whose horizon row became the five
+// a manager actually reasons in: this week, next week, the stretch to the
+// playoffs, the playoffs, the season. `next3` stays for the newsroom, the
+// trade finder and the Wednesday snapshot, which were built on it.
 const HORIZONS = {
   week: { key: 'week', label: 'This Week' },
+  next: { key: 'next', label: 'Next Week', span: 1 },
   next3: { key: 'next3', label: 'Next 3 Weeks', span: 3 },
+  untilPlayoffs: { key: 'untilPlayoffs', label: 'Get Me to the Playoffs' },
   ros: { key: 'ros', label: 'Rest of Season' },
   playoffs: { key: 'playoffs', label: 'Fantasy Playoffs: Weeks 15-17', weeks: PLAYOFF_WEEKS }
 };
@@ -7111,6 +7182,12 @@ function horizonWeeks(horizon, state, through) {
   if (cur == null) return [];
   // A week that is active still counts: its games have not all been played.
   if (horizon === 'week') return [cur];
+  // NEXT WEEK is one week, the one after the clock's, and in Week 18 there is
+  // none. UNTIL THE PLAYOFFS runs from now to the week before they start
+  // (a league's own start, when it says one, arrives as `through`); once
+  // they have begun there is no stretch left and the list is empty.
+  if (horizon === 'next') return cur + 1 <= 18 ? [cur + 1] : [];
+  if (horizon === 'untilPlayoffs') { const stop = Math.max(1, Math.min(18, Number(through) || PLAYOFF_WEEKS[0] - 1)); const o = []; for (let w = cur; w <= stop; w++) o.push(w); return o; }
   if (horizon === 'next3') { const o = []; for (let w = cur; w <= 18 && o.length < 3; w++) o.push(w); return o; }
   const o = []; for (let w = cur; w <= last; w++) o.push(w); return o;
 }
@@ -7314,6 +7391,12 @@ function buildBoards(ctx, opts) {
   const weeks = horizonWeeks(horizon, state, o.through);
   const ratings = ctx.ratings;
   const curWeek = state && state.ok && state.week.type === 'REG' ? state.week.number : null;
+  // A horizon with no week left in it (Next Week in Week 18, Get Me to the
+  // Playoffs once they have begun) is refused outright rather than served as
+  // a board of zeros, on which every player would rank first.
+  if (!weeks.length && (horizon === 'next' || horizon === 'untilPlayoffs')) {
+    return { ok: false, error: 'no_weeks', contract: BOARDS_CONTRACT, horizon: { ...HORIZONS[horizon], weeks: [], through: null }, currentWeek: curWeek, players: [] };
+  }
   const wantPos = o.position ? String(o.position).toUpperCase() : null;
   const posMatch = p => !wantPos || wantPos === 'ALL' || p === wantPos ||
     (wantPos === 'FLEX' && (p === 'RB' || p === 'WR' || p === 'TE')) || (wantPos === 'DST' && p === 'DEF');
@@ -7565,9 +7648,34 @@ function buildBoards(ctx, opts) {
       r.why = r.marketOut ? _explainMarketOut(r) : explainDelta(r, mv, wk ? wk.env : null, r.marketDelta);
     }
   }
+  // Rest of season, a second ranking on the AVERAGE per game (10 Oct 2026).
+  // A total rewards games left as much as the player: an equal starter with
+  // his bye still to come, or a back returning from injury, sits under one
+  // with more games in the sum. The rest-of-season pages let the reader rank
+  // either way. Drawn here, beside the totals and by the same rules (points
+  // descending, name breaking a tie; within position, FLEX pooled), and
+  // classified by marketDelta itself, so the board in the browser divides
+  // nothing and invents no threshold. A player with no games left has no
+  // average and no rank.
+  if (horizon === 'ros') {
+    const F = ['consensus', 'vegas', 'ironTuna'];
+    for (const r of rows) {
+      r.perGame = {};
+      for (const f of F) r.perGame[f] = { points: r.games > 0 && Number.isFinite(r[f].points) ? _oddsRound(r[f].points / r.games) : null, rank: null, flexRank: null };
+    }
+    const avg = (list, f, out) => list.filter(r => r.perGame[f].points != null)
+      .sort((x, y) => (y.games > 0 ? y[f].points / y.games : 0) - (x.games > 0 ? x[f].points / x.games : 0) || (x.name < y.name ? -1 : 1))
+      .forEach((r, i) => { r.perGame[f][out] = i + 1; });
+    for (const g of Object.values(groups)) for (const f of F) avg(g, f, 'rank');
+    for (const f of F) avg(flex, f, 'flexRank');
+    for (const r of rows) {
+      const pg = r.perGame;
+      pg.marketDelta = marketDelta(pg.consensus.points, pg.consensus.rank, pg.vegas.points, pg.vegas.rank);
+    }
+  }
   return {
     ok: rows.length > 0, contract: BOARDS_CONTRACT,
-    horizon: { ...HORIZONS[horizon], weeks, through: horizon === 'ros' ? (Number(o.through) || ROS_LAST_WEEK_DEFAULT) : null },
+    horizon: { ...HORIZONS[horizon], weeks, through: horizon === 'ros' ? (Number(o.through) || ROS_LAST_WEEK_DEFAULT) : horizon === 'untilPlayoffs' ? (Number(o.through) || PLAYOFF_WEEKS[0] - 1) : null },
     season: ctx.sched ? ctx.sched.season : null,
     currentWeek: curWeek, phase: state && state.ok ? state.phase : null,
     scoring: { preset: o.preset || 'ppr', label: SCORING_PRESET_LABEL[o.preset || 'ppr'] || 'PPR' },
@@ -7868,6 +7976,13 @@ function detectInsights(input) {
 // called to agree. /the-line's floor is this number and not its own.
 const GAP_AGREE = 2.0;
 const EDGE_CONTRACT = 1;
+// The season-to-date lists on /api/vegas-edge (seasonForm): games a player
+// must have played before his average counts, the smallest gap in points a
+// game that is a figure rather than noise, and how many of each to send.
+// LONG_CONSENSUS_FLOOR: a consensus under this is a stale line on a backup
+// promoted to starter (Kirk Cousins at 0.6 in Week 5, 2026), not a price, and
+// the gap to his season average would be the promotion restated.
+const LONG_MIN_GAMES = 3, LONG_MIN_GAP = 1.5, LONG_LIST = 15, LONG_CONSENSUS_FLOOR = 3;
 // The prop board: every player market a book has quoted, one row per player
 // per market, in the order a reader scans a slate.
 const PROP_BOARD_ORDER = ['anytimeTD', 'passYd', 'passTD', 'passInt', 'rushYd', 'rushAtt', 'rushTD', 'rec', 'recYd', 'recTD'];
@@ -7925,10 +8040,46 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
     consensusRank: p.consensus.rank, vegasRank: p.vegas.rank, ironTunaRank: p.ironTuna.rank,
     consensusPoints: p.consensus.points, vegasPoints: p.vegas.points, ironTunaPoints: p.ironTuna.points,
     opponent: p.weeks && p.weeks[0] ? p.weeks[0].opponent : null,
-    delta: p.marketDelta, confidence: p.vegas.confidence, basis: p.vegas.basis, why: p.why ? p.why.summary : '' });
+    delta: p.marketDelta, confidence: p.vegas.confidence, basis: p.vegas.basis, why: p.why ? p.why.summary : '',
+    // Why a gap can be no disagreement at all: the man is hurt, or the books
+    // have left him off a priced game. A fade on a player ruled out is the
+    // injury report restated, and the homepage's market row must not lead
+    // with one (Lamar Jackson, Market 0.0 and consensus 18.9, Oct. 2026).
+    injury: p.injury ? p.injury.status : null, marketOut: p.marketOut ? p.marketOut.status : null });
   const vsExperts = {
     buys: sig.filter(p => p.marketDelta.points > 0).sort((a, b) => (b.marketDelta.rank || 0) - (a.marketDelta.rank || 0) || b.marketDelta.points - a.marketDelta.points).slice(0, 12).map(brief),
     fades: sig.filter(p => p.marketDelta.points < 0).sort((a, b) => (a.marketDelta.rank || 0) - (b.marketDelta.rank || 0) || a.marketDelta.points - b.marketDelta.points).slice(0, 12).map(brief)
+  };
+  // SEASON TO DATE AGAINST THE PRICE: what a player has averaged through
+  // the games he has played, set against what the consensus projects him for
+  // this week. The two weekly lists above are one week's disagreement; this is
+  // the long one, the player who keeps beating the number the consensus
+  // keeps putting on him, and the one who keeps falling short of it. The
+  // homepage rotates them beside the weekly buys and fades.
+  //
+  // LONG_MIN_GAMES of his own before a season average is a figure: a single
+  // big Sunday is not a trend. Skill positions only, for the reason vsExperts
+  // gives. A player listed with anything but Active or Probable is left off:
+  // his average is a healthy man's, and this week's consensus may already
+  // carry the injury, so the gap would be the report restated (the Lamar
+  // Jackson case again). The books leaving him off a priced game is the same.
+  const formed = players.filter(p => p.pos !== 'K' && p.pos !== 'DEF' && p.form && p.form.games >= LONG_MIN_GAMES
+    && Number.isFinite(p.form.ppg) && p.consensus.points >= LONG_CONSENSUS_FLOOR && p.vegas.points > 0 && !p.marketOut
+    && !(p.injury && p.injury.status && !/^(active|probable)$/i.test(String(p.injury.status))));
+  const formBrief = p => ({ ...brief(p), seasonPpg: p.form.ppg, seasonGames: p.form.games, formGap: _oddsRound(p.form.ppg - p.consensus.points) });
+  const seasonForm = {
+    minGames: LONG_MIN_GAMES,
+    over: formed.filter(p => p.form.ppg - p.consensus.points >= LONG_MIN_GAP).sort((a, b) => (b.form.ppg - b.consensus.points) - (a.form.ppg - a.consensus.points)).slice(0, LONG_LIST).map(formBrief),
+    under: formed.filter(p => p.consensus.points - p.form.ppg >= LONG_MIN_GAP).sort((a, b) => (a.form.ppg - a.consensus.points) - (b.form.ppg - b.consensus.points)).slice(0, LONG_LIST).map(formBrief),
+    // THE FORWARD PAIR (2026-10-10): the same gap read as a call on what he
+    // will do, printed as "Long term overperform" and "Long term underperform"
+    // beside the record above. His season says the consensus is off, and Iron
+    // Tuna's own projection for this week must not say the opposite: an
+    // overperformer Iron Tuna projects under his consensus is a streak the
+    // model does not believe, and no call. Drawn from the whole formed pool,
+    // not from the fifteen above, so a disagreement there cannot thin it.
+    likelyOver: formed.filter(p => p.form.ppg - p.consensus.points >= LONG_MIN_GAP && p.ironTuna.points >= p.consensus.points).sort((a, b) => (b.form.ppg - b.consensus.points) - (a.form.ppg - a.consensus.points)).slice(0, LONG_LIST).map(formBrief),
+    likelyUnder: formed.filter(p => p.consensus.points - p.form.ppg >= LONG_MIN_GAP && p.ironTuna.points <= p.consensus.points).sort((a, b) => (a.form.ppg - a.consensus.points) - (b.form.ppg - b.consensus.points)).slice(0, LONG_LIST).map(formBrief)
   };
   // Movers: every player market with a real move, biggest first.
   const movers = [];
@@ -8032,7 +8183,7 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   return { ok: true, contract: EDGE_CONTRACT, week: state && state.ok ? state.week.label : null, hasProps,
            note: hasProps ? null : 'No priced player prop has reached this board. Books post props; none are in the feed behind this build, so every player number here is derived from the posted game lines. The game board is quoted.',
            played, playedNote,
-           vsExperts, movers: movers.slice(0, 40), tdBoard, volumeBoard,
+           vsExperts, seasonForm, movers: movers.slice(0, 40), tdBoard, volumeBoard,
            propBoard: propBoard.slice(0, PROP_BOARD_CAP), propSummary,
            gameEnvironments, hiddenSignals: hidden };
 }
@@ -8518,10 +8669,12 @@ async function rosUpdatePayload(env, opts) {
   }
   return { ok: live.ok, contract: 1, season: live.season, currentWeek: live.currentWeek,
            featured: { builtAt: cur ? cur.builtAt : null, week: cur ? cur.week : null, previousWeek: prev ? prev.week : null },
+           // The cards on /rankings, one per forward horizon its row offers.
            choices: [
-             { horizon: 'next3', title: 'Next 3 Weeks', blurb: 'For managers making immediate lineup, trade and roster decisions.' },
-             { horizon: 'ros', title: 'Rest of Season', blurb: 'Overall player value for the remainder of the fantasy season.' },
-             { horizon: 'playoffs', title: 'Fantasy Playoffs: Weeks 15-17', blurb: 'Players ranked specifically for the fantasy playoffs.' } ],
+             { horizon: 'next', title: 'Next Week', blurb: 'The week after this one, before the books have priced it.' },
+             { horizon: 'untilPlayoffs', title: 'Get Me to the Playoffs', blurb: 'Every week from now until the fantasy playoffs begin, for managers who have to get there first.' },
+             { horizon: 'playoffs', title: 'Playoffs: Weeks 15-17', blurb: 'Players ranked specifically for the fantasy playoffs.' },
+             { horizon: 'ros', title: 'Rest of Season', blurb: 'Overall player value for the remainder of the fantasy season.' } ],
            risers: movers.risers, fallers: movers.fallers, marketVsRos: marketVsRos.slice(0, 20),
            snapshotNote: cur && prev ? null : cur ? 'One weekly snapshot exists; risers and fallers appear once a second Wednesday has run.' : 'No Wednesday snapshot has run yet.' };
 }
@@ -8953,7 +9106,7 @@ function weekGames(sched, week, now) {
 //                   gone final; 'until-kickoff': the availability picture has
 //                   changed and a target game is still to kick off). One slug,
 //                   several versions, never a second story.
-//   rivalry: true   the one place the Vega/Brooks disagreement may surface,
+//   rivalry: true   the one place the Market/Rankings disagreement may surface,
 //                   and only when rivalryGate() says the numbers earn it.
 //   absorbs         the legacy kinds this package replaced (LEGACY_CONTENT).
 const CONTENT_KINDS = {
@@ -9061,21 +9214,21 @@ const LEGACY_CONTENT = {
   'team-recaps':                 { title: 'Team-by-Team Recaps', slot: 'Mon 7 AM', disposition: 'retired', destination: 'what-sunday-taught-us', reason: 'A conventional recap. Its per-club usage data feeds What Sunday Taught Us.' },
   'mnf-breakdown':               { title: 'Monday Night: What We Learned', slot: 'Tue 7 AM', disposition: 'merged', destination: 'ros-rankings', reason: 'What Monday night changed opens the Tuesday rankings.' },
   'early-rankings':              { title: 'Early Rankings for Next Week', slot: 'Mon 6 AM', disposition: 'merged', destination: 'ros-rankings', reason: 'The whole board for the coming week, ranked a day before Tuesday ranked it again across four horizons. Monday 6 AM is now What Tuna Got Right.' },
-  'what-they-arent-telling-you': { title: "What They Aren't Telling You", slot: 'Tue 7 AM', disposition: 'merged', destination: 'underrated', reason: 'Same premise, one player, Thursday, Nate Vega.' },
+  'what-they-arent-telling-you': { title: "What They Aren't Telling You", slot: 'Tue 7 AM', disposition: 'merged', destination: 'underrated', reason: 'Same premise, one player, Thursday, the Market Desk.' },
   'opportunity-report':          { title: 'The Opportunity Report', slot: 'Wed 7 AM', disposition: 'merged', destination: 'wideout-wednesday', reason: 'Targets to Wideout Wednesday, backfields to Tailback Tuesday.' },
   'rankings-update':             { title: 'Forward-Looking Rankings Update', slot: 'Wed 7 AM', disposition: 'merged', destination: 'ros-rankings', reason: 'One ranking engine, four horizons, Tuesday.' },
   'final-read':                  { title: 'The Final Read', slot: 'Thu 7 AM', disposition: 'merged', destination: 'weekend-preview', reason: 'Start/sit pressure and market vs consensus belong in the weekend preview.' },
-  'tnf-aftermath':               { title: 'Thursday Night Aftermath', slot: 'Fri 7 AM', disposition: 'merged', destination: 'tnf-what-matters', reason: 'Re-cut from recap to usage and sustainability, Mike Raines.' },
+  'tnf-aftermath':               { title: 'Thursday Night Aftermath', slot: 'Fri 7 AM', disposition: 'merged', destination: 'tnf-what-matters', reason: 'Re-cut from recap to usage and sustainability, the Usage Desk.' },
   'weekend-game-plan':           { title: 'The Weekend Game Plan', slot: 'Fri 7 AM', disposition: 'merged', destination: 'weekend-preview', reason: 'The game cards are the weekend preview’s DFS slate overview.' },
-  'what-changed-today':          { title: 'What Changed Today?', slot: 'Sun 8 PM', disposition: 'merged', destination: 'what-sunday-taught-us', reason: 'Same slot, same question, Jack Mercer, with signal/noise labels and a DFS lens.' },
+  'what-changed-today':          { title: 'What Changed Today?', slot: 'Sun 8 PM', disposition: 'merged', destination: 'what-sunday-taught-us', reason: 'Same slot, same question, the Editorial Desk, with signal/noise labels and a DFS lens.' },
   'snf-what-we-learned':         { title: 'Sunday Night: What We Learned', slot: 'Mon 1 AM', disposition: 'merged', destination: 'what-sunday-taught-us', reason: 'A live update of the Sunday piece once the night game is final, not a second story.' },
   'waiver-watch':                { title: 'Waiver Watch (static page)', slot: 'one-off', disposition: 'merged', destination: 'pickup-advisor', reason: 'The Wednesday Pickup Advisor is the standing feature.' },
   'the-pick':                    { title: 'The Pick (daily story, two Routines)', slot: 'daily 12:00Z and 13:00Z', disposition: 'retired', destination: 'underrated', reason: 'Draft-priced; two Routines wrote one column. The one-player-a-day idea is Thursday’s Most Underrated Player.' },
   'lead-story':                  { title: 'Lead story refresh (Routine, every 6h)', slot: '58 */6 * * *', disposition: 'retired', destination: 'desk-lead', reason: 'The front-page lead is the newest desk piece in the regular season. The /lead archive stays readable.' },
   'camp-desk':                   { title: 'Camp & preseason desk (Routine)', slot: 'daily 15:00Z', disposition: 'retired', destination: 'last-minute-intel', reason: 'Camp is over. Injury and role tracking runs through the availability and depth-chart jobs, Last-Minute Intel and breaking news.' },
-  'play-caller-premium':         { title: 'Play-Caller Premium daily entries (Routine)', slot: 'daily 12:00Z, hard stop 2026-09-13', disposition: 'retired', destination: 'quarterback-monday', reason: 'Coaching and scheme is Chris Dalton’s beat.' },
+  'play-caller-premium':         { title: 'Play-Caller Premium daily entries (Routine)', slot: 'daily 12:00Z, hard stop 2026-09-13', disposition: 'retired', destination: 'quarterback-monday', reason: 'Coaching and scheme is the Quarterback Desk’s beat.' },
   'x-draft-posts':               { title: 'X/Threads auction, snake and best-ball threads (three weekday crons)', slot: '13:00, 16:00, 19:00 UTC weekdays', disposition: 'retired', destination: 'none', reason: 'Draft-day insights. Gated off in the regular season; DRAFT_SEASON_SOCIAL=1 re-enables them for 2027.' },
-  'the-tell':                    { title: 'The Tell (Routine, Tuesdays)', slot: 'Tue 14:00Z', disposition: 'retained', destination: 'the-tell', reason: 'A distinct function (rank versus projection composition) nothing in the calendar duplicates. Registered on Evan Brooks’s desk.' },
+  'the-tell':                    { title: 'The Tell (Routine, Tuesdays)', slot: 'Tue 14:00Z', disposition: 'retained', destination: 'the-tell', reason: 'A distinct function (rank versus projection composition) nothing in the calendar duplicates. Registered on the Rankings Desk.' },
   'projections-update':          { title: 'Projections update (Routine, daily Aug–Sep)', slot: '0 10 * 8,9 *', disposition: 'retained', destination: 'data', reason: 'A data job, not a story; the ROS boards price off it. Ends with September; a weekly cadence is recommended.' }
 };
 // Sections per lens. A section named here is what the writer is asked for and
@@ -9695,7 +9848,7 @@ function validateDraft(text, allowed) {
   // sentence end.
   // The run must not cross that inserted break, so the words of a name are
   // separated by a space and never by the newline: \s matches both, which is
-  // why "Herbert. Vega called the buy" still read as a man named Herbert Vega.
+  // why "Herbert. Rankings called the buy" still read as a man named Herbert Rankings.
   const bounded = String(text).replace(/([a-z0-9)][.!?;:])\s+(?=[A-Z])/g, '$1\n');
   for (const m of bounded.matchAll(/\b([A-Z][a-z'\u2019.-]+(?:[^\S\n][A-Z][A-Za-z'\u2019.-]+){1,2})\b/g)) {
     const n = m[1];
@@ -9761,7 +9914,7 @@ async function writePiece(env, kind, brief) {
 // -- the newsroom ----------------------------------------------------------------
 // The in-season intelligence desk: eight AI analyst personas with fixed
 // beats, one research packet per package, a Weekly Fantasy lens and a DFS
-// lens written from the same facts, analyst memory, the one Vega/Brooks
+// lens written from the same facts, analyst memory, the one Market/Rankings
 // rivalry, a significance-scored breaking-news workflow, and an admin
 // control center with a pause switch. Nothing here invents a fact: the
 // packet is built by arithmetic over the boards, the usage file, the injury
@@ -9776,7 +9929,7 @@ const NEWSROOM_FLAGS = {
   DFS_CONTENT:           { dflt: true,  note: 'the DFS lens on every package and the DFS metrics' },
   MARKET_SLIDER:         { dflt: true,  note: 'the Fantasy Analysis / Market Intelligence control and /api/blend' },
   ANALYST_PERSONAS:      { dflt: true,  note: 'bylines and voices; off publishes every piece under Iron Tuna' },
-  RIVALRY:               { dflt: true,  note: 'the single Vega/Brooks rivalry line, when the numbers earn it' },
+  RIVALRY:               { dflt: true,  note: 'the single Market Desk / Rankings Desk rivalry line, when the numbers earn it' },
   BREAKING_NEWS:         { dflt: true,  note: 'the significance-scored breaking-news scan and pieces' },
   PERSONALIZED_RANKINGS: { dflt: true,  note: 'rankings re-scored at the saved league on the pages' },
   // The league a reader saves, and everything that reads it.
@@ -9784,7 +9937,13 @@ const NEWSROOM_FLAGS = {
   PERSONALIZED_WAIVERS:  { dflt: true,  note: 'the Pickup Advisor on the players actually available in a synced league' },
   PERSONALIZED_LINEUP:   { dflt: true,  note: 'Best Lineup, Your Matchup, roster alerts and playoff readiness from a synced roster' },
   PERSONALIZED_TRADES:   { dflt: true,  note: 'trade partners and targets across a synced league’s rosters' },
-  PERSONALIZED_STORIES:  { dflt: true,  note: 'the On Your Roster / Available in Your League callouts on stories and player cards' }
+  PERSONALIZED_STORIES:  { dflt: true,  note: 'the On Your Roster / Available in Your League callouts on stories and player cards' },
+  // The one connector left, and the one that never stores a credential: a CBS
+  // league read from the reader's own signed-in CBS tab by the extension and
+  // posted here as a snapshot. On by default because the worker only ever
+  // validates and writes what the reader's browser sends; FLAG_CBS_SYNC=0
+  // refuses the route.
+  CBS_SYNC:              { dflt: true,  note: 'the CBS browser import: POST /api/leagues/connect from the Iron Tuna CBS Connector extension' }
 };
 function flagOn(env, name) {
   const f = NEWSROOM_FLAGS[name]; if (!f) return false;
@@ -9797,61 +9956,69 @@ function flagReport(env) {
 }
 
 // ── the staff ──────────────────────────────────────────────────────────────
-// Eight personas. `voice` is what the writer is told; `rivalry` names the ONE
-// formal rivalry on the desk (Vega and Brooks, market intelligence against
-// traditional fantasy analysis). Nobody else has one, and newsroomAudit()
-// fails if a second pair ever appears here.
+// Eight desks. `voice` is what the writer is told; `rivalry` names the ONE
+// formal rivalry on the desk (the Market Desk and the Rankings Desk, market
+// intelligence against traditional fantasy analysis). Nobody else has one,
+// and newsroomAudit() fails if a second pair ever appears here.
+//
+// NO FICTIONAL PEOPLE. Until 2026-10-10 each desk carried an invented human
+// name and a surname URL (/analysts/vega), and the prose wrote about "him".
+// The names are gone: a byline now credits the desk, and nothing on the
+// site reads as a person who does not exist. `id` is the storage key and
+// stays what it was, because content_pieces, analyst_calls, the rivalry JSON
+// and ninety static pages carry it; `slug` is the public URL and is the only
+// place a reader meets the key. The old surname URLs 301 to the slug.
 const ANALYSTS = {
-  mercer: { id: 'mercer', name: 'Jack Mercer', role: 'Editor-in-Chief', avatar: 'JM',
+  mercer: { id: 'mercer', slug: 'editor', name: 'Editorial Desk', role: 'Editor-in-Chief', avatar: 'ED',
     specialty: ['Editorial synthesis', 'Major fantasy developments', 'Cross-position conclusions'],
     personality: 'Confident, decisive and skeptical.',
-    philosophy: 'His question is "So what?" A statistic without an action attached is trivia.',
+    philosophy: 'The question is "So what?" A statistic without an action attached is trivia.',
     assignments: ['What Sunday Taught Us', 'What Tuna Got Right', 'Breaking stories', 'Cross-position analysis'],
     voice: 'Decisive. Opens with the conclusion, then the evidence. Asks "so what" of every number and answers it in the same breath. Impatient with statistics that do not change a decision. Short declarative sentences; no throat-clearing.',
     rivalry: null },
-  vega: { id: 'vega', name: 'Nate Vega', role: 'Market Intelligence Analyst', avatar: 'NV',
+  vega: { id: 'vega', slug: 'market', name: 'Market Desk', role: 'Market Intelligence Analyst', avatar: 'MI',
     specialty: ['Sportsbook props', 'Market movement', 'Implied player expectations', 'Consensus-vs-market discrepancies'],
     personality: 'Quantitative, confident, contrarian and mildly provocative.',
     philosophy: 'The market often knows before the fantasy consensus knows. A prop line is a forecast with money behind it; a ranking is a forecast with a byline behind it.',
     assignments: ['Market analysis', 'Market-driven rankings', 'Most Underrated Player', 'Market movers', 'DFS pricing discrepancies', 'The market side of the Fantasy / Market slider'],
-    voice: 'Leads with the line and what moved it. Treats a prop as evidence and a ranking as an opinion. Mildly provocative, never rude: he needles the consensus, not people. Quotes numbers, then says what they imply. Enjoys being early.',
+    voice: 'Leads with the line and what moved it. Treats a prop as evidence and a ranking as an opinion. Mildly provocative, never rude: it needles the consensus, not people. Quotes numbers, then says what they imply. Enjoys being early.',
     rivalry: 'brooks' },
-  brooks: { id: 'brooks', name: 'Evan Brooks', role: 'Fantasy Rankings Analyst', avatar: 'EB',
+  brooks: { id: 'brooks', slug: 'rankings', name: 'Rankings Desk', role: 'Fantasy Rankings Analyst', avatar: 'FR',
     specialty: ['Weekly and rest-of-season rankings', 'Talent, role and workload', 'Schedule', 'Positional evaluation', 'Trade value'],
     personality: 'Confident, measured and skeptical of overreacting to market movements.',
     philosophy: 'Markets provide useful information but do not replace football analysis. Sportsbooks optimize a market; they do not rank your flex.',
     assignments: ['Weekly rankings', 'Rest-of-season rankings', 'Running backs, receivers and tight ends', 'Trade Desk', 'The fantasy side of the Fantasy / Market slider'],
-    voice: 'Measured. Builds from role, workload and schedule to a rank, and says what would change his mind. Wants to see a player earn the opportunity before he pays for it. Respects the market as one input among several and says so plainly.',
+    voice: 'Measured. Builds from role, workload and schedule to a rank, and says what would change the call. Wants to see a player earn the opportunity before paying for it. Respects the market as one input among several and says so plainly.',
     rivalry: 'vega' },
-  raines: { id: 'raines', name: 'Mike Raines', role: 'Usage and Opportunity Analyst', avatar: 'MR',
+  raines: { id: 'raines', slug: 'usage', name: 'Usage Desk', role: 'Usage and Opportunity Analyst', avatar: 'UO',
     specialty: ['Snaps and routes', 'Targets and carries', 'Red-zone and goal-line opportunity', 'Deployment', 'Near misses and plays called back'],
     personality: 'Detail-obsessed and skeptical of conclusions drawn from a box score alone.',
     philosophy: 'Opportunity predicts tomorrow better than yesterday’s fantasy points do.',
     assignments: ['Last-Minute Intel', 'Sunday usage intelligence', 'Thursday Night: What Matters', 'Wideout Wednesday', 'Role changes and hidden opportunity'],
     voice: 'Counts things. Targets, carries, snaps, red-zone touches, and what share of the team each was. Distrusts a box score that the usage does not support and says which number is lying. Dry, precise, a little relentless.',
     rivalry: null },
-  dalton: { id: 'dalton', name: 'Chris Dalton', role: 'Quarterback and Offense Analyst', avatar: 'CD',
+  dalton: { id: 'dalton', slug: 'quarterback', name: 'Quarterback Desk', role: 'Quarterback and Offense Analyst', avatar: 'QB',
     specialty: ['Quarterbacks', 'Offensive systems', 'Passing volume and protection', 'Game script', 'Coaching and receiver relationships'],
     personality: 'Analytical, opinionated and system-oriented.',
     philosophy: 'A quarterback is the system he plays in. Volume, protection and the play-caller explain more than arm talent does.',
     assignments: ['Monday Night Football Preview', 'Thursday Night Football Preview', 'Quarterback Monday', 'QB rankings', 'Passing-game analysis'],
     voice: 'Thinks in systems: pass rate, protection, the play-caller’s tendencies, who the quarterback looks for on third down. Opinionated about scheme and willing to say a good player is in a bad system. Explains the game script before the fantasy points.',
     rivalry: null },
-  grant: { id: 'grant', name: 'Tyler Grant', role: 'Waiver and Roster Strategy Analyst', avatar: 'TG',
+  grant: { id: 'grant', slug: 'waivers', name: 'Waiver Desk', role: 'Waiver and Roster Strategy Analyst', avatar: 'WR',
     specialty: ['Waivers and FAAB', 'Deep pickups and stashes', 'Bench construction', 'Aggressive roster optimization'],
     personality: 'Practical, aggressive and conversational.',
     philosophy: 'The bottom of the roster should constantly earn its place.',
     assignments: ['Pickup Advisor', 'Stashes and deep sleepers', 'Injury beneficiaries'],
     voice: 'Talks to the reader like a league-mate who has already put in the claim. Practical about FAAB and bench spots, aggressive about churning the bottom of the roster, plain about what to drop. Conversational, never sloppy with a number.',
     rivalry: null },
-  porter: { id: 'porter', name: 'Sam Porter', role: 'Matchups and Special Teams Analyst', avatar: 'SP',
+  porter: { id: 'porter', slug: 'matchups', name: 'Matchups Desk', role: 'Matchups and Special Teams Analyst', avatar: 'MS',
     specialty: ['Matchups and schedule', 'Defenses', 'Kickers', 'Streaming decisions'],
     personality: 'Concise, dry and skeptical of unnecessary complexity.',
     philosophy: 'Most of a streaming decision is the opponent and the total. The rest is noise with a byline.',
     assignments: ['Weekend Preview', 'Kickers & Defenses', 'Streaming and matchup recommendations'],
     voice: 'Terse. Names the matchup, the total and the decision, and stops. Suspicious of any argument that needs more than two numbers. Dry humor, used sparingly.',
     rivalry: null },
-  park: { id: 'park', name: 'Lena Park', role: 'DFS Strategy Analyst', avatar: 'LP',
+  park: { id: 'park', slug: 'dfs', name: 'DFS Desk', role: 'DFS Strategy Analyst', avatar: 'DF',
     specialty: ['DFS salary and ownership', 'Leverage', 'Stacking and correlation', 'Cash, single-entry and large-field strategy', 'Showdown', 'Late swap'],
     personality: 'Calm, quantitative and focused on expected value.',
     philosophy: 'A good fantasy player is not automatically a good DFS play. Price and ownership decide.',
@@ -9859,6 +10026,10 @@ const ANALYSTS = {
     voice: 'Calm and quantitative. Every recommendation is a projection at a salary at an ownership. Separates cash from tournaments explicitly. Says when ownership is a model rather than a feed. Never excited, always specific.',
     rivalry: null }
 };
+// The public URL is the slug, never the storage id: /analysts/rankings, not
+// /analysts/brooks. Everything that prints a link to a desk goes through here.
+const ANALYST_BY_SLUG = Object.fromEntries(Object.values(ANALYSTS).map(a => [a.slug, a]));
+const analystUrl = a => (a && a.slug ? '/analysts/' + a.slug : '/analysts');
 const RIVALRY_PAIR = ['vega', 'brooks'];
 const ANALYST_HOUSE = { id: 'irontuna', name: 'Iron Tuna', role: 'The desk', avatar: 'IT', voice: 'Direct, analytical, actionable. No persona.' };
 function analystFor(env, id) {
@@ -9868,7 +10039,7 @@ function analystFor(env, id) {
 const AI_DISCLOSURE = 'Iron Tuna’s analysts are AI-powered editorial personas, not people. Each has a fixed beat, a stated analytical philosophy and a memory of its own published calls. Every number they print is computed from the site’s own data (the boards, the usage file, the injury list, the depth charts, the sportsbook line history and the DFS salaries you load); a piece whose prose named something the data does not contain is held, not published. The personalities are a way of organizing the analysis. The facts are the site’s.';
 
 // ── per-analyst head meta ──────────────────────────────────────────────────
-// /analysts/<id> is eight URLs served from ONE shell (analyst.html), which the
+// /analysts/<slug> is eight URLs served from ONE shell (analyst.html), which the
 // browser fills in from /api/analyst. The shell ships with the index page's
 // canonical, so without this every one of those eight URLs told a crawler "I am
 // really /analysts" while sitemap.xml advertised all eight — a self-canceling
@@ -9885,10 +10056,10 @@ const AI_DISCLOSURE = 'Iron Tuna’s analysts are AI-powered editorial personas,
 function analystSeo(env, pathname) {
   const m = /^\/analysts\/([a-z]+)\/?$/.exec(pathname);
   if (!m) return null;
-  const a = ANALYSTS[m[1]];
-  if (!a) return null;                       // an unknown id keeps the shell's own meta
+  const a = ANALYST_BY_SLUG[m[1]];
+  if (!a) return null;                       // an unknown slug keeps the shell's own meta
   if (!flagOn(env, 'ANALYST_PERSONAS')) return null;   // personas off: every piece is Iron Tuna's
-  const url = 'https://irontuna.com/analysts/' + a.id;
+  const url = 'https://irontuna.com' + analystUrl(a);
   // The specialty list is written sentence-case ("DFS salary and ownership",
   // "Sportsbook props"). Lower-casing the whole string turns DFS into dfs; not
   // lower-casing it drops capitals mid-sentence. So only the first word gives up
@@ -9896,9 +10067,7 @@ function analystSeo(env, pathname) {
   const beat = a.specialty
     .map((t) => (/^[A-Z]{2,}\b/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1)))
     .join(', ');
-  // No pronouns in the generated copy. The table writes about the male-named
-  // personas as "he" and about Lena Park with none at all, so a template that
-  // picked one would be guessing about half the desk to save four characters.
+  // No pronouns in the generated copy: a desk is not a person.
   const desc = a.name + ' is Iron Tuna\u2019s ' + a.role + ', an AI analyst persona covering '
     + beat + '. ' + a.philosophy + ' Every published call, and how it turned out, is on this page.';
   return {
@@ -9961,7 +10130,7 @@ function analystLd(a, url) {
 
 // ── /player/<slug> and /players ────────────────────────────────────────────
 // ~400 URLs served from ONE shell (player.html), which the browser fills in
-// from /player-search.js and /it-league.js. The same shape as /analysts/<id>
+// from /player-search.js and /it-league.js. The same shape as /analysts/<slug>
 // above, and it was wrong in the same way, only larger: the shell ships
 // noindex and canonicalises to /player, so all ~400 URLs told a crawler "I am
 // really the empty lookup box" — and the one word a reader actually searches
@@ -10243,25 +10412,25 @@ function rkPreHtml(pre) {
   const rows = pre.payload.players.slice(0, RK_PRERENDER_ROWS).map((p) => {
     const w0 = p.weeks && p.weeks[0];
     const opp = week
-      ? '<td>' + (!w0 || w0.bye ? '<span class="is-status">BYE</span>'
+      ? '<td class="rk-opp">' + (!w0 || w0.bye ? '<span class="is-status">BYE</span>'
           : e((w0.home ? 'vs ' : 'at ') + w0.opponent) + (w0.out ? ' <span class="is-status">OUT</span>' : '')) + '</td>'
-      : '<td class="num">' + (p.games == null ? '—' : p.games) + '</td>';
+      : '<td class="num rk-opp">' + (p.games == null ? '—' : p.games) + '</td>';
     const d = p.marketDelta || {};
     const cls = d.points == null ? 'flat' : d.points > 0.05 ? 'up' : d.points < -0.05 ? 'down' : 'flat';
     const slots = d.rank == null ? '' : (d.rank > 0 ? '+' : '') + d.rank + ' slots';
     const cr = rankOf(p, 'consensus'), vr = rankOf(p, 'vegas');
     return '<tr id="p-' + e(slug(p.name)) + '">' +
-      '<td class="num">' + (cr == null ? '—' : e(p.position) + cr) + '</td>' +
+      '<td class="num rk-rank">' + (cr == null ? '—' : e(p.position) + cr) + '</td>' +
       '<td class="rk-who"><a href="/player/' + e(slug(p.name)) + '"><b>' + e(p.name) + '</b></a>' +
         (pre.pos === 'ALL' || pre.pos === 'FLEX' ? '<small>' + e(p.position) + '</small>' : '') + '</td>' +
-      '<td>' + e(p.team) + '</td>' + opp +
+      '<td class="rk-team">' + e(p.team) + '</td>' + opp +
       '<td class="rk-fan rk-pts">' + n1(p.consensus ? p.consensus.points : null) + '</td>' +
       '<td class="rk-fan rk-rnk">' + (cr == null ? '—' : e(p.position) + cr) + '</td>' +
       '<td class="rk-mkt rk-pts">' + n1(p.vegas ? p.vegas.points : null) +
         '<div class="rk-basis">' + e(p.vegas ? p.vegas.basis : '') + '</div></td>' +
       '<td class="rk-mkt rk-rnk">' + (vr == null ? '—' : e(p.position) + vr) + '</td>' +
       '<td class="rk-gap ' + cls + '"><b>' + signed(d.points) + '</b><span>' +
-        e(d.classification || '') + (slots ? ' &middot; ' + e(slots) : '') + '</span></td>' +
+        e(d.classification || '') + '</span>' + (slots ? '<span class="rk-slots">' + e(slots) + '</span>' : '') + '</td>' +
       '</tr>';
   }).join('');
   const hz = pre.payload.horizon || {};
@@ -10351,8 +10520,8 @@ function freshnessReport(stamps, kind, now) {
 // interpolate between them in the browser with no recalculation:
 //   fantasy  the traditional read: the consensus projection at the reader's
 //            rules, with the usage role trend applied once three games have
-//            earned it (Brooks's inputs: talent, role, workload, schedule).
-//   market   the sportsbook read: the Vegas board (Vega's inputs: props,
+//            earned it (the Rankings Desk's inputs: talent, role, workload, schedule).
+//   market   the sportsbook read: the Vegas board (the Market Desk's inputs: props,
 //            team totals, game totals), SHRUNK toward the fantasy number by
 //            how much of it is a quoted market. A prop is a market; a fitted
 //            team rating is a projection OF the market and gets 55%.
@@ -10421,23 +10590,23 @@ function blendDisagreements(rows, limit, opts) {
   return out.sort((x, y) => y.gap - x.gap).slice(0, limit || 20);
 }
 
-// ── Vega vs. Brooks, the column ────────────────────────────────────────────
+// ── Market Desk vs. Rankings Desk, the column ──────────────────────────────
 // The band under the newsroom used to be a table of rank gaps with a note
 // beside it, which is a report of an argument rather than the argument. It is
-// a column now: each man takes five players he expects to beat the other
-// man's ranking on, and makes the case in his own voice.
+// a column now: each desk takes five players it expects to beat the other
+// desk's ranking on, and makes the case in its own voice.
 //
 // The two lists cannot be the same list, because a player only qualifies for
-// the man whose end of the slider has him higher — Vega picks from the rows
-// the market ranks above the consensus, Brooks from the rows the consensus
-// ranks above the market — and a pick is used once. Everything in a pitch
-// except its last sentence is read off the row: the points at both ends, both
-// ranks, what the market is priced from, whether the usage trend has been
-// earned, and the one line that actually moved. Neither of them can claim
-// something the board does not show. The needle at the end is fixed prose,
-// chosen by a hash of the player, the week and the man, so the same player
-// does not draw the same jab every week and no two picks in one column draw
-// the same jab at all.
+// the desk whose end of the slider has him higher — the Market Desk picks from
+// the rows the market ranks above the consensus, the Rankings Desk from the
+// rows the consensus ranks above the market — and a pick is used once.
+// Everything in a pitch except its last sentence is read off the row: the
+// points at both ends, both ranks, what the market is priced from, whether the
+// usage trend has been earned, and the one line that actually moved. Neither
+// desk can claim something the board does not show. The needle at the end is
+// fixed prose, chosen by a hash of the player, the week and the desk, so the
+// same player does not draw the same jab every week and no two picks in one
+// column draw the same jab at all.
 const RIVALRY_PICKS = 5;
 // Widest gaps first; if a side is short of five the thresholds relax once,
 // rather than the column printing three picks and looking abandoned.
@@ -10452,27 +10621,27 @@ const RIV_BASIS = {
   none: 'no posted market at all'
 };
 const RIV_STANDFIRST = {
-  vega: 'Five the books already have ahead of Evan’s board. Every one of them is a number somebody took a position on, against a number somebody typed.',
-  brooks: 'Five my board has ahead of Nate’s screen. A sportsbook is not trying to win your league; it is trying to get even money on both sides of a market.'
+  vega: 'Five the books already have ahead of the Rankings Desk’s board. Every one of them is a number somebody took a position on, against a number somebody typed.',
+  brooks: 'Five my board has ahead of the Market Desk’s screen. A sportsbook is not trying to win your league; it is trying to get even money on both sides of a market.'
 };
 const RIV_NEEDLE = {
   vega: [
-    'Evan will have him there too in about three weeks, once it is safe.',
+    'The Rankings Desk will have him there too in about three weeks, once it is safe.',
     'A line is a forecast with money behind it. A ranking is a forecast with a byline behind it.',
-    'Evan wants to watch him earn it. The books have already paid him.',
+    'The Rankings Desk wants to watch him earn it. The books have already paid him.',
     'This is the part where the board catches up and somebody calls it a bold call.',
     'Waiting for confirmation is a fine hobby. It is not an edge.',
     'The market moved on Tuesday. The rankings will move on Friday.',
     'I do not need him to look the part. I need him to be priced wrong.'
   ],
   brooks: [
-    'Nate found a number a book set to balance its action and called it football.',
-    'The line is one input. Nate has promoted it to the whole argument.',
-    'Nate is early on everything, which is a generous way of saying he is often wrong first.',
-    'Being early and being right are two different achievements. He collects the first one.',
+    'The Market Desk found a number a book set to balance its action and called it football.',
+    'The line is one input. The Market Desk has promoted it to the whole argument.',
+    'The Market Desk is early on everything, which is a generous way of saying it is often wrong first.',
+    'Being early and being right are two different achievements. The Market Desk collects the first one.',
     'The market is not reading the depth chart this week. I am.',
     'When the line and the role disagree, take the role. It is the one getting the touches.',
-    'He is welcome to the closing line. I will take the workload.'
+    'The Market Desk is welcome to the closing line. I will take the workload.'
   ]
 };
 function _rivHash(s) { let h = 5381; const t = String(s); for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0; return h; }
@@ -10481,8 +10650,9 @@ function _rivNeedle(side, seed, used) {
   for (let i = 0; i < bank.length; i++) { const j = (seed + i) % bank.length; if (!used.has(j)) { used.add(j); return bank[j]; } }
   return bank[seed % bank.length];
 }
-// The evidence sentence. Vega argues from what is priced; Brooks argues from
-// role and schedule, and from how thin the market Nate is quoting actually is.
+// The evidence sentence. The Market Desk argues from what is priced; the
+// Rankings Desk argues from role and schedule, and from how thin the market
+// the other desk is quoting actually is.
 // Each branch carries two phrasings and takes them by the pick's position in
 // the column, because five picks that happen to share a branch used to open
 // with the same eight words five times.
@@ -10508,14 +10678,14 @@ function _rivEvidence(d, side, i) {
                : 'The usage has already earned the bump: ' + d.fantasyPoints + ' points at the role he is playing now, before the schedule ahead of him is priced in.';
   }
   if (d.marketBasis === 'ratings' || d.marketBasis === 'none') {
-    return alt ? 'There is no player market on him to read. Nate’s number comes off ' + basis + ', which is a projection of the market, not the market.'
-               : 'No book has posted a player market on him. Nate is ranking him off ' + basis + ' and presenting it as a read.';
+    return alt ? 'There is no player market on him to read. The Market Desk’s number comes off ' + basis + ', which is a projection of the market, not the market.'
+               : 'No book has posted a player market on him. The Market Desk is ranking him off ' + basis + ' and presenting it as a read.';
   }
   if (d.marketConfidence === 'LOW') {
-    return alt ? _cap(basis) + ', graded low confidence, with the books disagreeing among themselves. I have ' + d.fantasyPoints + ' points; he has ' + d.marketPoints + '.'
-               : 'The market he is quoting is graded low confidence: ' + basis + ', and the books do not agree with each other on it. My number is ' + d.fantasyPoints + ' points, his is ' + d.marketPoints + '.';
+    return alt ? _cap(basis) + ', graded low confidence, with the books disagreeing among themselves. I have ' + d.fantasyPoints + ' points; the Market Desk has ' + d.marketPoints + '.'
+               : 'The market the other desk is quoting is graded low confidence: ' + basis + ', and the books do not agree with each other on it. My number is ' + d.fantasyPoints + ' points, the Market Desk’s is ' + d.marketPoints + '.';
   }
-  return alt ? 'Talent, workload and schedule get him to ' + d.fantasyPoints + ' points. ' + _cap(basis) + ' get Nate to ' + d.marketPoints + '.'
+  return alt ? 'Talent, workload and schedule get him to ' + d.fantasyPoints + ' points. ' + _cap(basis) + ' get the Market Desk to ' + d.marketPoints + '.'
              : d.fantasyPoints + ' points of talent, workload and schedule, against ' + d.marketPoints + ' from ' + basis + '.';
 }
 // The two ranks, in the sentence, three ways: the chip above the pitch is for
@@ -10524,21 +10694,21 @@ function _rivEvidence(d, side, i) {
 function _rivGap(d, side, i) {
   const mine = side === 'vega' ? d.marketRank : d.fantasyRank;
   const theirs = side === 'vega' ? d.fantasyRank : d.marketRank;
-  const who = side === 'vega' ? 'Brooks' : 'Vega';
+  const who = side === 'vega' ? 'the Rankings Desk' : 'the Market Desk';
   const at = n => d.position + n;
   const places = d.gap + ' place' + (d.gap === 1 ? '' : 's');
   const v = (i || 0) % 3;
   if (v === 0) return 'I have him ' + at(mine) + '; ' + who + ' has him ' + at(theirs) + ', ' + places + ' lower.';
-  if (v === 1) return who + ' ranks him ' + at(theirs) + '. He is ' + at(mine) + ' on my board, and I am not giving those ' + places + ' back.';
+  if (v === 1) return _cap(who) + ' ranks him ' + at(theirs) + '. He is ' + at(mine) + ' on my board, and I am not giving those ' + places + ' back.';
   return at(mine) + ' on my board against ' + who + '’s ' + at(theirs) + ': ' + places + ' of daylight, and one of us is about to look silly.';
 }
 function rivalryColumn(id, cands, week) {
   const a = ANALYSTS[id], other = ANALYSTS[ANALYSTS[id].rivalry];
   const used = new Set();
   return {
-    id, name: a.name, avatar: a.avatar, role: a.role, url: '/analysts/' + id,
+    id, name: a.name, avatar: a.avatar, role: a.role, url: analystUrl(a),
     label: id === 'vega' ? 'Market Intelligence' : 'Fantasy Analysis',
-    against: { id: other.id, name: other.name, avatar: other.avatar, url: '/analysts/' + other.id },
+    against: { id: other.id, name: other.name, avatar: other.avatar, url: analystUrl(other) },
     standfirst: RIV_STANDFIRST[id],
     picks: cands.map((d, i) => {
       const mine = id === 'vega' ? d.marketRank : d.fantasyRank;
@@ -10563,7 +10733,7 @@ function rivalryColumns(rows, opts) {
   const loose = blendDisagreements(startable, 400, RIVALRY_LOOSE);
   const side = id => {
     const wants = id === 'vega' ? 'market' : 'fantasy';
-    // Vega does not pitch a player no book has priced: that is the one claim
+    // The Market Desk does not pitch a player no book has priced: that is the one claim
     // his method cannot make.
     const his = list => list.filter(d => d.higher === wants && !(id === 'vega' && (d.marketBasis === 'none' || !(d.marketPoints > 0))));
     const seen = new Set(), picks = [];
@@ -10804,7 +10974,7 @@ function weekFinishRanks(usage, week, rules) {
   return out;
 }
 // A rivalry-column pick is one specific claim -- "this player finishes ahead
-// of where the other man ranked him" -- so it is graded on that claim and on
+// of where the other desk ranked him" -- so it is graded on that claim and on
 // nothing else: the player's actual finish inside his position that week
 // against the rank the rival published. A tie is a push. A player who did not
 // play loses the claim; that is the risk the pitch took.
@@ -10813,7 +10983,7 @@ function gradeRivalryCall(call, finish) {
   const theirs = Number(rv.theirsRank);
   if (!theirs) return null;
   const pos = call.position || rv.position || '';
-  const rival = (ANALYSTS[rv.against] || {}).name || 'the other man';
+  const rival = (ANALYSTS[rv.against] || {}).name || 'the other desk';
   if (!finish) return { outcome: 'miss', note: 'no scored line in week ' + call.week + ': he did not play' };
   const line = 'finished ' + pos + finish.rank + ' on ' + finish.points + ' points; ' + rival + ' had him ' + pos + theirs;
   return { outcome: finish.rank === theirs ? 'push' : finish.rank < theirs ? 'hit' : 'miss', note: line };
@@ -10866,7 +11036,7 @@ async function runCallsGrade(env) {
 // on Thursday morning, before the first kickoff, and stored: picks that moved
 // every time the odds moved could not be graded, and a scoreboard nobody can
 // lose is not a rivalry. Every pick goes into analyst_calls as the claim it
-// actually makes -- this player finishes ahead of where the other man ranked
+// actually makes -- this player finishes ahead of where the other desk ranked
 // him -- and runCallsGrade settles it on the week's real finishes.
 const RIVALRY_COLUMN_KIND = 'rivalry-column';
 async function runRivalryColumn(env) {
@@ -10957,12 +11127,12 @@ function _rivWeekLine(rows) {
 }
 
 // ── the one rivalry ────────────────────────────────────────────────────────
-// Vega against Brooks, and only them, and only when: the kind allows it, the
-// packet has a player the two ends of the blend rank at least six spots and
-// a quarter apart, and the rivalry has appeared in fewer than one in five of
-// the last ten eligible pieces. Otherwise the packet carries no rivalry and
-// the writer cannot name the other analyst at all (his name is not in the
-// allowed list). Nothing is ever manufactured.
+// The Market Desk against the Rankings Desk, and only them, and only when: the
+// kind allows it, the packet has a player the two ends of the blend rank at
+// least six spots and a quarter apart, and the rivalry has appeared in fewer
+// than one in five of the last ten eligible pieces. Otherwise the packet
+// carries no rivalry and the writer cannot name the other desk at all (its
+// name is not in the allowed list). Nothing is ever manufactured.
 const RIVALRY = { targetShare: 0.2, window: 10 };
 function rivalryCandidate(disagreements) {
   const d = (disagreements || [])[0];
@@ -11004,7 +11174,7 @@ async function newsroomReady(env) {
     // IF NOT EXISTS; a duplicate column is an error we expect and swallow.
     // `dfs_headline` / `dfs_dek`: a package that runs in both lenses is WRITTEN
     // twice and, until 2026-09-21, was HEADLINED once. /dfs printed the Weekly
-    // Fantasy sentence over Lena Park's byline -- "the clearest roster add of
+    // Fantasy sentence over the DFS Desk's byline -- "the clearest roster add of
     // the week" is a waiver call, not a DFS read -- because there was nowhere
     // for a DFS headline to live. Now there is. A row stored before these
     // columns existed has them null and the feed falls back to the weekly
@@ -11898,8 +12068,8 @@ THE ONE RULE: you may state only facts that appear in the PACKET you are given. 
 NAME THE OPPONENT. Every time you discuss a player, say who he is playing, from the packet's opponent field for him (or nextWeekOpponent, or the game's matchup), with home or away where the packet has it: "against BUF at home", "at DEN". A reader who sees the opponent knows the advice is for this week's game and not a prior week's. In a recap, name the opponent he just played and, where the packet carries it, the one he plays next. If the packet carries no opponent for a player (a bye, or the field is null), say the opponent is not in the packet rather than guessing.
 THE QUESTION is never "what happened". It is "what does what happened tell us about what is going to happen next", and for DFS "what does this mean at this salary and this expected ownership".
 TWO LENSES, ONE SET OF FACTS. The WEEKLY FANTASY lens tells a season-long manager what to do: rankings, start/sit, waivers, trades, rest-of-season value. The DFS lens tells a daily player where projection, price and ownership create opportunity: value, chalk, leverage, stacks, cash versus tournaments. A good fantasy player is not automatically a good DFS play. The facts do not change between the lenses; the recommendations may. If the packet's dfs block says no salaries are loaded, the DFS lens speaks to roles and pricing direction and says plainly that no salary number is available.
-COLLEAGUES. You may name another analyst ONLY if the packet names that analyst (priorCalls, rivalry, marketAnalyst, dfsAnalyst). Never attribute a view to a colleague the packet does not attribute. If the packet carries priorCalls, you may reference those exact prior positions by analyst and week, agree with them, or say plainly what changed if the evidence moved; never pretend an old position did not exist. If the packet carries no rivalry, do not mention Nate Vega or Evan Brooks unless one of them is the byline.
-THE RIVALRY, when the packet carries one: exactly one line, intellectual, never personal. Acceptable: "Brooks still has him WR17. The receiving market appears considerably less worried." Not acceptable: insults, claims a colleague does not understand football, manufactured heat.
+COLLEAGUES. You may name another analyst ONLY if the packet names that analyst (priorCalls, rivalry, marketAnalyst, dfsAnalyst). Never attribute a view to a colleague the packet does not attribute. If the packet carries priorCalls, you may reference those exact prior positions by analyst and week, agree with them, or say plainly what changed if the evidence moved; never pretend an old position did not exist. If the packet carries no rivalry, do not mention the Market Desk or the Rankings Desk unless one of them is the byline.
+THE RIVALRY, when the packet carries one: exactly one line, intellectual, never personal. Acceptable: "The Rankings Desk still has him WR17. The receiving market appears considerably less worried." Not acceptable: insults, claims a colleague does not understand football, manufactured heat.
 STYLE. Direct, analytical, actionable, confident, concise. Take positions. No introductions, no restating the box score, no hedging padding, no em dashes (use a period, a colon or a comma). Never write "it's worth noting", "buckle up", "dive in", "game-changer", "in conclusion", "at the end of the day", "ever-evolving", "look no further". The analyst's personality is noticeable in the prose and never overrides the facts.
 HEADLINE AND DEK in sentence case: capitalize the first word and proper nouns (players, clubs, Vegas, Iron Tuna) and nothing else. Never Title Case. A week of the season is a proper noun: "Week 1", "Week 2", never "week 1". The headline names a player or a game and says what to do about it; the dek is one sentence carrying the finding and a number from the packet.
 LENGTH. At most six items per section, each one to three sentences. When the packet is large, choose what matters; never enumerate the whole slate. The whole answer must close its JSON.
@@ -11918,8 +12088,8 @@ function _voiceBlock(packet) {
   let s = 'BYLINE (WEEKLY FANTASY lens): ' + a.name + ', ' + a.role + '. Voice: ' + a.voice + ' Philosophy: ' + (a.philosophy || '') + '\n';
   s += 'BYLINE (DFS lens): ' + d.name + ', ' + d.role + '. Voice: ' + d.voice + '\n';
   if (m) s += 'MARKET VOICE available for one counterpoint line where the packet supports it: ' + m.name + ' (' + m.role + ').\n';
-  if (packet.rivalry) s += 'RIVALRY IN THIS PIECE: ' + packet.rivalry.player + '. Brooks (Fantasy Analysis) ' + packet.rivalry.position + packet.rivalry.brooks.rank + '; Vega (Market Intelligence) ' + packet.rivalry.position + packet.rivalry.vega.rank + ' on ' + packet.rivalry.vega.basis + '. Write ONE line in the weekly lens, in the section it belongs to, and put the same line in "rivalryLine". Nowhere else.\n';
-  else s += 'NO RIVALRY IN THIS PIECE. Do not set up Vega against Brooks.\n';
+  if (packet.rivalry) s += 'RIVALRY IN THIS PIECE: ' + packet.rivalry.player + '. The Rankings Desk (Fantasy Analysis) ' + packet.rivalry.position + packet.rivalry.brooks.rank + '; the Market Desk (Market Intelligence) ' + packet.rivalry.position + packet.rivalry.vega.rank + ' on ' + packet.rivalry.vega.basis + '. Write ONE line in the weekly lens, in the section it belongs to, and put the same line in "rivalryLine". Nowhere else.\n';
+  else s += 'NO RIVALRY IN THIS PIECE. Do not set up the Market Desk against the Rankings Desk.\n';
   if (packet.priorCalls && packet.priorCalls.length) s += 'PRIOR CALLS the desk has published on players in this packet are in priorCalls. Reference only those, by analyst and week, where relevant.\n';
   // A piece about the played week points at the next one. Its usage numbers
   // are last week's actuals and its board is next week's; the writer is told
@@ -12009,17 +12179,12 @@ function factCheck(body, packet) {
   const problems = v.ok ? [] : v.names.map(n => 'name:' + n).concat(v.numbers.map(n => 'number:' + n));
   const text = JSON.stringify(body);
   for (const re of AI_PHRASES) if (re.test(text)) problems.push('phrasing:' + String(re).replace(/^\/|\/i?$/g, ''));
-  // Analysts: only the packet's people, and the rivalry only when it fired.
+  // Analysts: only the packet's desks, and the rivalry only when it fired. A
+  // desk is named in full or not at all ("Market Desk has him WR5"); there is
+  // no surname to catch on its own now that the desks are not people.
   for (const a of Object.values(ANALYSTS)) {
     if ((packet.allowed.analysts || []).includes(a.name)) continue;
-    if (text.includes(a.name)) { problems.push('analyst:' + a.name); continue; }
-    // The two rivals by surname alone ("Vega has him WR5"), unless a player in
-    // the packet carries that surname.
-    if (RIVALRY_PAIR.includes(a.id)) {
-      const sur = a.name.split(' ').pop();
-      const playerHas = (packet.allowed.names || []).some(n => n !== a.name && new RegExp('\\b' + sur + '\\b').test(n));
-      if (!playerHas && new RegExp('\\b' + sur + '\\b').test(text)) problems.push('analyst:' + a.name);
-    }
+    if (text.includes(a.name)) problems.push('analyst:' + a.name);
   }
   if (!packet.rivalry && body && body.rivalryLine) problems.push('rivalry:not_in_packet');
   // Sections: each lens must carry its sections.
@@ -12527,7 +12692,7 @@ async function runContentTick(env) {
 // so the fallback empties itself without anything being backfilled.
 const _lensHead = (row, lens) => (lens === 'dfs' && row.dfs_headline) ? row.dfs_headline : row.headline;
 const _lensDek = (row, lens) => (lens === 'dfs' && row.dfs_headline) ? (row.dfs_dek || null) : row.dek;
-const _bylineOf = (row) => { const a = ANALYSTS[row.analyst] || ANALYST_HOUSE; const K = CONTENT_KINDS[row.kind]; const d = K ? (ANALYSTS[K.dfsAnalyst] || ANALYST_HOUSE) : ANALYST_HOUSE; return { analyst: a.id, name: a.name, role: a.role, avatar: a.avatar, dfsAnalyst: d.id, dfsName: d.name }; };
+const _bylineOf = (row) => { const a = ANALYSTS[row.analyst] || ANALYST_HOUSE; const K = CONTENT_KINDS[row.kind]; const d = K ? (ANALYSTS[K.dfsAnalyst] || ANALYST_HOUSE) : ANALYST_HOUSE; return { analyst: a.id, name: a.name, role: a.role, avatar: a.avatar, url: analystUrl(a), dfsAnalyst: d.id, dfsName: d.name, dfsUrl: analystUrl(d) }; };
 // A per-game row gets a fourth segment: the game, slugified. `_gameSlug` is
 // idempotent, so the segment read back off the path rebuilds the stored slug
 // exactly and the piece can be looked up by it.
@@ -12563,7 +12728,7 @@ async function contentListPayload(env, season, week) {
     const now = Date.now();
     const pieces = (q.results || []).map(r => ({ ...r, byline: _bylineOf(r), url: _pieceUrl(r), legacy: !CONTENT_KINDS[r.kind], expired: pieceExpired(r, sched, now) }));
     return { ok: true, contract: CONTENT_CONTRACT, disclosure: AI_DISCLOSURE,
-             kinds: Object.entries(CONTENT_KINDS).filter(([k, v]) => !v.unscheduled).map(([k, v]) => ({ kind: k, title: v.title, subtitle: v.subtitle || null, day: v.day, hour: v.hour, minute: v.minute || 0, analyst: v.analyst, analystName: (ANALYSTS[v.analyst] || ANALYST_HOUSE).name, dfsAnalyst: v.dfsAnalyst, lens: v.lens, summary: v.summary, gate: v.gate || null, updates: v.updates || null, perGame: !!v.perGame })),
+             kinds: Object.entries(CONTENT_KINDS).filter(([k, v]) => !v.unscheduled).map(([k, v]) => ({ kind: k, title: v.title, subtitle: v.subtitle || null, day: v.day, hour: v.hour, minute: v.minute || 0, analyst: v.analyst, analystName: (ANALYSTS[v.analyst] || ANALYST_HOUSE).name, analystUrl: analystUrl(ANALYSTS[v.analyst]), dfsAnalyst: v.dfsAnalyst, lens: v.lens, summary: v.summary, gate: v.gate || null, updates: v.updates || null, perGame: !!v.perGame })),
              pieces };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
@@ -12692,7 +12857,7 @@ function pieceExpired(row, sched, now) {
 // forward piece whose games have kicked off is left out (pieceExpired above);
 // `expired` counts what was held back so a thin feed can be told apart from
 // a desk that did not publish.
-async function newsroomFeedPayload(env, lens, limit) {
+async function newsroomFeedPayload(env, lens, limit, floor) {
   if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
   await newsroomReady(env);
   try {
@@ -12710,8 +12875,17 @@ async function newsroomFeedPayload(env, lens, limit) {
     const sched = await scheduleCacheRead(env);
     const now = Date.now();
     const before = rows.length;
+    const spent = rows.filter(r => pieceExpired(r, sched, now));
     rows = rows.filter(r => !pieceExpired(r, sched, now));
     const expired = before - rows.length;
+    // THE FLOOR. A caller that asks for one (the front page asks for three)
+    // gets the feed topped up to it when expiry leaves it short, and only
+    // with game recaps: a recap reports what happened, so it does not go
+    // stale the way spent advice does (Ken, 2026-10-09). The top-up rows are
+    // marked `expired` so a page can tell them apart. Without a floor, or
+    // with no spent recaps, the feed is exactly what it was.
+    const want0 = Math.max(0, Math.min(6, floor || 0));
+    if (rows.length < want0) rows = rows.concat(spent.filter(r => r.kind === 'game-recap').slice(0, want0 - rows.length).map(r => ({ ...r, _spent: true })));
     // The kind's CURRENT lens decides, not the row's: a row stored while its
     // kind still had a DFS lens does not put that kind back in the DFS lane.
     if (lens === 'dfs') rows = rows.filter(r => (r.lens === 'both' || r.lens === 'dfs') && !(CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].lens !== 'both'));
@@ -12722,7 +12896,7 @@ async function newsroomFeedPayload(env, lens, limit) {
     // nothing about which game. `components` are the findings the rail breaks
     // the story into once it is no longer the lead.
     return { ok: true, lens: lens || 'weekly', disclosure: AI_DISCLOSURE, expired, pieces: rows.map(r => ({ kind: r.kind, title: _pieceTitle(r), dfsTitle: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].dfsTitle || null : null, week: r.week, headline: _lensHead(r, lens), dek: _lensDek(r, lens), version: r.version || 1, edition: _pieceEdition(r), publishedAt: r.published_at, url: _pieceUrl(r) + (lens === 'dfs' ? '?lens=dfs' : ''), byline: _bylineOf(r), rivalry: !!r.rivalry,
-      game: r.game_id || null, perGame: !!(CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].perGame), components: parse(r.components) })) };
+      game: r.game_id || null, perGame: !!(CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].perGame), components: parse(r.components), ...(r._spent ? { expired: true } : {}) })) };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
 // The front page's lead, in the regular season: the newest published piece,
@@ -12904,11 +13078,14 @@ function deskNextPayload(state, sched, now) {
 let _RIV_MEMO = { key: '', at: 0, out: null };
 async function analystsPayload(env) {
   return { ok: true, disclosure: AI_DISCLOSURE, rivalry: RIVALRY_PAIR, personas: flagOn(env, 'ANALYST_PERSONAS'),
-           analysts: Object.values(ANALYSTS).map(a => ({ id: a.id, name: a.name, role: a.role, avatar: a.avatar, specialty: a.specialty, personality: a.personality, philosophy: a.philosophy, assignments: a.assignments, rivalry: a.rivalry, url: '/analysts/' + a.id })) };
+           analysts: Object.values(ANALYSTS).map(a => ({ id: a.id, name: a.name, role: a.role, avatar: a.avatar, specialty: a.specialty, personality: a.personality, philosophy: a.philosophy, assignments: a.assignments, rivalry: a.rivalry, url: analystUrl(a) })) };
 }
 async function analystPayload(env, id) {
-  const a = ANALYSTS[id];
+  // The page hands over the slug off its own URL; the admin board and older
+  // links hand over the id. Both resolve, and everything below keys on the id.
+  const a = ANALYSTS[id] || ANALYST_BY_SLUG[id];
   if (!a) return { ok: false, error: 'unknown_analyst' };
+  id = a.id;
   let pieces = [];
   if (await contentReady(env)) {
     await newsroomReady(env);
@@ -12920,8 +13097,8 @@ async function analystPayload(env, id) {
   if (RIVALRY_PAIR.includes(id)) {
     try { headToHead = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, rivalry, published_at, game_id FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL ORDER BY published_at DESC LIMIT 10").all()).results || []).map(r => { let rv = null; try { rv = JSON.parse(r.rivalry); } catch (e) {} return rv ? { kind: r.kind, week: r.week, headline: weekCase(r.headline), url: _pieceUrl(r), player: rv.player, position: rv.position, brooks: rv.brooks, vega: rv.vega, line: rv.line || null, publishedAt: r.published_at } : null; }).filter(Boolean); } catch (e) { headToHead = []; }
   }
-  const columns = id === 'brooks' ? [{ title: 'The Tell', url: '/the-tell', note: 'The weekly column on what is inside a ranking runs on this desk under a pen name; see the column’s own method box.' }] : [];
-  return { ok: true, disclosure: AI_DISCLOSURE, analyst: { id: a.id, name: a.name, role: a.role, avatar: a.avatar, specialty: a.specialty, personality: a.personality, philosophy: a.philosophy, assignments: a.assignments, voice: a.voice, rivalry: a.rivalry ? { id: a.rivalry, name: ANALYSTS[a.rivalry].name, url: '/analysts/' + a.rivalry } : null },
+  const columns = id === 'brooks' ? [{ title: 'The Tell', url: '/the-tell', note: 'The weekly column on what is inside a ranking runs on this desk; see the column’s own method box.' }] : [];
+  return { ok: true, disclosure: AI_DISCLOSURE, analyst: { id: a.id, name: a.name, role: a.role, avatar: a.avatar, specialty: a.specialty, personality: a.personality, philosophy: a.philosophy, assignments: a.assignments, voice: a.voice, rivalry: a.rivalry ? { id: a.rivalry, name: ANALYSTS[a.rivalry].name, url: analystUrl(ANALYSTS[a.rivalry]) } : null },
            pieces, calls, record, headToHead, columns };
 }
 async function disagreementsPayload(env, horizon) {
@@ -12946,14 +13123,14 @@ async function disagreementsPayload(env, horizon) {
     _RIV_MEMO = { key: memoKey, at: Date.now(), out: riv };
   }
   // The column that went on the record is the WEEK's. A caller asking for rest
-  // of season gets the same two men reading that board live, not last
+  // of season gets the same two desks reading that board live, not last
   // Thursday's picks under a rest-of-season heading.
   const stored = want === 'week' ? riv.stored : null, ledger = riv.ledger;
   const columns = stored ? JSON.parse(JSON.stringify(stored.columns)) : rivalryColumns(b.players, { week: b.currentWeek });
   if (ledger) for (const id of ['vega', 'brooks']) if (columns[id]) { columns[id].record = ledger[id]; }
   let recent = [];
   if (ready) { try { recent = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, rivalry, published_at, game_id FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL ORDER BY published_at DESC LIMIT 5").all()).results || []).map(r => { let rv = null; try { rv = JSON.parse(r.rivalry); } catch (e) {} return rv ? { kind: r.kind, week: r.week, headline: weekCase(r.headline), url: _pieceUrl(r), player: rv.player, position: rv.position, brooks: rv.brooks, vega: rv.vega, line: rv.line || null } : null; }).filter(Boolean); } catch (e) {} }
-  return { ok: true, horizon: b.horizon, currentWeek: b.currentWeek, pair: { brooks: { name: ANALYSTS.brooks.name, label: 'Fantasy Analysis', url: '/analysts/brooks' }, vega: { name: ANALYSTS.vega.name, label: 'Market Intelligence', url: '/analysts/vega' } },
+  return { ok: true, horizon: b.horizon, currentWeek: b.currentWeek, pair: { brooks: { name: ANALYSTS.brooks.name, label: 'Fantasy Analysis', url: analystUrl(ANALYSTS.brooks) }, vega: { name: ANALYSTS.vega.name, label: 'Market Intelligence', url: analystUrl(ANALYSTS.vega) } },
            columns, locked: !!stored, lockedAt: stored ? stored.builtAt : null, lastWeek: ledger ? ledger.lastWeek : null,
            disagreements: rows.map(r => ({ ...r, brooksRank: r.fantasyRank, vegaRank: r.marketRank })), recentLines: recent, thresholds: BLEND_DISAGREE };
 }
@@ -15062,6 +15239,12 @@ const ANALYTICS_MIGRATIONS = [
   'ALTER TABLE page_views ADD COLUMN internal INTEGER NOT NULL DEFAULT 0',
   'ALTER TABLE site_events ADD COLUMN internal INTEGER NOT NULL DEFAULT 0',
 ];
+// The one D1 refusal that is not a bug in the query: the account's free-tier
+// daily row-read allowance is spent and every read is refused until midnight
+// UTC (§120, §125). The admin page names it so the operator does not read an
+// empty dashboard as lost data.
+const D1_READ_LIMIT_RE = /row read limit|daily row read|exceeded D1/i;
+const d1ReadLimit = e => D1_READ_LIMIT_RE.test(String((e && e.message) || e || ''));
 // Cached per isolate, so the DDL costs one batch on cold start and nothing after.
 let __analyticsReady = false;
 async function analyticsReady(env) {
@@ -15162,14 +15345,20 @@ async function pruneAnalytics(env, keepDays) {
 // leagueIntel, leagueTrades, leaguePlayoffs, leagueAvailability) read ONLY the
 // local model plus the site's own boards.
 //
-// THERE IS ONE ADAPTER AND IT IS THE READER. The Sleeper, Yahoo and CBS
+// THE READER IS THE ADAPTER, TWICE OVER. The Sleeper, Yahoo and CBS API
 // connectors and the ESPN placeholder were removed on 2026-09-18 (HANDOFF
 // §89): Sleeper never cleared its non-commercial grant (docs/data-sources.md
-// R2), Yahoo never ran against a live account, CBS never completed an import,
-// and ESPN never had a supported path. Nothing here calls a fantasy platform
-// any more, so there is no OAuth, no stored provider credential and no
-// scheduled refresh. A league arrives from the forms and the roster-grid
-// screenshot on /my-league, through POST /api/leagues/manual, and changes only
+// R2), Yahoo never ran against a live account, the CBS token flow died when
+// CBS stopped exposing a token, and ESPN never had a supported path. Nothing
+// here calls a fantasy platform, so there is no OAuth, no stored provider
+// credential and no scheduled refresh. A league arrives one of two ways, both
+// from the reader's own browser: the forms and the roster-grid screenshot on
+// /my-league, through POST /api/leagues/manual; or the CBS browser import
+// (restored 2026-10-10, HANDOFF §128), where the Iron Tuna CBS Connector
+// extension reads settings, team names and rosters out of the reader's
+// signed-in CBS tab and posts the snapshot to POST /api/leagues/connect. The
+// worker validates that snapshot and writes it through the same model; it
+// never sees a CBS password, cookie or token. Either way a league changes only
 // when the reader changes it.
 const LEAGUE_CONTRACT = 1;
 const LEAGUE_DDL = [
@@ -15556,12 +15745,120 @@ const PROVIDER_MANUAL = {
   async pull() { throw new LeagueProviderError('manual_league', 'A manual league is edited, not synced.'); },
   normalize(raw) { return raw; }
 };
-// One provider, and it is the reader. The Sleeper, Yahoo, CBS and ESPN
-// connectors were removed on 2026-09-18 (HANDOFF §89): none of them ever
-// carried a league in production. The adapter shape stays, because it is what
-// keeps everything downstream from knowing where a league came from, and it is
-// what a future connector would slot into.
-const LEAGUE_PROVIDERS = { manual: PROVIDER_MANUAL };
+// -- the CBS browser import ---------------------------------------------------
+// The extension (extensions/cbs-connector) runs in the reader's signed-in CBS
+// tab, reads /rules, /teams/roster-grid and each /teams/<id> page through
+// same-origin requests, and posts ONE snapshot here. The snapshot is the whole
+// claim: the worker makes no request to CBS, holds nothing that could, and
+// treats every field as untrusted. A snapshot that is incomplete, inconsistent
+// (a roster whose section counts disagree with its footer, a duplicate player,
+// a team without a roster) or outside its bounds is refused whole, before any
+// row is touched, so a failed refresh leaves the last good import in place.
+//
+// What arrives: league name and size, the roster slot counts, the scoring
+// table as CBS prints it (group, code, text), playoff start, team names, and
+// each roster with CBS's own player ids, position, NFL team and the section
+// it sat in. What does not: standings, matchups, transactions and FAAB
+// balances, which the extension does not read. The notes say so on the league.
+function cbsLeagueId(input) {
+  let id = String(input || '').trim().toLowerCase();
+  const m = id.match(/^(?:https:\/\/)?([a-z0-9][a-z0-9-]{0,62})\.football\.cbssports\.com(?:\/[^?#]*)?$/);
+  if (m) id = m[1];
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(id)) throw new LeagueProviderError('league_not_found', 'Enter a CBS league ID or football league URL.');
+  return id;
+}
+function cbsBrowserNormalize(raw, ctx) {
+  const invalid = () => { throw new LeagueProviderError('invalid_browser_import', 'CBS import is incomplete or unsupported. Re-read the league with the updated extension.'); };
+  const str = (v, max) => { if (typeof v !== 'string' || !v.trim() || v.length > max || /[\x00-\x1f]/.test(v)) invalid(); return v.trim(); };
+  const id = v => { if (typeof v !== 'string' || !/^\d{1,12}$/.test(v)) invalid(); return v; };
+  if (!raw || raw.version !== 1 || JSON.stringify(raw).length > 350000) invalid();
+  const leagueId = cbsLeagueId(raw.leagueId);
+  if (leagueId !== raw.leagueId || !Number.isInteger(raw.season) || raw.season < 2020 || raw.season > Number(ctx.season) + 1) invalid();
+  const name = str(raw.name, 160);
+  if (!Number.isInteger(raw.numTeams) || raw.numTeams < 2 || raw.numTeams > 32 || !Array.isArray(raw.teams) || raw.teams.length !== raw.numTeams || !Array.isArray(raw.rosters) || raw.rosters.length !== raw.numTeams) invalid();
+  const teamIds = new Set(), rosterIds = new Set(), playerIds = new Set();
+  const teams = raw.teams.map(t => { const teamId = id(t.teamId); if (teamIds.has(teamId)) invalid(); teamIds.add(teamId); return { teamId, name: str(t.name, 160), ownerId: null, wins: null, losses: null, ties: null, pointsFor: null, pointsAgainst: null, faabLeft: null, waiverPosition: null }; });
+  const rosters = raw.rosters.map(r => {
+    const teamId = id(r.teamId);
+    if (!teamIds.has(teamId) || rosterIds.has(teamId) || !Array.isArray(r.players) || !r.players.length || r.players.length > 60) invalid();
+    const n = s => r.players.filter(p => p.slot === s).length, ir = r.counts && r.counts.ir != null ? r.counts.ir : n('ir');
+    if (!r.counts || !Number.isInteger(r.counts.starter) || !Number.isInteger(r.counts.bench) || !Number.isInteger(ir) || r.counts.starter < 0 || r.counts.bench < 0 || ir < 0 || n('starter') !== r.counts.starter || n('bench') !== r.counts.bench || n('ir') !== ir || r.counts.starter + r.counts.bench + ir !== r.players.length) invalid();
+    rosterIds.add(teamId);
+    return { teamId, players: r.players.map(p => {
+      const providerPlayerId = id(p.providerPlayerId);
+      if (playerIds.has(providerPlayerId) || !['QB','RB','WR','TE','K','DEF'].includes(p.position) || !['starter','bench','ir'].includes(p.slot) || !/^[A-Z]{2,3}$/.test(p.team)) invalid();
+      playerIds.add(providerPlayerId);
+      return { providerPlayerId, name: str(p.name, 100), position: p.position, team: p.team, slot: p.slot, slotLabel: str(p.slotLabel, 16) };
+    }) };
+  });
+  const roster = leagueEmptyRoster();
+  if (!raw.roster || typeof raw.roster !== 'object' || !Object.keys(raw.roster).length) invalid();
+  for (const [k,v] of Object.entries(raw.roster)) { if (!(k in roster) || k === 'other' || !Number.isInteger(v) || v < 0 || v > 20) invalid(); roster[k] = v; }
+  const scoring = leagueDefaultSettings().scoring, unsupported = {}, seen = new Set();
+  for (const k of Object.keys(scoring)) scoring[k] = Array.isArray(scoring[k]) ? [] : 0;
+  const scalar = { FL:'fumbleLost', Fum2PK:'fumble2pt', Fum2PT:'fumble2pt', IFRTD:'individualFumbleRecoveryTD', IKRTD:'individualKickReturnTD', IPRTD:'individualPuntReturnTD', MXP:'missedExtraPoint', Pa2P:'passing2pt', PaInt:'passingInt', PaTD:'passingTD', Re2P:'receiving2pt', ReTD:'receivingTD', Ru2P:'rushing2pt', RuTD:'rushingTD', XP:'extraPoint', DFR:'defensiveFumbleRecovery', DFTD:'defensiveTD', Int:'interception', ST2PT:'specialTeams2pt', STTD:'specialTeamsTD', STY:'safety', STY1PT:'specialTeamsSafety1pt' };
+  const num = '(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+))';
+  const goals = {}, missed = {};
+  if (!Array.isArray(raw.rules) || !raw.rules.length || raw.rules.length > 120) invalid();
+  for (const [i,rule] of raw.rules.entries()) {
+    const group = str(rule.group, 80), code = str(rule.code,16), text = str(rule.text,2000).replace(/Plus /g, ' Plus ').trim(), unique = group + ':' + code;
+    if (seen.has(unique)) invalid(); seen.add(unique);
+    let handled = false;
+    const regular = group === 'OFFENSIVE' || group === 'DEFENSIVE';
+    const simple = text.match(new RegExp('^' + num + ' points?$'));
+    if (regular && scalar[code] && simple) {
+      const key = scalar[code], value = Number(simple[1]);
+      if ((code === 'Fum2PT' && seen.has(group + ':Fum2PK') || code === 'Fum2PK' && seen.has(group + ':Fum2PT')) && scoring[key] !== value) invalid();
+      scoring[key] = value; handled = true;
+    }
+    if ((regular && ['PaYd','ReYd','RuYd','Recpt','SACK'].includes(code)) || group === 'SPECIAL SCORING FOR RUNNING BACKS' && code === 'Recpt') {
+      const base = text.match(new RegExp('^(\\d+)\\+ [A-Za-z]+ = ' + num + ' points? for every ' + num + ' [A-Za-z]+'));
+      if (base && Number(base[3]) > 0) {
+        const rest = text.slice(base[0].length).trim(), bonuses = [], re = new RegExp('Plus a ' + num + ' point bonus @ (\\d+)\\+ [A-Za-z]+', 'g');
+        for (const m of rest.matchAll(re)) bonuses.push({ at:Number(m[2]), points:Number(m[1]) });
+        if (!rest.replace(re,'').trim()) {
+          const prefix = { PaYd:'passing', ReYd:'receiving', RuYd:'rushing' }[code];
+          if (prefix && Number(base[2]) > 0) { scoring[prefix+'YardsPerPoint'] = Number(base[3])/Number(base[2]); scoring[prefix+'YardsThreshold'] = Number(base[1]); scoring[prefix+'YardBonuses'] = bonuses; handled = true; }
+          else if (!prefix && Number(base[1]) <= 1) {
+            const key = code === 'SACK' ? 'sack' : group === 'SPECIAL SCORING FOR RUNNING BACKS' ? 'rbReception' : 'reception';
+            scoring[key+'Points'] = Number(base[2])/Number(base[3]); scoring[key+'Bonuses'] = bonuses; handled = true;
+          }
+        }
+      }
+    }
+    if (regular && ['FG','MFG'].includes(code)) {
+      const re = new RegExp('Plus ' + num + ' points? for a ' + code + ' of (\\d+)(?: to (\\d+)|\\+) Yds','g');
+      const matches = [...text.matchAll(re)];
+      if (matches.length && !text.replace(re,'').trim()) { for (const m of matches) (code === 'FG' ? goals : missed)[m[2]+':'+(m[3]||999)] = Number(m[1]); handled = true; }
+    }
+    if (regular && code === 'PA') {
+      const re = new RegExp('(\\d+)(?: - (\\d+)|\\+) PAs? = ' + num + ' points?','g'), matches = [...text.matchAll(re)];
+      if (matches.length && !text.replace(re,'').trim()) { scoring.pointsAllowed = matches.map(m=>({min:Number(m[1]),max:Number(m[2]||999),points:Number(m[3])})); handled = true; }
+    }
+    if (!handled) unsupported['cbs_browser_'+i+'_'+code] = {group,code,text};
+  }
+  if (!seen.has('SPECIAL SCORING FOR RUNNING BACKS:Recpt')) { scoring.rbReceptionPoints = scoring.receptionPoints; scoring.rbReceptionBonuses = scoring.receptionBonuses; }
+  scoring.fieldGoalTiers = Object.entries(goals).map(([range,points])=>{ const [min,max]=range.split(':').map(Number); return {min,max,points,missPoints:missed[range]||0}; }).sort((a,b)=>a.min-b.min);
+  for (const value of Object.values(scoring)) for (const number of Array.isArray(value) ? value.flatMap(v=>Object.values(v)) : [value]) if (!Number.isFinite(number) || Math.abs(number) > 1000000) invalid();
+  if (Object.keys(missed).some(k=>!(k in goals))) unsupported.cbs_missed_ranges = missed;
+  if (scoring.fieldGoalTiers.length !== 5) unsupported.cbs_field_goal_ranges = 'This league does not have the five field-goal ranges required by the kicker model. Review kicker scoring.';
+  const notes = ['Browser import: refresh with the CBS extension. Standings, matchups, transactions and waiver balances are not imported.', 'Confirm playoff team count and league type; CBS browser import does not read those fields.'];
+  if (Object.keys(unsupported).length) notes.push('Some CBS scoring rules are preserved but not scored. Review settings before using recommendations.');
+  const settings = leagueNormalizeSettings({scoring,roster,extras:{unsupported,notes},faab:null,waiverType:'unknown',playoffWeekStart:raw.playoffWeekStart});
+  return { name, season:raw.season, numTeams:teams.length, status:'in_season', userTeamId:null, settings, teams, rosters, matchups:[], transactions:[] };
+}
+const PROVIDER_CBS_BROWSER = {
+  id: 'cbs_browser', label: 'CBS browser import', auth: 'browser', flag: 'CBS_SYNC',
+  terms: 'League tables read by the reader’s own browser from their signed-in CBS league and posted here. Refreshed by running the extension again; no credential is stored.',
+  needs: () => true,
+  async discover() { return { user: null, leagues: [] }; },
+  async pull() { throw new LeagueProviderError('browser_refresh_required', 'Open your CBS league and use the Iron Tuna extension to refresh it.'); },
+  normalize: cbsBrowserNormalize
+};
+// Two providers, and both are the reader: the forms, and the reader's own
+// browser on CBS. The adapter shape is what keeps everything downstream from
+// knowing where a league came from.
+const LEAGUE_PROVIDERS = { manual: PROVIDER_MANUAL, cbs_browser: PROVIDER_CBS_BROWSER };
 // -- storage: the model in D1, idempotently ---------------------------------
 // Provider ids are the primary keys, so a sync that runs twice writes the
 // same rows twice. Rows a sync did not touch (a dropped player, a team that
@@ -15713,6 +16010,27 @@ async function leagueManualUpsert(env, email, body, existingRow) {
     .bind(name, ctx.season, numTeams, 'in_season', JSON.stringify(settings), userTeamId, ts, ts, ts, 'manual', row.id).run();
   return { id: row.id, unmatched: mapped.unmatched, unresolved: players.filter(p => !(mapped.map.get(p.providerPlayerId) || {}).key).map(p => p.name) };
 }
+// A CBS browser snapshot: validate the whole thing, map CBS's player ids onto
+// the board (recorded under provider 'cbs' so an id learned once is known the
+// next time), then write it under the reader's league row for that CBS league,
+// creating the row on the first import and refreshing it after. The reader's
+// chosen team survives a refresh as long as that team is still in the room;
+// their overrides are a separate column this never touches. Nothing is written
+// until normalization has accepted the snapshot in full.
+async function leagueBrowserImport(env, email, raw) {
+  const ctx = await leagueWeekContext(env);
+  const model = cbsBrowserNormalize(raw, ctx);
+  const players = [];
+  for (const r of model.rosters) for (const p of r.players) players.push(p);
+  const mapped = await leagueMapPlayers(env, 'cbs', players);
+  const { row, created } = await leagueCreateRow(env, email, 'cbs_browser', raw.leagueId, model.name, model.season, { numTeams: model.numTeams, settings: model.settings });
+  const ts = Date.now();
+  await leagueWriteModel(env, row.id, model, mapped.map, ts);
+  const keepTeam = row.user_team_id && model.teams.some(t => t.teamId === row.user_team_id);
+  await env.LEADS_DB.prepare('UPDATE leagues SET name=?, season=?, num_teams=?, status=?, settings=?, user_team_id=?, updated_at=?, last_sync_at=?, last_ok_at=?, sync_status=?, last_error=NULL, next_sync_at=NULL, failures=0 WHERE id=?')
+    .bind(model.name, model.season, model.numTeams, 'in_season', JSON.stringify(model.settings), keepTeam ? row.user_team_id : null, ts, ts, ts, 'ok', row.id).run();
+  return { id: row.id, created, unmatched: mapped.unmatched, players: players.length, teams: model.teams.length };
+}
 async function leagueSetDefault(env, email, id) {
   if (!(await leagueReady(env))) return false;
   try {
@@ -15737,7 +16055,7 @@ async function leagueDisconnect(env, email, row) {
 // how much does it help, short-term or rest-of-season, and playoff impact.
 // Confidence is graded from the margin, never asserted: a half-point edge is
 // a lean, not an order.
-const LEAGUE_HORIZONS = ['week', 'next3', 'ros', 'playoffs'];
+const LEAGUE_HORIZONS = ['week', 'next', 'next3', 'untilPlayoffs', 'ros', 'playoffs'];
 function leagueRankRows(rows) {
   const rankIn = (list, field) => { list.slice().sort((x, y) => y[field].points - x[field].points || (x.name < y.name ? -1 : 1)).forEach((r, i) => { r[field].rank = i + 1; }); };
   const groups = {};
@@ -15752,7 +16070,11 @@ function leagueRankRows(rows) {
 async function leagueBoard(env, L, horizon, through) {
   const hz = LEAGUE_HORIZONS.includes(horizon) ? horizon : 'week';
   const custom = { ...L.settings.scoring };
-  const out = await boardsPayload(env, { horizon: hz, position: 'ALL', preset: 'custom', custom, through: through || null, customKey: leagueScoringKey(L.settings) });
+  // The stretch to the playoffs ends where THIS league's playoffs begin, not
+  // where the site's default does, unless the caller named a week itself.
+  const pws = Number(L.settings.playoffWeekStart);
+  const thr = through || (hz === 'untilPlayoffs' && pws >= 2 ? pws - 1 : null);
+  const out = await boardsPayload(env, { horizon: hz, position: 'ALL', preset: 'custom', custom, through: thr, customKey: leagueScoringKey(L.settings) });
   if (!out || !out.ok) return out || { ok: false, error: 'no_board' };
   const te = Number(L.settings.extras && L.settings.extras.tePremium) || 0;
   const idx = leagueRosterIndex(L);
@@ -15887,7 +16209,7 @@ async function leagueLineup(env, L, board) {
 }
 // The pickup advisor for THIS room: only players nobody here owns, measured
 // by what they add to the reader's own lineup and bench, with a drop that
-// actually costs less than the add is worth. Tyler Grant's desk.
+// actually costs less than the add is worth. The Waiver Desk's.
 let _LEAGUE_PICK_MEMO = new Map();
 async function leaguePickups(env, L, opts) {
   const o = opts || {};
@@ -16001,7 +16323,7 @@ async function leagueMatchup(env, L) {
 }
 // Last-minute intel for this roster: who on it is out, doubtful or
 // questionable and the move that answers it; the opponent's exposure; and
-// nothing about the other twenty-nine teams' injuries. Mike Raines's desk.
+// nothing about the other twenty-nine teams' injuries. The Usage Desk's.
 async function leagueIntel(env, L) {
   const b = await leagueBoard(env, L, 'week');
   if (!b.ok) return { ok: false, error: 'no_board' };
@@ -16204,7 +16526,9 @@ const LEAGUE_ERRORS = {
   too_many_leagues: 'Twelve leagues is the limit per account.',
   too_soon: 'That league was synced less than two minutes ago.',
   not_signed_in: 'Sign in to connect a league.',
-  no_db: 'League sync is not available right now.'
+  no_db: 'League sync is not available right now.',
+  invalid_browser_import: 'CBS import is incomplete or unsupported. Re-read the league with the updated extension.',
+  browser_refresh_required: 'Open your CBS league and use the Iron Tuna extension to refresh it.'
 };
 function leagueErr(code, detail, status, c) {
   return json({ ok: false, error: code, message: LEAGUE_ERRORS[code] || detail || code, detail: detail || null }, status || 400, c);
@@ -16228,7 +16552,7 @@ async function leagueRoutes(request, env, url, ctx) {
     if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
     if (!(await leagueReady(env))) return json({ ok: false, error: 'no_db' }, 503, c);
     const q = async (sql, ...b) => (((await env.LEADS_DB.prepare(sql).bind(...b).all()).results) || []);
-    const leagues = await q('SELECT id, email, name, season, num_teams, created_at, updated_at FROM leagues ORDER BY updated_at DESC LIMIT 100');
+    const leagues = await q('SELECT id, email, provider, name, season, num_teams, created_at, updated_at, last_ok_at FROM leagues ORDER BY updated_at DESC LIMIT 100');
     const misses = await q('SELECT provider, provider_player_id, name, position, nfl_team, count, last_seen FROM player_map_misses ORDER BY count DESC LIMIT 50');
     return json({ ok: true, contract: LEAGUE_CONTRACT,
                   leagues: leagues.map(l => ({ ...l, email: undefined })), total: leagues.length, misses }, 200, c);
@@ -16242,6 +16566,31 @@ async function leagueRoutes(request, env, url, ctx) {
     const list = await leagueList(env, email);
     return json({ ok: true, contract: LEAGUE_CONTRACT, leagues: list.map(leaguePublic),
                   defaultId: (list.find(l => l.isDefault) || list[0] || {}).id || null }, 200, c);
+  }
+  // The CBS browser import. The extension posts { provider: 'cbs_browser',
+  // snapshot } from the signed-in Iron Tuna tab, so the session cookie is the
+  // whole authorization; the snapshot is validated in full before a row moves,
+  // and a first import that cannot be saved is deleted rather than left empty.
+  if (path === '/api/leagues/connect') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+    if (await rl(env, request, 'lgconnect', 30, 600)) return leagueErr('rate_limited', null, 429, c);
+    const body = await readBody();
+    const pid = String(body.provider || '').toLowerCase();
+    const provider = LEAGUE_PROVIDERS[pid];
+    if (!provider || pid === 'manual') return leagueErr('unsupported_provider', 'Unknown provider', 400, c);
+    if (provider.flag && !flagOn(env, provider.flag)) return leagueErr('provider_disabled', 'The CBS browser import is not enabled on Iron Tuna yet.', 503, c);
+    const raw = body.snapshot;
+    try { cbsBrowserNormalize(raw, await leagueWeekContext(env)); } catch (e) { return leagueErr('invalid_browser_import', null, 400, c); }
+    let r = null;
+    try { r = await leagueBrowserImport(env, email, raw); }
+    catch (e) {
+      if (e && e.code === 'too_many_leagues') return leagueErr('too_many_leagues', null, 400, c);
+      const row = await env.LEADS_DB.prepare('SELECT * FROM leagues WHERE email=? AND provider=? AND provider_league_id=?').bind(email, pid, cbsLeagueId(raw.leagueId)).first().catch(() => null);
+      if (row && !row.last_ok_at) await leagueDisconnect(env, email, row).catch(() => {});
+      return json({ ok: false, error: (e && e.code) || 'import_failed', message: 'The import could not be saved. Please retry.', detail: String((e && e.message) || e).slice(0, 200) }, 502, c);
+    }
+    const L = await leagueLoad(env, email, r.id);
+    return json({ ok: true, created: r.created, imported: { teams: r.teams, players: r.players, unmatched: r.unmatched }, league: L ? leaguePublic(L) : null, needsTeam: !!(L && !L.userTeamId), teams: L ? L.teams : [] }, 200, c);
   }
   if (path === '/api/leagues/manual') {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
@@ -16263,6 +16612,9 @@ async function leagueRoutes(request, env, url, ctx) {
     const L = await leagueLoad(env, email, id);
     return json({ ok: true, contract: LEAGUE_CONTRACT, league: leaguePublic(L) }, 200, c);
   }
+  // There is no sync route: a manual league is edited, and a CBS browser
+  // league is refreshed by the extension, which is what the 409 says.
+  if (action === 'sync' && row.provider === 'cbs_browser') return leagueErr('browser_refresh_required', null, 409, c);
   if (action === 'default') {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
     await leagueSetDefault(env, email, id);
@@ -16362,6 +16714,17 @@ export default {
     // lane read are still on Vegas Edge and Game Intel, one lane over.
     if (/^\/(in-season\/)?wagers\/?$/.test(url.pathname)) {
       return new Response(null, { status: 301, headers: { 'Location': IN_SEASON_HUB + (url.search || ''), 'Cache-Control': 'public, max-age=3600' } });
+    }
+    // The desks used to answer at the surname of an invented analyst
+    // (/analysts/vega). The names were retired on 2026-10-10 and the URLs went
+    // with them, but the old ones sat in the sitemap and in the byline of
+    // ninety static pages for a month, so they 301 to the desk's slug rather
+    // than 404. The storage id is still the surname; only the slug is public.
+    {
+      const __an = /^\/analysts\/([a-z]+)\/?$/.exec(url.pathname);
+      if (__an && ANALYSTS[__an[1]] && !ANALYST_BY_SLUG[__an[1]]) {
+        return new Response(null, { status: 301, headers: { 'Location': analystUrl(ANALYSTS[__an[1]]) + (url.search || ''), 'Cache-Control': 'public, max-age=3600' } });
+      }
     }
     // The saved league: /api/leagues/* and the admin board's read of it.
     if (url.pathname.startsWith('/api/leagues') || url.pathname === '/api/admin/leagues') {
@@ -16608,11 +16971,11 @@ export default {
       return json(slate, 200, { ...c, 'cache-control': 'no-store' });
     }
     // The newsroom: the public feed the homes read, the staff, one analyst,
-    // the Fantasy/Market blend, and the Vega/Brooks disagreements.
+    // the Fantasy/Market blend, and the Market/Rankings disagreements.
     if (url.pathname === '/api/newsroom') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
-      const out = await newsroomFeedPayload(env, url.searchParams.get('lens') === 'dfs' ? 'dfs' : 'weekly', parseInt(url.searchParams.get('limit') || '20', 10) || 20);
+      const out = await newsroomFeedPayload(env, url.searchParams.get('lens') === 'dfs' ? 'dfs' : 'weekly', parseInt(url.searchParams.get('limit') || '20', 10) || 20, parseInt(url.searchParams.get('floor') || '0', 10) || 0);
       return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=120' });
     }
     // The recap strip above the front page's hero. Sixty seconds, because on a
@@ -17853,16 +18216,30 @@ export default {
       try {
         const now = Date.now();
         const since = now - days * 86400000;
-        const rows = async (sql, ...bind) => { try { return ((await db.prepare(sql).bind(...bind).all()).results) || []; } catch (e) { return []; } };
-        const one = async (sql, ...bind) => { try { return (await db.prepare(sql).bind(...bind).first()) || {}; } catch (e) { return {}; } };
+        // A read that fails is remembered, not swallowed. On 2026-10-10 D1
+        // refused every read on this route ("Your account has exceeded D1's
+        // free tier daily row read limit", the §120 failure again) and these
+        // helpers turned each refusal into an empty result, so /admin drew a
+        // dashboard of zeros: no users, no views, "nothing recorded yet". The
+        // operator read it as the data being gone. Nothing was lost; nothing
+        // could be read. The first read decides: when the window total cannot
+        // be read the page is told why instead of being shown an empty site it
+        // has no way to tell from a refused one. A later read failing on its
+        // own is reported on the payload so the page can say it is partial.
+        let readErr = null;
+        const rows = async (sql, ...bind) => { try { return ((await db.prepare(sql).bind(...bind).all()).results) || []; } catch (e) { readErr = readErr || e; return []; } };
+        const one = async (sql, ...bind) => { try { return (await db.prepare(sql).bind(...bind).first()) || {}; } catch (e) { readErr = readErr || e; return {}; } };
+        const errText = e => String((e && e.message) || e || '').slice(0, 200);
         // Every read below is filtered the same way, so no table on the page can
         // disagree with another about who counts.
         const mine = includeMe ? '' : ' AND internal = 0';
         const win = () => 'SELECT COUNT(*) AS views, COUNT(DISTINCT visitor) AS userDays FROM page_views WHERE ts >= ?' + mine;
 
         const out = { ok: true, generatedAt: now, days, includeMe };
+        const winTot = await one(win(), since);
+        if (readErr) return json({ ok: false, error: d1ReadLimit(readErr) ? 'd1_limit' : 'd1_read', detail: errText(readErr) }, 503, head);
         out.totals = {
-          window: await one(win(), since),
+          window: winTot,
           activeNow: ((await one('SELECT COUNT(DISTINCT visitor) AS n FROM page_views WHERE ts >= ?' + mine, now - 1800000)).n) || 0,
         };
         // Daily grid, zero-filled so the chart has a point for every day even
@@ -17950,6 +18327,7 @@ export default {
 
         const first = await one('SELECT MIN(ts) AS t FROM page_views');
         out.collectingSince = first.t || null;
+        if (readErr) out.readError = { limit: d1ReadLimit(readErr), detail: errText(readErr) };
         return json(out, 200, head);
       } catch (e) { return json({ ok: false, error: 'server', detail: String(e).slice(0, 200) }, 500, head); }
     }
@@ -18149,8 +18527,8 @@ export default {
       // slug back off the path and fetches its own body. The stories turn over
       // every three hours, so they are rendered rather than built as pages.
       else if (/^\/lead(\/[A-Za-z0-9._-]*)?\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/lead', url).toString(), request);
-      // /analysts is the staff page and the AI disclosure; /analysts/<id> is
-      // one analyst's page, one shell reading the id off the path.
+      // /analysts is the staff page and the AI disclosure; /analysts/<slug> is
+      // one desk's page, one shell reading the slug off the path.
       else if (/^\/analysts\/[a-z]+\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/analyst', url).toString(), request);
       // /player and /player/<slug> both serve the one player-card shell, which
       // reads the slug back off the path and assembles the card in the browser
@@ -18247,7 +18625,7 @@ export default {
           ogd: 'Ceiling-weighted best ball values, live stack detection, and championship-week edges tuned to your exact roster as you draft. Free to try.'
         }
       };
-      // The SPA format routes take their meta from the table above; /analysts/<id>
+      // The SPA format routes take their meta from the table above; /analysts/<slug>
       // builds its own from the staff table, and both land in the same rewriter.
       // /player/<slug> joins them, and unlike the two above it is async: the
       // slug is resolved against the generated index (fetched through the asset
@@ -18347,9 +18725,11 @@ export default {
       }
 
       // The rankings board, pre-rendered into its own host. See ranksPrerender:
-      // the body is only read for the sixteen pages that carry a board, and the
-      // board it builds is read off the page's own data-rk-* attributes.
-      if (/^\/(weekly|season-long)-([a-z]{1,4}-)?rankings$/.test(__seoKey)) {
+      // the body is only read for the eighteen pages that carry a board, and the
+      // board it builds is read off the page's own data-rk-* attributes. The
+      // position segment is any word, not four letters: /weekly-overall-rankings
+      // (10 Oct 2026, the pooled board on its own page) is seven.
+      if (/^\/(weekly|season-long)-([a-z]+-)?rankings$/.test(__seoKey)) {
         let __h = await resp.text();
         const __pre = await ranksPrerender(env, __h);
         if (__pre) {

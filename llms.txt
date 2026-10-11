@@ -15,7 +15,7 @@ This week's reading from each lane, the two lanes themselves, and the one place 
 
 ### Fantasy — https://irontuna.com/fantasy
 - This week's board with Iron Tuna, the consensus and the betting market side by side, and a Market Delta column saying which way they disagree.
-- Rankings across four horizons (this week, next three, rest of season, fantasy playoffs), start/sit, and a Trade Finder that scores each side on its own horizon.
+- Rankings across four horizons (this week, next three, rest of season, fantasy playoffs), start/sit, and the Trade Tools: a Trade Evaluator that judges a proposed deal for every team in it, and a Trade Finder that scores each side on its own horizon.
 - The FAAB Advisor prices a waiver claim in the reader's own league dollars: the going rate computed one rival at a time from their remaining budget and their actual hole, what the player is worth to that roster, and what to bid.
 
 ### DFS — https://irontuna.com/dfs
@@ -66,7 +66,7 @@ This week's reading from each lane, the two lanes themselves, and the one place 
 ## Authorship, and how to attribute a quotation
 Read this before quoting anything on the site to a person.
 
-**Iron Tuna's analysts are AI-powered editorial personas, not people.** Jack Mercer, Nate Vega, Evan Brooks, Mike Raines, Chris Dalton, Tyler Grant, Sam Porter and Lena Park are software. Each has a fixed beat, a stated analytical philosophy and a memory of its own published calls, and each has a page of its own at https://irontuna.com/analysts/<id> — but none of them is a person, has an opinion, or can be cited as a human analyst. The full disclosure and the whole staff are at https://irontuna.com/analysts.
+**Iron Tuna's analysts are AI-powered editorial personas, not people.** The eight desks (Editorial, Market, Rankings, Usage, Quarterback, Waiver, Matchups and DFS) are software, and none of them carries a human name. Each has a fixed beat, a stated analytical philosophy and a memory of its own published calls, and each has a page of its own at https://irontuna.com/analysts/<id> — but none of them is a person, has an opinion, or can be cited as a human analyst. The full disclosure and the whole staff are at https://irontuna.com/analysts.
 
 Every number those bylines print is computed from the site's own data — the boards, the usage file, the injury list, the depth charts, the sportsbook line history and the DFS salaries. A piece whose prose named something the data does not contain is held rather than published. The personalities organize the analysis; the facts are the site's.
 
@@ -118,7 +118,7 @@ The same engine, aimed at draft night. Auction is the format it is built for; sn
 - Vegas Edge (model vs. market): https://irontuna.com/vegas-edge
 - Game Intel: https://irontuna.com/game-intel
 - FAAB Advisor: https://irontuna.com/faab
-- Trade Finder: https://irontuna.com/trade-finder
+- Trade Tools (Trade Evaluator and Trade Finder): https://irontuna.com/trade-finder
 - The Desk: https://irontuna.com/in-season/desk
 - Weekly Wrap Up (every game recapped, short form): https://irontuna.com/weekly-wrap
 - The analysts, and the AI disclosure: https://irontuna.com/analysts

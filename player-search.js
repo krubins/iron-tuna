@@ -526,6 +526,65 @@
     return fig;
   }
 
+  // ── the destinations ──────────────────────────────────────────────────────
+  // The homepage box answers more than "which player": a reader who types
+  // "rankings", "trade" or "dfs" wants a tool, not a name. Only a box that asks
+  // for them (data-search-tools, or opts.tools) offers these; every other box
+  // stays a player lookup. On focus with nothing typed, the box lists the
+  // first group so a reader can pick what they came for without typing.
+  // `w` is the words a reader might type for it; matching is by prefix, either
+  // way round, so "rank", "rankings" and "rb rankings" all land.
+  var TOOLS = [
+    { n: 'Rankings', d: 'Quarterbacks first, every position a chip away, priced off the betting market', h: '/weekly-rankings', w: 'rankings ranks rank weekly week board top' },
+    { n: 'Trade advice', d: 'Trade Tools: judge a trade, or find one both sides say yes to', h: '/trade-finder', w: 'trade trades trading advice value values finder evaluator evaluate offer' },
+    { n: 'DFS lineups', d: 'The market read, aimed at one slate', h: '/dfs', w: 'dfs daily lineup lineups draftkings fanduel optimizer salary slate' },
+    { n: 'Player lookup', d: 'Every player Iron Tuna prices, one page', h: '/players', w: 'players player lookup search find card cards' },
+    { n: 'Start / sit and my lineup', d: 'Your best lineup, matchup and alerts', h: '/my-week', w: 'start sit lineup my week matchup who should' },
+    { n: 'Waivers and FAAB', d: 'What to bid on every claim', h: '/waivers', w: 'waivers waiver wire faab pickups pickup adds bid claims' },
+    { n: 'Vegas Edge', d: 'Where the market and the rankings disagree', h: '/vegas-edge', w: 'vegas edge betting market odds props sleepers busts' },
+    { n: 'Game lines and totals', d: 'Every line, total and implied score', h: '/game-intel', w: 'games game lines spreads totals implied scores intel schedule' },
+    { n: 'Depth charts', d: 'Every NFL depth chart', h: '/depth-charts', w: 'depth charts chart starters backups handcuffs' },
+    { n: 'Articles', d: 'The desk’s stories this week', h: '/in-season/desk', w: 'articles news stories desk analysis reads' },
+    { n: 'My league', d: 'Save your league’s scoring', h: '/my-league', w: 'my league settings scoring sync import' },
+    { n: 'QB rankings', d: 'Quarterbacks, this week', h: '/weekly-qb-rankings', w: 'qb qbs quarterback quarterbacks', pos: 1 },
+    { n: 'RB rankings', d: 'Running backs, this week', h: '/weekly-rb-rankings', w: 'rb rbs running backs back', pos: 1 },
+    { n: 'WR rankings', d: 'Wide receivers, this week', h: '/weekly-wr-rankings', w: 'wr wrs wide receivers receiver', pos: 1 },
+    { n: 'TE rankings', d: 'Tight ends, this week', h: '/weekly-te-rankings', w: 'te tes tight ends end', pos: 1 },
+    { n: 'Flex rankings', d: 'RB, WR and TE together, this week', h: '/weekly-flex-rankings', w: 'flex', pos: 1 },
+    { n: 'Kicker rankings', d: 'Kickers, this week', h: '/weekly-k-rankings', w: 'k kicker kickers', pos: 1 },
+    { n: 'Defense rankings', d: 'Defense / special teams, this week', h: '/weekly-dst-rankings', w: 'dst def defense defenses special teams', pos: 1 }
+  ];
+  TOOLS.forEach(function (t) { t.f = fold(t.n); t.ws = fold(t.w + ' ' + t.n).split(' '); });
+  var MAX_TOOLS = 4;
+
+  // A tool answers when every word typed starts one of its words, or (for a
+  // reader who types past a word, "rankings" against "rank") one of its words
+  // starts the typed word. One letter is too little to mean a tool, except a
+  // position letter on its own ("k").
+  function searchTools(query) {
+    var q = fold(query);
+    if (!q) return [];
+    var typed = q.split(' ');
+    var hits = [];
+    TOOLS.forEach(function (t, i) {
+      var score = 0;
+      for (var j = 0; j < typed.length; j++) {
+        var w = typed[j], best = 0;
+        for (var m = 0; m < t.ws.length; m++) {
+          var x = t.ws[m];
+          if (x === w) { best = 3; break; }
+          if (w.length >= 2 && x.indexOf(w) === 0) best = Math.max(best, 2);
+          else if (x.length >= 3 && w.indexOf(x) === 0) best = Math.max(best, 1);
+        }
+        if (!best) return;
+        score += best;
+      }
+      hits.push({ t: t, s: score, i: i });
+    });
+    hits.sort(function (a, b) { return (b.s - a.s) || (a.i - b.i); });
+    return hits.slice(0, MAX_TOOLS).map(function (h) { return h.t; });
+  }
+
   // ── the box ───────────────────────────────────────────────────────────────
   // The menu is appended to <body> and positioned in viewport coordinates,
   // never nested under the input. The one place this box has to work is the
@@ -556,7 +615,32 @@
     doc.body.appendChild(menu);
     input.setAttribute('aria-controls', menu.id);
 
+    // `hits` is everything the menu offers, in menu order: destinations
+    // ({ tool }) and players ({ player }). The arrow keys and Enter walk it.
     var hits = [], at = -1, open = false;
+    var tools = !!opts.tools;
+
+    // What the box offers for what is typed. A destination leads when it is
+    // what the reader plainly meant (a word typed in full, "dfs", "trade",
+    // "qb") or when no player answers by name; otherwise the players lead,
+    // so "mark" still opens on Mark Andrews rather than on the market.
+    function items(value) {
+      var q = fold(value);
+      if (!tools) return search(value, opts.limit || MAX_HITS).map(function (p) { return { player: p }; });
+      if (!q) {
+        return TOOLS.filter(function (t) { return !t.pos; }).slice(0, MAX_HITS)
+          .map(function (t) { return { tool: t }; });
+      }
+      var ts = searchTools(value).map(function (t) { return { tool: t }; });
+      var ps = search(value, opts.limit || MAX_HITS).map(function (p) { return { player: p }; });
+      var named = ps.some(function (h) { return rankOf(h.player, q) < 2; });
+      var plain = q.split(' ').every(function (w) {
+        return TOOLS.some(function (t) { return t.ws.indexOf(w) >= 0; });
+      });
+      var lead = ts.length && (plain || !named);
+      var out = lead ? ts.concat(ps) : ps.concat(ts);
+      return out.slice(0, MAX_HITS + MAX_TOOLS);
+    }
 
     function place() {
       // Off the FIELD, not the bare <input>: both boxes wrap the input in a
@@ -614,45 +698,81 @@
       if (at < 0) input.removeAttribute('aria-activedescendant');
     }
 
-    function go(p) {
+    function go(h) {
+      if (h.tool) {
+        try { if (typeof root.gtag === 'function') root.gtag('event', 'site_search_tool', { tool: h.tool.h, from: opts.from || 'ribbon' }); } catch (e) {}
+        root.location.href = h.tool.h;
+        return;
+      }
+      var p = h.player;
       try { if (typeof root.gtag === 'function') root.gtag('event', 'player_search', { player: p.k, from: opts.from || 'ribbon' }); } catch (e) {}
       root.location.href = href(p);
     }
 
+    // A small glyph in the face's slot, so a destination row lines up with
+    // the player rows under it and does not read as a player without a photo.
+    function toolIcon() {
+      var box = doc.createElement('span');
+      box.className = 'pl-face pl-tool';
+      box.setAttribute('aria-hidden', 'true');
+      box.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+      return box;
+    }
+
+    function group(label) {
+      var g = doc.createElement('div');
+      g.className = 'pl-group';
+      g.setAttribute('role', 'presentation');
+      g.textContent = label;
+      menu.appendChild(g);
+    }
+
     function render() {
       var q = fold(input.value);
-      hits = q ? search(input.value, opts.limit || MAX_HITS) : [];
+      hits = (q || tools) ? items(input.value) : [];
       menu.innerHTML = '';
-      if (!q) { close(); return; }
+      if (!q && !tools) { close(); return; }
       if (!hits.length) {
         var none = doc.createElement('div');
         none.className = 'pl-empty';
-        none.textContent = 'No player by that name on the board.';
+        none.textContent = tools ? 'Nothing by that name. Try a player, “rankings”, “trade” or “DFS”.' : 'No player by that name on the board.';
         menu.appendChild(none);
       } else {
-        hits.forEach(function (p, i) {
+        var last = null;
+        hits.forEach(function (h, i) {
+          var kind = h.tool ? 'tool' : 'player';
+          if (tools && kind !== last) group(kind === 'tool' ? (q ? 'Go to' : 'What are you looking for?') : 'Players');
+          last = kind;
           // An <a>, not a button: a player card is a place, and a reader who
           // wants it in a new tab should be able to have one.
           var a = doc.createElement('a');
-          a.className = 'pl-opt';
+          a.className = 'pl-opt' + (h.tool ? ' pl-opt-tool' : '');
           a.id = menu.id + '-o' + i;
           a.setAttribute('role', 'option');
           a.setAttribute('aria-selected', 'false');
-          a.href = href(p);
-          a.appendChild(faceEl(p));
           var meta = doc.createElement('span');
           meta.className = 'pl-meta';
           var b = doc.createElement('b');
-          b.appendChild(highlight(p.n, input.value));
           var sub = doc.createElement('span');
-          sub.textContent = p.p + (p.t && p.t !== 'FA' ? ' · ' + p.t : ' · Free agent');
+          if (h.tool) {
+            a.href = h.tool.h;
+            a.appendChild(toolIcon());
+            b.appendChild(highlight(h.tool.n, input.value));
+            sub.textContent = h.tool.d;
+          } else {
+            var p = h.player;
+            a.href = href(p);
+            a.appendChild(faceEl(p));
+            b.appendChild(highlight(p.n, input.value));
+            sub.textContent = p.p + (p.t && p.t !== 'FA' ? ' · ' + p.t : ' · Free agent');
+          }
           meta.appendChild(b); meta.appendChild(sub);
           a.appendChild(meta);
           a.addEventListener('mousedown', function (e) { e.preventDefault(); });  // keep focus off the blur handler
           a.addEventListener('click', function (e) {
             if (e.metaKey || e.ctrlKey || e.shiftKey || e.button > 0) return;     // let a new tab be a new tab
             e.preventDefault();
-            go(p);
+            go(h);
           });
           menu.appendChild(a);
         });
@@ -666,7 +786,7 @@
     }
 
     on(input, 'input', render);
-    on(input, 'focus', function () { if (input.value) render(); });
+    on(input, 'focus', function () { if (input.value || tools) render(); });
     on(input, 'blur', function () { root.setTimeout(close, 120); });
     on(input, 'keydown', function (e) {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -680,8 +800,9 @@
       } else if (e.key === 'Enter') {
         // With nothing picked, Enter takes the top match — the reader typed a
         // name and pressed go, and sending them to a search page they never
-        // asked for would be a worse answer than the one they meant.
-        var pick = hits[at >= 0 ? at : 0];
+        // asked for would be a worse answer than the one they meant. An empty
+        // box with the destinations showing is not a choice yet.
+        var pick = fold(input.value) ? hits[at >= 0 ? at : 0] : hits[at];
         if (pick) { e.preventDefault(); go(pick); }
       } else if (e.key === 'Escape') {
         if (open) { e.preventDefault(); close(); }
@@ -691,7 +812,8 @@
     // handler above answers first, and this stops a stray submit behind it.
     if (input.form) on(input.form, 'submit', function (e) {
       e.preventDefault();
-      var pick = search(input.value, 1)[0];
+      if (!fold(input.value)) return;
+      var pick = items(input.value)[0];
       if (pick) go(pick);
     });
     on(root, 'resize', function () { if (open) place(); });
@@ -1024,6 +1146,7 @@
     plate: plateEl,
     href: href,
     fold: fold,
+    tools: searchTools,
     mount: mount,
     linkPlayers: linkPlayers,
     linkAllPlayers: linkAllPlayers,
@@ -1035,7 +1158,7 @@
   function boot() {
     var boxes = root.document.querySelectorAll('[data-player-search]');
     for (var i = 0; i < boxes.length; i++) {
-      mount(boxes[i], { from: boxes[i].getAttribute('data-player-search') || 'page' });
+      mount(boxes[i], { from: boxes[i].getAttribute('data-player-search') || 'page', tools: boxes[i].hasAttribute('data-search-tools') });
     }
     // The stories already in the served HTML — the drop pages, /the-pick,
     // /play-caller-premium. Pages that paint their stories from data call

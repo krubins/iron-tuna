@@ -184,10 +184,12 @@ ok('the cards are advertised, one URL per slug',
 // sections now, short enough that a pinned box buys nothing, and the masthead's
 // own SEARCH link is the way in.
 console.log('\nthe lookup is reachable from the homepage');
-ok('the masthead links the card directly', /<nav class="mast-jump"[\s\S]*?href="\/player">Search<\/a>/.test(front));
+ok('the masthead links the card directly', /<nav class="nav"[\s\S]*?href="\/player">Search<\/a>/.test(front));
 ok('front.html loads the lookup', front.includes('src="/player-search.js"'));
 ok('and uses it to link the names it paints', /ITPlayerSearch\.linkPlayers/.test(front));
-ok('it carries no second, in-page search box', !/rb-search|data-player-search/.test(front));
+// October 2026: the hero's search field IS the page's search box, mounted on
+// the shared lookup; the masthead's Search link is the route to the card.
+ok('it carries exactly one in-page search box', (front.match(/data-player-search=/g) || []).length === 1 && !/rb-search/.test(front));
 // The widget contract itself is unchanged, and the card and the draft app are
 // the surfaces that mount it.
 ok('the box opts in by attribute, so the card and the app mount the same widget',

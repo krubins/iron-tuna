@@ -96,16 +96,23 @@ console.log('\nthe staff and the one rivalry');
 {
   const A = H.ANALYSTS;
   ok('eight analysts', Object.keys(A).length === 8 && ['mercer', 'vega', 'brooks', 'raines', 'dalton', 'grant', 'porter', 'park'].every(k => A[k]));
-  ok('Vega and Brooks are each other\'s rivalry and nobody else has one', A.vega.rivalry === 'brooks' && A.brooks.rivalry === 'vega' && Object.values(A).filter(a => a.rivalry).length === 2);
+  ok('the Market Desk and the Rankings Desk are each other\'s rivalry and nobody else has one', A.vega.rivalry === 'brooks' && A.brooks.rivalry === 'vega' && Object.values(A).filter(a => a.rivalry).length === 2);
   ok('every analyst has a voice, a philosophy and assignments', Object.values(A).every(a => a.voice.length > 40 && a.philosophy && a.assignments.length));
+  // No invented people. A desk is named for its beat and the name says so;
+  // a "First Last" name here is a fictional author, which the site retired.
+  ok('every analyst is a desk, not a person', Object.values(A).every(a => / Desk$/.test(a.name)) && !Object.values(A).some(a => /^(Jack|Nate|Evan|Mike|Chris|Tyler|Sam|Lena) /.test(a.name)));
+  ok('every analyst has a public slug distinct from its storage id', Object.values(A).every(a => /^[a-z]+$/.test(a.slug) && a.slug !== a.id) && new Set(Object.values(A).map(a => a.slug)).size === 8);
+  ok('no voice or philosophy writes about the desk as a person', Object.values(A).every(a => !/\b(he|his|him|she|her)\b/.test(a.voice.replace(/the play-caller’s|who the quarterback/g, '')) || a.id === 'dalton'));
   ok('the disclosure says they are AI personas, not people', /AI-powered editorial personas, not people/.test(H.AI_DISCLOSURE));
   const flags = H.flagReport({});
   // Nothing defaults off any more. The four provider connectors were the only
-  // flags that did, and they went with the connectors (HANDOFF §87), so an
+  // flags that did, and they went with the connectors (HANDOFF §89), so an
   // off-by-default flag appearing here again is a deliberate decision someone
-  // has to make rather than a leftover.
+  // has to make rather than a leftover. CBS_SYNC came back on 2026-10-10 for
+  // the browser import (HANDOFF §128), on by default: it gates a route that
+  // only validates what the reader's own browser posts, and stores no credential.
   ok('every flag defaults on', Object.entries(flags).every(([, f]) => f.on && f.source === 'default'));
-  ok('and no provider connector flag is left behind', !['SLEEPER_SYNC', 'YAHOO_SYNC', 'CBS_SYNC', 'ESPN_SYNC'].some(k => flags[k]));
+  ok('and no platform-credential connector flag is left behind', !['SLEEPER_SYNC', 'YAHOO_SYNC', 'ESPN_SYNC'].some(k => flags[k]) && flags.CBS_SYNC && flags.CBS_SYNC.on);
   ok('a flag reads off the env', !H.flagOn({ FLAG_RIVALRY: '0' }, 'RIVALRY') && H.flagOn({ FLAG_RIVALRY: 'on' }, 'RIVALRY') && !H.flagOn({}, 'NOPE'));
 }
 
@@ -159,17 +166,18 @@ console.log('\nthe rivalry column');
   }
   const b = H.blendBoard({ ok: true, players: pool, currentWeek: 3 }, 0.5);
   const c = H.rivalryColumns(b.players, { week: 3 });
-  ok('both men file a column of five', c.vega.picks.length === H.RIVALRY_PICKS && c.brooks.picks.length === H.RIVALRY_PICKS, JSON.stringify([c.vega.picks.length, c.brooks.picks.length]));
-  ok('each column is bylined to its man and points at the other', c.vega.name === 'Nate Vega' && c.vega.against.name === 'Evan Brooks' && c.brooks.against.name === 'Nate Vega' && c.vega.url === '/analysts/vega');
-  ok('a man only pitches players his own end of the slider has higher', c.vega.picks.every(p => p.mineRank < p.theirsRank) && c.brooks.picks.every(p => p.mineRank < p.theirsRank));
+  ok('both desks file a column of five', c.vega.picks.length === H.RIVALRY_PICKS && c.brooks.picks.length === H.RIVALRY_PICKS, JSON.stringify([c.vega.picks.length, c.brooks.picks.length]));
+  ok('each column is bylined to its desk and points at the other', c.vega.name === 'Market Desk' && c.vega.against.name === 'Rankings Desk' && c.brooks.against.name === 'Market Desk' && c.vega.url === '/analysts/market' && c.brooks.url === '/analysts/rankings');
+  ok('a desk only pitches players its own end of the slider has higher', c.vega.picks.every(p => p.mineRank < p.theirsRank) && c.brooks.picks.every(p => p.mineRank < p.theirsRank));
   ok('the two columns cannot be the same column', !c.vega.picks.some(p => c.brooks.picks.some(q => q.key === p.key)));
   ok('nobody is pitched twice in one column', new Set(c.vega.picks.map(p => p.key)).size === 5 && new Set(c.brooks.picks.map(p => p.key)).size === 5);
   ok('every pitch names both ranks and ends on the needle', c.vega.picks.every(p => p.pitch.indexOf(p.position + p.mineRank) > 0 && p.pitch.indexOf(p.position + p.theirsRank) > 0 && /[.!]$/.test(p.pitch)) && c.brooks.picks.every(p => p.pitch.indexOf(p.position + p.mineRank) > 0 && p.pitch.indexOf(p.position + p.theirsRank) > 0));
   ok('no two picks in a column draw the same jab', new Set(c.vega.picks.map(p => p.pitch.split('. ').pop())).size === 5 && new Set(c.brooks.picks.map(p => p.pitch.split('. ').pop())).size === 5);
   ok('the same board on the same week reads the same', JSON.stringify(H.rivalryColumns(b.players, { week: 3 })) === JSON.stringify(c));
   ok('the needles move with the week', JSON.stringify(H.rivalryColumns(b.players, { week: 4 })) !== JSON.stringify(c));
-  ok('Vega never pitches a player no book has priced', c.vega.picks.every(p => p.marketBasis !== 'none'));
-  ok('each man names his rival, not himself', c.vega.picks.every(p => /Brooks|Evan/.test(p.pitch)) && c.brooks.picks.every(p => /Vega|Nate/.test(p.pitch)));
+  ok('the Market Desk never pitches a player no book has priced', c.vega.picks.every(p => p.marketBasis !== 'none'));
+  ok('each desk names its rival, not itself', c.vega.picks.every(p => /Rankings Desk/.test(p.pitch)) && c.brooks.picks.every(p => /Market Desk/.test(p.pitch)));
+  ok('no pitch writes about a desk as a person', ['vega', 'brooks'].every(k => !/\b(Evan|Nate|Brooks|Vega)\b/.test(c[k].standfirst) && c[k].picks.every(p => !/\b(Evan|Nate|Brooks|Vega)\b/.test(p.pitch))));
   ok('the pitches clear the same phrasing bar the writer is held to, em dashes included', ['vega', 'brooks'].every(k => !H.AI_PHRASES.some(re => re.test(c[k].standfirst)) && c[k].picks.every(p => !H.AI_PHRASES.some(re => re.test(p.pitch)))));
   // A week the two ends agree on: the relaxed pass still has to find five, and
   // a board with nothing in it must not invent anybody.
@@ -265,7 +273,7 @@ console.log('\nthe rivalry column on the record');
   ok('every pick is settled once the week publishes', graded.ok && graded.rivalry === 10 && db.t.analyst_calls.every(r => r.outcome), JSON.stringify(graded));
   ok('a player who did not play loses the claim', db.t.analyst_calls[0].outcome === 'miss' && /did not play/.test(db.t.analyst_calls[0].outcome_note));
   ok('a pick that finishes ahead of the rival’s rank is a hit', db.t.analyst_calls.slice(1).every(r => r.outcome === 'hit') && /finished/.test(db.t.analyst_calls[1].outcome_note));
-  ok('the note names the finish and the rank it beat', /finished [A-Z]+\d+ on [\d.]+ points; (Nate Vega|Evan Brooks) had him [A-Z]+\d+/.test(db.t.analyst_calls[1].outcome_note), db.t.analyst_calls[1].outcome_note);
+  ok('the note names the finish and the rank it beat', /finished [A-Z]+\d+ on [\d.]+ points; (Market Desk|Rankings Desk) had him [A-Z]+\d+/.test(db.t.analyst_calls[1].outcome_note), db.t.analyst_calls[1].outcome_note);
 
   // The stats file moves on: week 3's picks are no longer gradeable from it,
   // and a player who played on must not read as a scratch.
@@ -371,11 +379,11 @@ const board = (list) => ({ ok: true, players: list.map((p, i) => ({ ...p, games:
 
 console.log('\nthe packet the writer sees');
 {
-  const big = { meta: { kind: 'weekend-preview' }, freshness: { stale: [] }, rivalry: null, priorCalls: [], playerIndex: { a: 1 }, rivalryBudget: { allowed: true }, colleagues: ['x'], allowed: { names: ['A B'], numbers: ['1'], analysts: ['Sam Porter'] },
+  const big = { meta: { kind: 'weekend-preview' }, freshness: { stale: [] }, rivalry: null, priorCalls: [], playerIndex: { a: 1 }, rivalryBudget: { allowed: true }, colleagues: ['x'], allowed: { names: ['A B'], numbers: ['1'], analysts: ['Matchups Desk'] },
     cards: Array.from({ length: 40 }, (_, i) => ({ game: 'G' + i, rankings: Array.from({ length: 30 }, (_, j) => ({ name: 'P' + j, x: 'y'.repeat(60) })) })), injuries: Array.from({ length: 200 }, (_, i) => ({ name: 'I' + i, note: 'z'.repeat(80) })) };
   const c = H.compactForWriter(big, 20000);
   ok('the compacted packet is whole JSON under the budget', JSON.stringify(c).length <= 20000 && JSON.parse(JSON.stringify(c)) && !c.playerIndex && !c.rivalryBudget);
-  ok('and says what it left out rather than cutting a string mid-object', Array.isArray(c.omittedForLength) && c.omittedForLength.length >= 1 && c.meta && c.allowed.analysts[0] === 'Sam Porter');
+  ok('and says what it left out rather than cutting a string mid-object', Array.isArray(c.omittedForLength) && c.omittedForLength.length >= 1 && c.meta && c.allowed.analysts[0] === 'Matchups Desk');
   ok('a packet inside the budget passes through with its facts intact', !H.compactForWriter({ meta: {}, allowed: { analysts: [] }, facts: [1, 2, 3] }).omittedForLength);
   ok('the writer waits longer than the legacy minute', H.WRITER_TIMEOUT_MS >= 120000 && H.WRITER_PACKET_BUDGET <= 120000);
   const now = Date.now();
@@ -397,16 +405,16 @@ console.log('\nanalyst memory');
 console.log('\nthe fact check');
 {
   const packet = H._finishBrief({ meta: { kind: 'trade-desk', lens: 'both' }, rivalry: null, players: [{ name: 'CeeDee Lamb', targets: 12, share: 34 }] });
-  packet.allowed.names.push('Evan Brooks', 'Lena Park'); packet.allowed.analysts = ['Evan Brooks', 'Lena Park'];
-  const good = { headline: 'Lamb is a target', dek: 'x', dfsHeadline: 'Lamb is the chalk', dfsDek: 'x', weekly: { target: [{ player: 'CeeDee Lamb', why: '12 targets, a 34% share' }], tradeAway: [], reasoning: ['Brooks likes the share.'], marketCounterpoint: [] }, dfs: { attack: [], fade: [], reasoning: ['Park: no salaries loaded.'] }, calls: [] };
+  packet.allowed.names.push('Rankings Desk', 'DFS Desk'); packet.allowed.analysts = ['Rankings Desk', 'DFS Desk'];
+  const good = { headline: 'Lamb is a target', dek: 'x', dfsHeadline: 'Lamb is the chalk', dfsDek: 'x', weekly: { target: [{ player: 'CeeDee Lamb', why: '12 targets, a 34% share' }], tradeAway: [], reasoning: ['Rankings Desk likes the share.'], marketCounterpoint: [] }, dfs: { attack: [], fade: [], reasoning: ['DFS Desk: no salaries loaded.'] }, calls: [] };
   ok('a draft inside the packet, in the right shape, passes', H.factCheck(good, packet).ok, H.factCheck(good, packet).problems.join(';'));
   const bad = JSON.parse(JSON.stringify(good)); bad.weekly.reasoning = ['Jerry Jeudy had 155 yards.'];
   const v = H.factCheck(bad, packet);
   ok('a name and a number the packet lacks are caught', !v.ok && v.problems.includes('name:Jerry Jeudy') && v.problems.includes('number:155'));
-  const riv = JSON.parse(JSON.stringify(good)); riv.weekly.reasoning = ['Vega has him WR5.']; riv.rivalryLine = 'Vega has him WR5.';
+  const riv = JSON.parse(JSON.stringify(good)); riv.weekly.reasoning = ['Market Desk has him WR5.']; riv.rivalryLine = 'Market Desk has him WR5.';
   const rv = H.factCheck(riv, packet);
-  ok('naming Vega without a rivalry in the packet is caught twice: as an analyst and as a rivalry line', !rv.ok && rv.problems.includes('analyst:Nate Vega') && rv.problems.includes('rivalry:not_in_packet'));
-  const withRiv = { ...packet, rivalry: { player: 'CeeDee Lamb' }, allowed: { ...packet.allowed, names: packet.allowed.names.concat('Nate Vega'), analysts: packet.allowed.analysts.concat('Nate Vega') } };
+  ok('naming the Market Desk without a rivalry in the packet is caught twice: as an analyst and as a rivalry line', !rv.ok && rv.problems.includes('analyst:Market Desk') && rv.problems.includes('rivalry:not_in_packet'));
+  const withRiv = { ...packet, rivalry: { player: 'CeeDee Lamb' }, allowed: { ...packet.allowed, names: packet.allowed.names.concat('Market Desk'), analysts: packet.allowed.analysts.concat('Market Desk') } };
   ok('and passes once the packet carries the rivalry', H.factCheck(riv, withRiv).ok, H.factCheck(riv, withRiv).problems.join(';'));
   const ai = JSON.parse(JSON.stringify(good)); ai.weekly.reasoning = ['Buckle up, it is worth noting that Lamb — a target — is a game-changer.'];
   const pv = H.factCheck(ai, packet);
@@ -524,7 +532,7 @@ console.log('\nthe fact check reads a sentence break, a verb and shown arithmeti
     players: [{ name: 'Justin Herbert', salary: 6100 }, { name: 'Kyren Williams', carries: 14 }, { name: 'Matthew Stafford', projected: 17.1, points: 4.2 }],
     dfs: { saver: [{ name: 'Patrick Mahomes', salary: 5500 }, { name: 'Josh Allen', salary: 7000 }, { name: 'Geno Smith', salary: 4600 }, { name: 'Bub Means', salary: 3000 }, { name: 'Saints DST', salary: 2200 }] } });
   const v = s => H.validateDraft(s, p.allowed);
-  ok('a name meeting a sentence break is two sentences', v('The market has Herbert at rank 3. Vega called the buy.').ok, JSON.stringify(v('The market has Herbert at rank 3. Vega called the buy.').names));
+  ok('a name meeting a sentence break is two sentences', v('The market has Herbert at rank 3. Rankings called the buy.').ok, JSON.stringify(v('The market has Herbert at rank 3. Rankings called the buy.').names));
   ok('a verb in front of a packet name is a verb', v('Lock Herbert in cash. Move Williams up.').ok, JSON.stringify(v('Lock Herbert in cash. Move Williams up.').names));
   ok('a difference the draft spells out is arithmetic at any size', v('Projected 17.1, finished 4.2. A 12.9-point miss.').ok, JSON.stringify(v('Projected 17.1, finished 4.2. A 12.9-point miss.').numbers));
   ok('salary savings the draft spells out are arithmetic', v('Mahomes at 5,500 saves 1,500 against Allen at 7,000, and Smith at 4,600 saves 2,400.').ok, JSON.stringify(v('Mahomes at 5,500 saves 1,500 against Allen at 7,000, and Smith at 4,600 saves 2,400.').numbers));
@@ -644,7 +652,7 @@ console.log('\nwhat the site called before kickoff, and how it landed');
   })());
   ok('a recap with nothing called is not held for the section it was told to omit', (() => {
     const without = { meta: { kind: 'game-recap', lens: 'weekly' }, calledIt: H._vindication(null, new Map(), 1),
-                      allowed: { names: [], numbers: [], analysts: ['Mike Raines'] } };
+                      allowed: { names: [], numbers: [], analysts: ['Usage Desk'] } };
     const body = { headline: 'A game', weekly: Object.fromEntries(H.sectionsFor('game-recap', 'weekly', without).map(k => [k, ['x']])) };
     const fc = H.factCheck(body, without);
     return !fc.problems.some(p => /missing:weekly.weCalledIt/.test(p));
@@ -652,7 +660,7 @@ console.log('\nwhat the site called before kickoff, and how it landed');
   ok('but a recap that DID call something is held if it leaves the section out', (() => {
     const frz = { takenAt: 1, kickoff: 2, rows: [{ key: 'p|WR', name: 'A Player', position: 'WR', team: 'AAA', consensusRank: 24, consensusPts: 10, ironTunaRank: 13, ironTunaPts: 18, vegasRank: 10, vegasPts: 12 }] };
     const withCall = { meta: { kind: 'game-recap', lens: 'weekly' }, calledIt: H._vindication(frz, new Map([['p|WR', { points: 22 }]]), 1),
-                       allowed: { names: [], numbers: [], analysts: ['Mike Raines'] } };
+                       allowed: { names: [], numbers: [], analysts: ['Usage Desk'] } };
     const body = { headline: 'A game', weekly: Object.fromEntries(H.sectionsFor('game-recap', 'weekly').filter(k => k !== 'weCalledIt').map(k => [k, ['x']])) };
     return H.factCheck(body, withCall).problems.some(p => /missing:weekly.weCalledIt/.test(p));
   })());
@@ -757,7 +765,7 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
     ok('a hold and a stash are held off the week\'s record entirely', got.held === 2 && !got.rows.some(r => /Hold|Sher/.test(r.name)));
     ok('the rivalry column is not on this record: it is graded on rank in its own column', !got.rows.some(r => r.kind === H.RIVALRY_COLUMN_KIND));
     ok('another week is not on it either', !got.rows.some(r => r.name === 'Nex Tweek'));
-    ok('each one names its story, its analyst and a URL that resolves', got.rows[0].story === 'Pickup Advisor' && got.rows[0].analystName === 'Mike Raines' && got.rows[0].url === '/in-season/desk/pickup-advisor/1'
+    ok('each one names its story, its analyst and a URL that resolves', got.rows[0].story === 'Pickup Advisor' && got.rows[0].analystName === 'Usage Desk' && got.rows[0].url === '/in-season/desk/pickup-advisor/1'
       && got.rows[1].url === '/in-season/desk/game-recap/1/2026-01-aaa-bbb', JSON.stringify(got.rows.map(r => r.url)));
     ok('the stories are counted, not the calls', got.stories === 2);
     ok('a database that is not there is not an error, it is an empty record', (await H.weekPublishedCalls({}, 2026, 1)).rows.length === 0 && (await H.weekPublishedCalls(env, 2026, null)).rows.length === 0);
@@ -777,7 +785,7 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
   // list, so the Monday piece covers the recommendations a reader acted on
   // and not only the model's numbers.
   const rec = (o) => ({ source: 'story', key: o.key, name: o.name, player: o.name, position: o.pos || 'WR', team: o.team || 'AAA',
-    analyst: o.analyst || 'raines', analystName: o.analystName || 'Mike Raines', kind: o.kind || 'pickup-advisor', slug: 's-' + o.name,
+    analyst: o.analyst || 'raines', analystName: o.analystName || 'Usage Desk', kind: o.kind || 'pickup-advisor', slug: 's-' + o.name,
     story: o.story || 'Pickup Advisor', direction: o.dir || 'start', recommendation: o.rec || 'start him', confidence: 'HIGH' });
 
   // The week's box scores, keyed the way the board keys a player: exactly
@@ -796,7 +804,7 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
   const ctxS = { ...ctx, week: wk };
   const recs = { stories: 2, held: 1, rows: [
     rec({ key: 'r1|WR', name: 'Stu Story', team: 'AAA' }),
-    rec({ key: 'r2|RB', name: 'Fay Fade', pos: 'RB', team: 'CCC', dir: 'fade', rec: 'leave him on the bench', analyst: 'park', analystName: 'Lena Park', kind: 'trade-desk', story: 'The Trade Desk' }),
+    rec({ key: 'r2|RB', name: 'Fay Fade', pos: 'RB', team: 'CCC', dir: 'fade', rec: 'leave him on the bench', analyst: 'park', analystName: 'DFS Desk', kind: 'trade-desk', story: 'The Trade Desk' }),
     rec({ key: 'r3|WR', name: 'Wes Wrong', team: 'DDD' }),
     rec({ key: 'r4|TE', name: 'Pip Push', pos: 'TE', team: 'AAA' }),
     rec({ key: 'r5|WR', name: 'Noc Onsensus', team: 'AAA' })
@@ -810,7 +818,7 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
   ok('both kinds of win rank in ONE list, on the points the call beat its number by', pr.biggestWins.map(w => w.name).join() === 'Cy Huge,Stu Story,Al Big,Fay Fade,Bo Small', pr.biggestWins.map(w => w.name + ':' + w.margin).join());
   ok('every win says which kind it is, and a story win names the story and the analyst', (() => {
     const b = pr.biggestWins.find(w => w.name === 'Cy Huge'), t = pr.biggestWins.find(w => w.name === 'Stu Story');
-    return b.source === 'board' && b.story === null && t.source === 'story' && t.story === 'Pickup Advisor' && t.analystName === 'Mike Raines' && t.recommendation === 'start him';
+    return b.source === 'board' && b.story === null && t.source === 'story' && t.story === 'Pickup Advisor' && t.analystName === 'Usage Desk' && t.recommendation === 'start him';
   })());
   ok('a story win carries the numbers that settle it', (() => {
     const t = pr.biggestWins.find(w => w.name === 'Stu Story');
@@ -821,7 +829,7 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
   ok('ONE ROW PER PLAYER: the same call in several stories is one win, with the rest named on it', (() => {
     const many = { stories: 3, held: 0, rows: [
       rec({ key: 'r1|WR', name: 'Stu Story', team: 'AAA' }),
-      { ...rec({ key: 'r1|WR', name: 'Stu Story', team: 'AAA' }), slug: 's-pickup-2', story: 'Last-Minute Intel', analyst: 'park', analystName: 'Lena Park' },
+      { ...rec({ key: 'r1|WR', name: 'Stu Story', team: 'AAA' }), slug: 's-pickup-2', story: 'Last-Minute Intel', analyst: 'park', analystName: 'DFS Desk' },
       { ...rec({ key: 'r1|WR', name: 'Stu Story', team: 'AAA' }), slug: 's-pickup-3', story: 'The Trade Desk' },
       rec({ key: 'r2|RB', name: 'Fay Fade', pos: 'RB', team: 'CCC', dir: 'fade', rec: 'bench him' })
     ] };
@@ -848,7 +856,7 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
   ok('the misses mix both kinds too, widest first', pr.misses.map(m => m.name).join() === 'Wes Wrong,Di Miss' && pr.misses[0].source === 'story', pr.misses.map(m => m.name + ':' + m.margin).join());
   ok('a wrong story call still counts by position', pr.byPosition.WR.misses === 2 && pr.byPosition.RB.hits === 2);
   ok('the record is broken out by story and by analyst', (() => {
-    const st = pr.byStory.find(x => x.story === 'Pickup Advisor'), a = pr.byAnalyst.find(x => x.analyst === 'Lena Park');
+    const st = pr.byStory.find(x => x.story === 'Pickup Advisor'), a = pr.byAnalyst.find(x => x.analyst === 'DFS Desk');
     return st && st.calls === 3 && st.hits === 1 && st.misses === 1 && st.pushes === 1 && a && a.calls === 1 && a.hits === 1;
   })());
   ok('a week with no frozen board anywhere still runs on the stories alone', (() => {
@@ -877,7 +885,7 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
                 ...H.packetCalledItWeek(games, [{ game: games[0], calledIt: H._vindication(null, new Map(), 1) }], ctxS, recs, box) };
     const v = H._voiceBlock(q);
     return q.headlineWin.name === 'Stu Story' && q.headlineWin.source === 'story'
-      && /STORY call, not a board call/.test(v) && /Mike Raines published/.test(v) && /Pickup Advisor/.test(v) && /consensus had him at 13 points/.test(v);
+      && /STORY call, not a board call/.test(v) && /Usage Desk published/.test(v) && /Pickup Advisor/.test(v) && /consensus had him at 13 points/.test(v);
   })());
   ok('the writer is given both records separately and told to print both', (() => {
     const v = H._voiceBlock({ meta: { kind: 'what-tuna-got-right', analyst: 'mercer', dfsAnalyst: 'park' }, ...pr });
@@ -885,14 +893,14 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
       && /2 of 3 decided calls landed \(67%\)/.test(v) && /TOGETHER: 5 of 8 \(71%/.test(v)
       && /1 published position is not on this record at all/.test(v) && /1 more could not be settled/.test(v) && /source "story"/.test(v);
   })());
-  ok('the analysts a story win credits are named people for the piece, so the fact check does not hold the draft', (() => {
+  ok('the desks a story win credits are allowed names for the piece, so the fact check does not hold the draft', (() => {
     const packet = H._finishBrief({ meta: { kind: 'what-tuna-got-right', lens: 'both', analyst: 'mercer', dfsAnalyst: 'park' }, ...pr });
-    return packet.allowed.names.includes('Mike Raines') && packet.allowed.names.includes('Stu Story');
+    return packet.allowed.names.includes('Usage Desk') && packet.allowed.names.includes('Stu Story');
   })());
 
   ok('the fact check asks the scorecard for its sections and holds a draft without them', (() => {
     const packet = H._finishBrief({ meta: { kind: 'what-tuna-got-right', lens: 'both', analyst: 'mercer', dfsAnalyst: 'park' }, ...p });
-    packet.allowed.analysts = ['Jack Mercer', 'Lena Park'];
+    packet.allowed.analysts = ['Editorial Desk', 'DFS Desk'];
     const full = { headline: 'Cy Huge is the week', dek: 'x', dfsHeadline: 'Cy Huge is the price', dfsDek: 'x', weekly: Object.fromEntries(H.sectionsFor('what-tuna-got-right', 'weekly', packet).map(k => [k, ['Cy Huge scored 25.']])), dfs: Object.fromEntries(H.sectionsFor('what-tuna-got-right', 'dfs', packet).map(k => [k, ['Cy Huge scored 25.']])) };
     const missing = { ...full, weekly: { theRecord: ['Cy Huge scored 25.'] } };
     return H.factCheck(full, packet).ok && H.factCheck(missing, packet).problems.some(x => /missing:weekly.biggestWins/.test(x));
@@ -1106,275 +1114,22 @@ console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, edit
   ok('the cap is finite and above one', Number.isInteger(H.REWRITE_HELD_MAX) && H.REWRITE_HELD_MAX > 1 && H.RECAPS_PER_TICK >= 1);
 }
 
-// ── what is on the cover ──────────────────────────────────────────────────
-// `coverBand` and `coverFace` in front.html decide the two things on "/" that
-// name a player at the top of it: the three cards under "Current from the
-// desk", and the hero's photograph. They are lifted out of the page and run
-// here rather than driven in a browser, because tools/test-homepage.mjs needs
-// Chromium and skips without it.
-//
-// The rule these pin, learned the hard way over three attempts on 2026-09-18:
-// A SUBJECT COMES OFF THE COVER, it does not merely move. Reordering three
-// cards changes the order and never the cast, and neither the first nor the
-// second attempt touched the hero at all, which was running the widest market
-// gap and had been the same man for a day and a half.
+// ── what the homepage reads ──────────────────────────────────────────────
+// The cover rotation (coverBand, coverFace and the rest) came off front.html
+// in October 2026 with the photograph and the three cards it rotated: the
+// homepage lists the six newest pieces as a ledger, newest first, so no one
+// story can hold the cover. What survives is the rule about WHICH FEED it
+// reads. /api/content is the archive: every row that is not 'unpublished',
+// one per VERSION, held drafts included, and it once put five drafts of one
+// preview on the front page. /api/newsroom is the published feed /in-season/
+// desk reads, deduped by slug with expiry applied.
 {
   const front = fs.readFileSync(path.join(ROOT, 'front.html'), 'utf8');
-  const head = front.indexOf('var COVER_TURN_MS =');
-  const tail = front.indexOf('// ── end cover rotation', head);
-  if (head < 0 || tail < 0) { console.error('FAIL: the cover rotation block is not in front.html'); process.exit(1); }
-  const R = new Function(front.slice(head, tail) + '; return { coverBand, coverFace, coverFaces, coverPick, coverLead, coverSubjects, leadTurn, COVER_TURN_MS, DESK_BAND, HERO_POOL, CARD_POOL, LEAD_POOL };')();
-  const { coverBand, coverFace, coverFaces, coverPick, coverLead, coverSubjects, leadTurn } = R;
-  const TURN = R.COVER_TURN_MS;
-  const at = h => Date.UTC(2026, 8, 18, 12) + h * 3600 * 1000;
-  const ids = a => a.map(p => p.headline).join(',');
-
-  // ── the band ────────────────────────────────────────────────────────────
-  const feed = 'abcdefghij'.split('').map((id, i) => ({ url: '/p/' + id, headline: id, publishedAt: at(-i) }));
-
-  ok('three cards, not the whole feed', coverBand(feed, at(6)).length === R.DESK_BAND);
-  ok('a piece published inside the current turn leads', ids(coverBand(feed, at(0) + TURN / 2)) === 'a,b,c',
-    ids(coverBand(feed, at(0) + TURN / 2)));
-
-  const turns = [];
-  for (let t = 0; t < 8; t++) turns.push(coverBand(feed, at(4) + t * TURN).map(p => p.headline));
-  const sets = turns.map(t => t.slice().sort().join());
-  ok('consecutive turns print different stories', sets.every((s2, i) => i === 0 || s2 !== sets[i - 1]), sets.join(' | '));
-  ok('each turn takes one story off and puts one on',
-    turns.every((t, i) => !i || t.filter(x => turns[i - 1].indexOf(x) < 0).length === 1),
-    turns.map(t => t.join('')).join(' '));
-  const onCover = turns.filter(t => t.indexOf('a') >= 0).length;
-  ok('one story is not on every turn', onCover > 0 && onCover < turns.length, `${onCover}/${turns.length}`);
-  ok('the rotation reaches past the three newest', new Set(turns.flat()).size > 3);
-  ok('it never prints the same piece twice in one turn', turns.every(t => new Set(t).size === t.length));
-  ok('and it stays inside the pool rather than reaching the whole archive',
-    [...new Set(turns.flat())].every(x => 'abcdefgh'.includes(x)), [...new Set(turns.flat())].join(','));
-  ok('the band is a function of the clock alone', ids(coverBand(feed, at(9))) === ids(coverBand(feed, at(9))));
-  ok('one piece is printed as it is', ids(coverBand([feed[0]], at(9))) === 'a');
-  ok('an empty feed is empty', coverBand([], at(9)).length === 0);
-  // THE LEAD TAKES TURNS (2026-10-04). Fresh news leads outright; otherwise
-  // the newest LEAD_POOL qualifying stories lead an hour each, and the lead
-  // changes every turn.
-  {
-    const c = ['a', 'b', 'c', 'd', 'e', 'f'].map((h, i) => ({ headline: h, publishedAt: at(-2 - i) }));
-    ok('a story published inside the current turn leads outright',
-      [0, 1, 2, 3, 4].every(t => leadTurn([{ ...c[0], publishedAt: at(t) + 60000 }, ...c.slice(1)], at(t) + TURN / 2) === 0));
-    const seq = []; for (let t = 0; t < 8; t++) seq.push(leadTurn(c, at(t)));
-    ok('the lead changes every turn', seq.every((v, i) => i === 0 || v !== seq[i - 1]), seq.join(','));
-    ok('it walks only the newest LEAD_POOL stories', seq.every(v => v >= 0 && v < R.LEAD_POOL) && new Set(seq).size === R.LEAD_POOL, seq.join(','));
-    ok('one story always leads', leadTurn([c[0]], at(5)) === 0);
-    ok('no stories, no lead', leadTurn([], at(5)) === -1);
-    ok('the lead is a function of the clock alone', leadTurn(c, at(7)) === leadTurn(c, at(7)));
-  }
-  ok('a piece with no timestamp does not stop the band',
-    coverBand([{ url: '/x', headline: 'x' }, { url: '/y', headline: 'y' }, { url: '/z', headline: 'z' }], at(9)).length === 3);
-
-  // WHICH FEED THE COVER READS. The band drew from /api/content, the archive:
-  // every row that is not 'unpublished', one per VERSION. That put five held
-  // drafts of one preview on the front page and pushed every other published
-  // piece below the cutoff. /api/newsroom is the published feed, deduped by
-  // slug, expiry applied — the one /in-season/desk reads.
-  ok('the cover reads the published feed', /grab\('\/api\/newsroom/.test(front),
-    'front.html must read /api/newsroom for the desk band');
+  ok('the homepage reads the published feed', /grab\('\/api\/newsroom/.test(front),
+    'front.html must read /api/newsroom for the desk ledger');
   ok('and never the archive endpoint', !/grab\('\/api\/content/.test(front),
     '/api/content carries held drafts and one row per version');
-
-  // ── the 24-hour floor ───────────────────────────────────────────────────
-  // A window that has slid into the older half of the pool can carry nothing
-  // from the last day, under a heading that says "Current from the desk". The
-  // floor puts the newest recent piece in the last slot when that happens.
-  // The fixture above never triggers it: every piece there is hours old, which
-  // is the point — the floor must be inert when the feed is fresh.
-  {
-    const DAY = 24 * 3600 * 1000;
-    // One fresh piece, the rest from earlier in the week.
-    const stale = ['n', 'o', 'p', 'q', 'r', 's', 't'].map((id, i) => ({
-      url: '/p/' + id, headline: id, publishedAt: at(0) - (30 + i * 6) * 3600 * 1000
-    }));
-    // Two hours old at turn 0, so it is still inside the day eight turns later.
-    // An earlier draft of this fixture published it 20 hours before turn 0 and
-    // watched it age out mid-run, which is the floor working, not failing.
-    const mixed = [{ url: '/p/N', headline: 'N', publishedAt: at(0) - 2 * 3600 * 1000 }].concat(stale);
-
-    const windows = [];
-    for (let t = 0; t < 8; t++) windows.push(coverBand(mixed, at(0) + t * TURN).map(p => p.headline));
-    ok('every turn carries something from the last 24 hours',
-      windows.every(w => w.includes('N')), windows.map(w => w.join('')).join(' '));
-    ok('the floor takes the last slot, not the lead',
-      windows.every(w => w[0] !== 'N' || w.indexOf('N') === 0), windows.map(w => w.join('')).join(' '));
-    ok('the floor never prints the same story twice in one window',
-      windows.every(w => new Set(w).size === w.length), windows.map(w => w.join('')).join(' '));
-    ok('the rest of the window still rotates under it',
-      windows.every((w, i) => !i || w.join() !== windows[i - 1].join()), windows.map(w => w.join('')).join(' '));
-    // AT MOST one, not exactly one, and the difference is the floor's own cost.
-    // On the turn where the sliding window first reaches the pinned piece on
-    // its own, the cast repeats in a new order — [N,n,o] then [n,o,N] — because
-    // the piece the floor was holding in the last slot has become the one the
-    // rotation would have shown anyway. It happens once per cycle, and the
-    // alternative is pinning the newest story to the cover on every turn even
-    // when the window is full of current work, which is the complaint this
-    // whole section started from.
-    ok('and no turn brings more than one new story',
-      windows.every((w, i) => !i || w.filter(x => windows[i - 1].indexOf(x) < 0).length <= 1),
-      windows.map(w => w.join('')).join(' '));
-    ok('the cover is never two identical turns in a row',
-      windows.every((w, i) => !i || w.join() !== windows[i - 1].join()),
-      windows.map(w => w.join('')).join(' '));
-    ok('and over a cycle it still reaches the whole pool',
-      new Set(windows.flat()).size === mixed.length, [...new Set(windows.flat())].join(''));
-
-    // Inert when the window already has something fresh.
-    const allFresh = 'uvwxyz'.split('').map((id, i) => ({
-      url: '/p/' + id, headline: id, publishedAt: at(0) - (2 + i) * 3600 * 1000
-    }));
-    const before = coverBand(allFresh, at(0) + 3 * TURN).map(p => p.headline);
-    ok('a window that is already current is left alone',
-      before.join() === ['u', 'v', 'w', 'x', 'y', 'z'].slice(3, 6).join(), before.join());
-
-    // Nothing fresh anywhere: the floor has nothing to insert and must not
-    // throw, empty the band, or start repeating a piece.
-    const none = coverBand(stale, at(0) + 5 * DAY);
-    ok('a feed with nothing fresh still prints three distinct cards',
-      none.length === 3 && new Set(none.map(p => p.headline)).size === 3,
-      none.map(p => p.headline).join(''));
-  }
-
-  // ── the hero's face ─────────────────────────────────────────────────────
-  // THE ONE THAT WOULD HAVE CAUGHT THE REAL BUG. The hero took the widest gap
-  // on the board and nothing else, so the same player held the cover for as
-  // long as he led it, however often the cards underneath him rotated.
-  const gaps = 'vwxyz12'.split('').map(n => ({ name: n }));
-  const faceAt = t => { const f = coverFace(gaps, null, at(0) + t * TURN); return f && f.name; };
-  const faces = [];
-  for (let t = 0; t < 6; t++) faces.push(faceAt(t));
-  ok('the hero is not the same player every turn', new Set(faces).size > 1, faces.join(','));
-  ok('the hero changes on every turn', faces.every((f, i) => !i || f !== faces[i - 1]), faces.join(','));
-  ok('the hero comes off the widest gaps, not the whole board',
-    faces.every(f => gaps.slice(0, R.HERO_POOL).some(g => g.name === f)), faces.join(','));
-  ok('the hero is a function of the clock alone', faceAt(3) === faceAt(3));
-
-  // The Fantasy card's player is never also the hero: one player, one place.
-  const skipped = [];
-  for (let t = 0; t < 6; t++) { const f = coverFace(gaps, gaps[0], at(0) + t * TURN); skipped.push(f && f.name); }
-  ok('the player the Fantasy card names never takes the hero', !skipped.includes('v'), skipped.join(','));
-  ok('and skipping him does not empty the hero', skipped.every(Boolean), skipped.join(','));
-
-  ok('no gaps on the board means no face rather than a throw', coverFace([], null, at(1)) === null);
-  ok('one gap, and it is the face', (coverFace([gaps[0]], null, at(1)) || {}).name === 'v');
-  ok('one gap that is the card’s own player leaves the hero to the desk',
-    coverFace([gaps[0]], gaps[0], at(1)) === null);
-
-  // ── the runners-up behind the face ──────────────────────────────────────
-  // The picture can fail on a NAME: the player lookup does not carry a face
-  // for everybody, and heroPaint was given one name and painted nothing when
-  // it could not resolve it. Standing still that was a rare miss on one
-  // player. On a clock it is an hour of every day, chosen at random off the
-  // board, with no photograph on the cover. The painter walks the pool now.
-  const pool = t => coverFaces(gaps, null, at(0) + t * TURN).map(g => g.name);
-  ok('the turn’s pick leads the list', pool(2)[0] === faceAt(2), pool(2).join(','));
-  ok('and the rest of the pool is behind him',
-    pool(2).length === R.HERO_POOL && new Set(pool(2)).size === R.HERO_POOL, pool(2).join(','));
-  ok('every turn offers the same cast in a different order',
-    [0, 1, 2, 3].every(t => pool(t).slice().sort().join('') === pool(0).slice().sort().join('')),
-    pool(0).join(',') + ' / ' + pool(1).join(','));
-  ok('the player the Fantasy card names is not in the list either',
-    !coverFaces(gaps, gaps[0], at(3)).some(g => g.name === 'v'));
-  ok('an empty board offers nobody rather than throwing', coverFaces([], null, at(1)).length === 0);
-
-  // ── the face and the sentence under it ──────────────────────────────────
-  // THE HERO RAN ONE PLAYER'S PHOTOGRAPH OVER ANOTHER PLAYER'S NEWS. The desk
-  // card took the subject of the piece's FIRST finding and printed the piece's
-  // HEADLINE beneath him, two picks off one row with nothing tying them
-  // together. On 2026-09-21 that was Nate Adkins's face over "Parker
-  // Washington's 43% target share after Week 2 makes him the clearest roster
-  // add of the week". `coverSubjects` pairs a face with a line, and the line
-  // may not be about anybody else.
-  {
-    const waivers = {
-      headline: 'Parker Washington\u2019s 43% target share after Week 2 makes him the clearest roster add of the week',
-      components: [
-        { n: 1, player: 'Nate Adkins', headline: 'Nate Adkins is the Denver tight end now' },
-        { n: 2, player: 'Parker Washington', headline: 'Parker Washington ran a route on 43% of the dropbacks' }
-      ]
-    };
-    const subs = coverSubjects(waivers);
-    ok('the headline goes to the player it names, not to the first finding',
-      subs.length > 0 && subs[0].name === 'Parker Washington' && subs[0].line === waivers.headline,
-      JSON.stringify(subs[0] || null));
-    ok('the other subject is still offered, under his own finding',
-      subs.some(s2 => s2.name === 'Nate Adkins' && s2.line === waivers.components[0].headline),
-      JSON.stringify(subs));
-    ok('nobody is offered twice', new Set(subs.map(s2 => s2.name)).size === subs.length, JSON.stringify(subs));
-    // THE RULE, stated against the cast the piece itself names: no face is
-    // ever offered with a line about one of the piece's other subjects.
-    const cast = waivers.components.map(c => c.player);
-    ok('no subject carries a line about one of the others',
-      subs.every(s2 => !cast.some(other => other !== s2.name && s2.line.includes(other))),
-      JSON.stringify(subs));
-
-    // A headline that names nobody is the desk's own framing of its story, not
-    // a mismatch: it belongs to the piece's first subject, which is what the
-    // card's own face stamp does with it.
-    const framed = coverSubjects({ headline: 'Three lineups the market moved overnight', components: [
-      { n: 1, player: 'Puka Nacua', headline: 'a' }, { n: 2, player: 'James Cook', headline: 'b' } ] });
-    ok('a headline that names nobody still leads with the piece\u2019s first subject',
-      framed.length > 0 && framed[0].name === 'Puka Nacua'
-      && framed[0].line === 'Three lineups the market moved overnight', JSON.stringify(framed[0] || null));
-
-    // How the desk actually writes a second reference.
-    ok('a surname on its own counts', (coverSubjects({ headline: 'Adkins has the Denver tight end job',
-      components: [{ n: 1, player: 'Nate Adkins', headline: 'x' }, { n: 2, player: 'Courtland Sutton', headline: 'y' }] })[0] || {}).name === 'Nate Adkins');
-    ok('a suffix and a possessive do not break the match',
-      (coverSubjects({ headline: 'Marvin Harrison Jr.\u2019s target share is up',
-        components: [{ n: 1, player: 'Trey McBride', headline: 'x' }, { n: 2, player: 'Marvin Harrison Jr.', headline: 'y' }] })[0] || {}).name === 'Marvin Harrison Jr.');
-    // A surname two men on the piece answer to is nobody's: the line is not
-    // offered with either face rather than guessed at.
-    const shared = coverSubjects({ headline: 'Williams is the back to own this week', components: [
-      { n: 1, player: 'Kyren Williams', headline: 'Kyren Williams took every goal-line carry' },
-      { n: 2, player: 'Javonte Williams', headline: 'Javonte Williams is the Dallas lead back' } ] });
-    ok('an ambiguous surname is offered to nobody',
-      shared.every(s2 => !/back to own/.test(s2.line)), JSON.stringify(shared));
-    ok('and the two are still offered under their own findings',
-      shared.length === 2 && shared[0].name === 'Kyren Williams' && shared[1].name === 'Javonte Williams',
-      JSON.stringify(shared));
-
-    // A piece the desk broke into no findings names nobody, so it offers no
-    // face and the hero falls through to the market gap below it.
-    ok('a piece with no findings offers nothing rather than throwing',
-      coverSubjects({ headline: 'What Sunday taught us' }).length === 0
-      && coverSubjects({}).length === 0 && coverSubjects(null).length === 0);
-
-    // The page must actually use it: the old call site built its candidate
-    // from `whoOf(p)[0]` and `p.headline`, which is the bug in one line.
-    // The cover hands it the de-boasted headline, so the call carries a
-    // second argument: match the call, not one exact spelling of it. Since
-    // 2026-09-26 it is called on the lead alone (`lead`), not on every piece.
-    ok('the desk hero is built from coverSubjects', /coverSubjects\((p|lead)[,)]/.test(front));
-    ok('and no longer pairs the first finding with the headline',
-      !/name:\s*whoOf\(p\)\[0\]/.test(front));
-  }
-
-  // ── the two card readings ───────────────────────────────────────────────
-  // THE THIRD AND FOURTH PATHS ONTO THE COVER. §88 enumerated two. The Fantasy
-  // card took the strongest BUY and the DFS card took bestVegasValues[0], so
-  // the cover changed hourly above two readings that did not change all week.
-  const rows = 'abcdefg'.split('').map(n => ({ name: n }));
-  const pick = t => (coverPick(rows, at(0) + t * TURN) || {}).name;
-  const picks = [];
-  for (let t = 0; t < 6; t++) picks.push(pick(t));
-  ok('a card reading is not the same player every turn', new Set(picks).size > 1, picks.join(','));
-  ok('it changes on every turn', picks.every((x, i) => !i || x !== picks[i - 1]), picks.join(','));
-  ok('it comes off the leaders, not the whole board',
-    picks.every(x => rows.slice(0, R.CARD_POOL).some(r => r.name === x)), picks.join(','));
-  ok('it is a function of the clock alone', pick(3) === pick(3));
-  ok('a board of one is printed as it is', (coverPick([rows[0]], at(5)) || {}).name === 'a');
-  ok('an empty board is no reading rather than a throw', coverPick([], at(5)) === null);
-
-  // A superlative belongs to the leader alone: a caption still claiming the
-  // top of the board once the turn has moved off it is simply false.
-  ok('the leader is known as the leader', coverLead(rows, rows[0]) === true);
-  ok('and a runner-up is not', coverLead(rows, rows[3]) === false);
-  ok('an empty board has no leader', coverLead([], undefined) === false);
+  ok('and no cover rotation is back on it', !/var COVER_TURN_MS/.test(front));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

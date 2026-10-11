@@ -65,6 +65,9 @@
 
   var PRESETS = [['standard', 'Standard'], ['half', 'Half PPR'], ['ppr', 'PPR']];
   var STORE = 'it.ranks.scoring';
+  // Rest of season only: rank on the total over the games left, or on the
+  // average per game. Remembered like the scoring choice.
+  var RATE_STORE = 'it.ranks.rate';
   // The columns ?sort= may name. A closed list, because the value lands in
   // sortVal's switch and an unknown key would silently sort by nothing.
   var SORT_KEYS = ['rank', 'player', 'team', 'opp', 'games', 'cpts', 'crank',
@@ -91,6 +94,45 @@
     catch (e) { return 'ppr'; }
   }
   function remember(v) { try { localStorage.setItem(STORE, v); } catch (e) {} }
+  function rememberedRate() {
+    try { return localStorage.getItem(RATE_STORE) === 'game' ? 'game' : 'total'; }
+    catch (e) { return 'total'; }
+  }
+  function rememberRate(v) { try { localStorage.setItem(RATE_STORE, v); } catch (e) {} }
+
+  // THE PER-GAME BOARD (10 Oct 2026). A rest-of-season total rewards games
+  // left as much as it rewards the player: a starter with a bye still to come
+  // sits a slot or two under an equal starter whose bye has passed, and a back
+  // returning from injury reads as worse than he is because he has fewer games
+  // in the sum. Dividing by the games he is projected to play asks the other
+  // question, how good is he when he plays, and both are fair, so the reader
+  // chooses.
+  //
+  // The worker ranks and classifies the averages (p.perGame, beside the
+  // totals in buildBoards), so this only lays them over the row: the gap
+  // verdict stays the worker's rule, never one re-derived here. The row keeps
+  // its totals under `total` for the drawer and the two lines, which are
+  // written about the season's sum.
+  function perGameBoard(payload) {
+    return payload.players.map(function (p) {
+      var pg = p.perGame || {};
+      var r = {};
+      for (var k in p) if (Object.prototype.hasOwnProperty.call(p, k)) r[k] = p[k];
+      r.total = p;
+      ['consensus', 'vegas', 'ironTuna'].forEach(function (f) {
+        var o = {};
+        var b = p[f] || {};
+        for (var x in b) if (Object.prototype.hasOwnProperty.call(b, x)) o[x] = b[x];
+        var a = pg[f] || {};
+        o.points = a.points == null ? null : a.points;
+        o.rank = a.rank == null ? null : a.rank;
+        o.flexRank = a.flexRank == null ? null : a.flexRank;
+        r[f] = o;
+      });
+      r.marketDelta = pg.marketDelta || null;
+      return r;
+    });
+  }
 
   function Board(host) {
     var horizon = host.getAttribute('data-rk-horizon') === 'ros' ? 'ros' : 'week';
@@ -98,10 +140,13 @@
     var wantWeeks = host.getAttribute('data-rk-weeks') === '1';
     var label = host.getAttribute('data-rk-label') || '';
     var preset = remembered();
+    var rate = horizon === 'ros' ? rememberedRate() : 'total';
+    var perGameShown = false;    // whether the rows on screen are the averages
     var cache = {};              // preset -> payload
     var q = '';
     var sortKey = 'rank', sortDir = 1;
     var open = {};               // player key -> drawer open
+    var readOpen = {};           // player key -> Player/Opportunity lines shown
     var allOpen = false;
     var focus = '';              // the row ?player= names, until the reader moves
     var painted = false;         // whether the live board has rendered once
@@ -129,6 +174,11 @@
       try { qs = new URLSearchParams(location.search); } catch (e) { return; }
       var sc = qs.get('scoring');
       if (/^(standard|half|ppr)$/.test(sc || '')) preset = sc;
+      if (horizon === 'ros') {
+        var ra = qs.get('rank');
+        if (ra === 'game') rate = 'game';
+        else if (ra === 'total') rate = 'total';
+      }
       var so = qs.get('sort');
       if (so && SORT_KEYS.indexOf(so) >= 0) sortKey = so;
       if (qs.get('dir') === 'desc') sortDir = -1;
@@ -149,6 +199,10 @@
       try { qs = new URLSearchParams(location.search); } catch (e) { qs = new URLSearchParams(); }
       var put = function (k, v) { if (v) qs.set(k, v); else qs.delete(k); };
       put('scoring', preset !== 'ppr' ? preset : '');
+      // Written whenever the reader is off the default, and also when their
+      // remembered choice is per game, so a shared link opens on the view
+      // the sender saw rather than on the recipient's own habit.
+      if (horizon === 'ros') put('rank', rate === 'game' ? 'game' : '');
       put('sort', sortKey !== 'rank' ? sortKey : '');
       put('dir', sortDir < 0 ? 'desc' : '');
       put('q', q);
@@ -188,6 +242,18 @@
       b.setAttribute('data-preset', p[0]);
       seg.appendChild(b);
     });
+    var rateSeg = null;
+    if (horizon === 'ros') {
+      rateSeg = el('div', 'rk-seg2');
+      rateSeg.setAttribute('role', 'group');
+      rateSeg.setAttribute('aria-label', 'Rank by');
+      [['total', 'Total points'], ['game', 'Per game']].forEach(function (r) {
+        var b = el('button', null, r[1]);
+        b.type = 'button';
+        b.setAttribute('data-rate', r[0]);
+        rateSeg.appendChild(b);
+      });
+    }
     var find = el('label', 'rk-find');
     var input = document.createElement('input');
     input.type = 'search';
@@ -213,6 +279,7 @@
       expand.style.color = 'var(--sec)';
     }
     tools.appendChild(seg);
+    if (rateSeg) tools.appendChild(rateSeg);
     if (expand) tools.appendChild(expand);
     tools.appendChild(find);
 
@@ -240,8 +307,14 @@
 
     // ── the columns ───────────────────────────────────────────────────────
     // Two spanning groups over the pair that matters, so the eye reads
-    // "consensus vs odds" and not "eleven numbers".
+    // "consensus vs odds" and not "eleven numbers". The group names sort too
+    // (10 Oct 2026): a reader who wants the board in consensus order clicks
+    // the words "Fantasy Consensus", not the small "Rank" under them, and a
+    // click that did nothing read as a broken page. Each group carries the
+    // key of its own rank column, so the group and the column below it are
+    // one sort, flip together and light up together.
     function headHtml() {
+      var ptsHead = perGameShown ? 'Per gm' : 'Proj';
       var lead = [
         wantWeeks ? '<th scope="col"><span class="is-status">Wks</span></th>' : '',
         th('rank', '#'),
@@ -251,13 +324,13 @@
       ].join('');
       var group = '<tr>' +
         '<th colspan="' + (wantWeeks ? 5 : 4) + '"></th>' +
-        '<th class="rk-grp fan" colspan="2" scope="colgroup">Fantasy Consensus</th>' +
-        '<th class="rk-grp mkt" colspan="2" scope="colgroup">Betting Odds</th>' +
+        grp('crank', 'Fantasy Consensus', 'rk-grp fan') +
+        grp('vrank', 'Betting Odds', 'rk-grp mkt') +
         '<th colspan="2"></th>' +
         '</tr>';
       var cols = '<tr>' + lead +
-        th('cpts', 'Proj', 'rk-fan num') + th('crank', 'Rank', 'rk-fan num') +
-        th('vpts', 'Proj', 'rk-mkt num') + th('vrank', 'Rank', 'rk-mkt num') +
+        th('cpts', ptsHead, 'rk-fan num') + th('crank', 'Rank', 'rk-fan num') +
+        th('vpts', ptsHead, 'rk-mkt num') + th('vrank', 'Rank', 'rk-mkt num') +
         th('gap', 'Gap', 'num') +
         th('extra', horizon === 'week' ? 'Note' : 'Schedule') +
         '</tr>';
@@ -266,6 +339,11 @@
     function th(key, text, cls) {
       var on = key === sortKey;
       return '<th scope="col" data-key="' + key + '"' + (cls ? ' class="' + cls + '"' : '') +
+        (on ? ' aria-sort="' + (sortDir > 0 ? 'ascending' : 'descending') + '"' : '') + '>' + esc(text) + '</th>';
+    }
+    function grp(key, text, cls) {
+      var on = key === sortKey;
+      return '<th scope="colgroup" colspan="2" data-key="' + key + '" class="' + cls + '"' +
         (on ? ' aria-sort="' + (sortDir > 0 ? 'ascending' : 'descending') + '"' : '') + '>' + esc(text) + '</th>';
     }
 
@@ -290,7 +368,8 @@
       var cls = d.points == null ? 'flat' : d.points > 0.05 ? 'up' : d.points < -0.05 ? 'down' : 'flat';
       var slots = d.rank == null ? '' : (d.rank > 0 ? '+' : '') + d.rank + ' slots';
       return '<td class="rk-gap ' + cls + '"><b>' + signed(d.points) + '</b>' +
-        '<span>' + esc(d.classification || '') + (slots ? ' &middot; ' + esc(slots) : '') + '</span></td>';
+        '<span>' + esc(d.classification || '') + '</span>' +
+        (slots ? '<span class="rk-slots">' + esc(slots) + '</span>' : '') + '</td>';
     }
 
     function extraCell(p) {
@@ -299,11 +378,11 @@
         if (p.injury && p.injury.status) bits.push(esc(p.injury.status) + (p.injury.gamesOut ? ' (' + p.injury.gamesOut + ')' : ''));
         if (p.why && p.why.summary) bits.push(esc(p.why.summary));
         if (!bits.length && p.roleTrend && p.roleTrend.applied) bits.push('usage ' + esc(p.roleTrend.label) + (p.roleTrend.pct != null ? ' ' + (p.roleTrend.pct > 0 ? '+' : '') + p.roleTrend.pct + '%' : ''));
-        return '<td>' + (bits.length ? bits.join(' &middot; ') : '—') + '</td>';
+        return '<td class="rk-note' + (bits.length ? '' : ' rk-empty') + '">' + (bits.length ? bits.join(' &middot; ') : '—') + '</td>';
       }
       var s = p.scheduleDifficulty;
       var byes = p.byes && p.byes.length ? ' &middot; bye ' + esc(p.byes.join(', ')) : '';
-      return '<td>' + (s ? esc(s.label) + ' <span class="is-status">' + esc(s.avgOpponentDefRank) + '</span>' : '—') + byes + '</td>';
+      return '<td class="rk-note' + (s || byes ? '' : ' rk-empty') + '">' + (s ? esc(s.label) + ' <span class="is-status">' + esc(s.avgOpponentDefRank) + '</span>' : '—') + byes + '</td>';
     }
 
     // THE TWO LINES, from the shared grammar in it-reads.js. All this board has
@@ -320,9 +399,25 @@
     var readCtx = null;
     function reads(p) {
       if (!window.ITReads) return '';
+      // The two lines are written about the season's total ("projects 212
+      // points over 11 games"), so on the per-game view they are fed the
+      // total row they were written for, not the averages.
+      if (p.total) p = p.total;
       return ITReads.cell(p, { horizon: horizon, spellOut: pos === 'FLEX',
         rank: p.vegas ? p.vegas.rank : null,
         points: p.vegas ? p.vegas.points : null, ctx: readCtx });
+    }
+
+    // The two lines fold away under the name (9 Oct 2026). Open, they stood
+    // every row four lines tall, so a screen held six players and the numbers,
+    // which are what a reader scans down, were spread across a page of prose.
+    // A <details> needs no script to open and is announced as expandable. The
+    // open set is kept by key, because a sort or a filter rebuilds the rows.
+    function readsBlock(p) {
+      var r = reads(p);
+      if (!r) return '';
+      return '<details class="rk-more" data-read="' + esc(p.key) + '"' + (readOpen[p.key] ? ' open' : '') + '>' +
+        '<summary>Player &amp; opportunity</summary>' + r + '</details>';
     }
 
     function rowHtml(p) {
@@ -331,12 +426,12 @@
       // different fact, and one the Opportunity line below would contradict.
       var w0 = p.weeks && p.weeks[0];
       var oppCell = horizon === 'week'
-        ? '<td>' + (!w0 || w0.bye ? '<span class="is-status">BYE</span>'
+        ? '<td class="rk-opp">' + (!w0 || w0.bye ? '<span class="is-status">BYE</span>'
             : esc((w0.home ? 'vs ' : 'at ') + w0.opponent) + (w0.out ? ' <span class="is-status">OUT</span>'
               : w0.noLine && w0.noLine.status === 'out' ? ' <span class="is-status">NO LINE</span>' : '')) + '</td>'
-        : '<td class="num">' + (p.games == null ? '—' : p.games) + '</td>';
+        : '<td class="num rk-opp">' + (p.games == null ? '—' : p.games) + '</td>';
       var opener = wantWeeks
-        ? '<td><button class="rk-open" type="button" data-open="' + esc(p.key) + '" aria-expanded="' + (open[p.key] ? 'true' : 'false') +
+        ? '<td class="rk-opener"><button class="rk-open" type="button" data-open="' + esc(p.key) + '" aria-expanded="' + (open[p.key] ? 'true' : 'false') +
           '" aria-label="Show every remaining week for ' + esc(p.name) + '">' + (open[p.key] ? '&minus;' : '+') + '</button></td>'
         : '';
       // The row's own address. The id is what #p-<slug> lands on with no
@@ -344,14 +439,14 @@
       // included, which is the thing a reader actually wants to paste.
       var sl = slug(p.name);
       return '<tr id="p-' + esc(sl) + '"' + (focus && focus === sl ? ' class="rk-hit"' : '') + '>' + opener +
-        '<td class="num">' + (primaryRank(p) == null ? '—' : esc(p.position) + primaryRank(p)) + '</td>' +
+        '<td class="num rk-rank">' + (primaryRank(p) == null ? '—' : esc(p.position) + primaryRank(p)) + '</td>' +
         '<td class="rk-who"><a href="/player/' + sl + '"><b>' + esc(p.name) + '</b></a>' +
           (pos === 'ALL' || pos === 'FLEX' ? '<small>' + esc(p.position) + '</small>' : '') +
           '<button class="rk-share" type="button" data-share="' + esc(sl) +
             '" aria-label="Copy a link to ' + esc(p.name) + ' on this board">Link</button>' +
-          reads(p) +
+          readsBlock(p) +
         '</td>' +
-        '<td>' + esc(p.team) + '</td>' + oppCell +
+        '<td class="rk-team">' + esc(p.team) + '</td>' + oppCell +
         '<td class="rk-fan rk-pts">' + n1(p.consensus ? p.consensus.points : null) + '</td>' +
         '<td class="rk-fan rk-rnk">' + (rankOf(p, 'consensus') == null ? '—' : esc(p.position) + rankOf(p, 'consensus')) + '</td>' +
         '<td class="rk-mkt rk-pts">' + n1(p.vegas ? p.vegas.points : null) +
@@ -376,10 +471,16 @@
           '<td class="num">' + n1(w.ironTunaPts) + '</td>' +
           '<td><span class="is-status">' + esc(w.basis || '') + '</span></td></tr>';
       }).join('');
-      var totals = '<tfoot><tr><td colspan="2">Total over ' + (p.games || 0) + ' game' + (p.games === 1 ? '' : 's') + '</td>' +
-        '<td class="num">' + n1(p.consensus ? p.consensus.points : null) + '</td>' +
-        '<td class="num">' + n1(p.vegas ? p.vegas.points : null) + '</td>' +
-        '<td class="num">' + n1(p.ironTuna ? p.ironTuna.points : null) + '</td><td></td></tr></tfoot>';
+      var t = p.total || p;
+      var totals = '<tfoot><tr><td colspan="2">Total over ' + (t.games || 0) + ' game' + (t.games === 1 ? '' : 's') + '</td>' +
+        '<td class="num">' + n1(t.consensus ? t.consensus.points : null) + '</td>' +
+        '<td class="num">' + n1(t.vegas ? t.vegas.points : null) + '</td>' +
+        '<td class="num">' + n1(t.ironTuna ? t.ironTuna.points : null) + '</td><td></td></tr>' +
+        (p.total ? '<tr><td colspan="2">Per game</td>' +
+          '<td class="num">' + n1(p.consensus ? p.consensus.points : null) + '</td>' +
+          '<td class="num">' + n1(p.vegas ? p.vegas.points : null) + '</td>' +
+          '<td class="num">' + n1(p.ironTuna ? p.ironTuna.points : null) + '</td><td></td></tr>' : '') +
+        '</tfoot>';
       return '<tr class="rk-weeks"><td colspan="' + span + '">' +
         '<h4>' + esc(p.name) + ' &middot; every week still to come</h4>' +
         '<div class="is-scroll"><table class="rk-wk"><thead><tr>' +
@@ -414,10 +515,17 @@
       [].forEach.call(seg.querySelectorAll('button'), function (b) {
         b.setAttribute('aria-pressed', b.getAttribute('data-preset') === preset ? 'true' : 'false');
       });
+      if (rateSeg) [].forEach.call(rateSeg.querySelectorAll('button'), function (b) {
+        b.setAttribute('aria-pressed', b.getAttribute('data-rate') === rate ? 'true' : 'false');
+      });
 
       if (window.ITReads && ITReads.context && !payload.readCtx) payload.readCtx = ITReads.context(payload.players);
       readCtx = payload.readCtx || null;
-      var rows = payload.players.slice();
+      // A payload from before the worker carried averages has none to show,
+      // and a column of dashes is worse than the totals it would replace.
+      var perGame = rate === 'game' && payload.players.some(function (p) { return p.perGame; });
+      if (perGame && !payload.perGameRows) payload.perGameRows = perGameBoard(payload);
+      var rows = (perGame ? payload.perGameRows : payload.players).slice();
       if (q) {
         var qq = q.toLowerCase();
         rows = rows.filter(function (p) {
@@ -438,6 +546,7 @@
       if (focus && !painted && wantWeeks) {
         rows.forEach(function (p) { if (slug(p.name) === focus) open[p.key] = true; });
       }
+      perGameShown = perGame;
       thead.innerHTML = headHtml();
       tbody.innerHTML = rows.slice(0, 250).map(function (p) {
         return rowHtml(p) + (wantWeeks && open[p.key] ? weeksHtml(p, span) : '');
@@ -451,6 +560,7 @@
       stamp.innerHTML = 'Scored at <b>' + esc(payload.scoring ? payload.scoring.label : preset) + '</b> &middot; ' +
         esc(label || hz.label || '') +
         (weeks.length ? ' (week' + (weeks.length > 1 ? 's ' + weeks[0] + '&ndash;' + weeks[weeks.length - 1] : ' ' + weeks[0]) + ')' : '') +
+        (horizon === 'ros' ? ' &middot; ranked by <b>' + (perGame ? 'points per game' : 'total points') + '</b>' : '') +
         ' &middot; ' + rows.length + ' player' + (rows.length === 1 ? '' : 's') +
         (payload.season ? ' &middot; ' + esc(payload.season) + ' season' : '') +
         (payload.played ? ' &middot; ' + payload.played + ' player' + (payload.played === 1 ? ' whose game has' : 's whose games have') + ' kicked off are off the board' : '');
@@ -529,7 +639,20 @@
       remember(preset);
       render();
     });
+    if (rateSeg) rateSeg.addEventListener('click', function (ev) {
+      var b = ev.target.closest('button');
+      if (!b) return;
+      rate = b.getAttribute('data-rate');
+      rememberRate(rate);
+      render();
+    });
     input.addEventListener('input', function () { q = this.value.trim(); render(); });
+    // `toggle` does not bubble, so it is caught on the way down.
+    tbody.addEventListener('toggle', function (ev) {
+      var d = ev.target;
+      if (!d || !d.getAttribute || !d.hasAttribute('data-read')) return;
+      readOpen[d.getAttribute('data-read')] = d.open;
+    }, true);
     thead.addEventListener('click', function (ev) {
       var h = ev.target.closest('th[data-key]');
       if (!h) return;

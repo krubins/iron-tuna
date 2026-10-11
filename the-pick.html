@@ -14,7 +14,6 @@
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
 <title>The Pick: One Fantasy Football Story a Day, With the Numbers Behind It | Iron Tuna</title>
 <meta name="description" content="One story a day, each built on a single theme &mdash; positional scarcity, scoring settings, tier cliffs &mdash; with the projection numbers that prove it and the exact player to buy because of it. New entry every morning.">
 <link rel="canonical" href="https://irontuna.com/the-pick">
@@ -33,6 +32,7 @@
 <meta property="og:url" content="https://irontuna.com/the-pick">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <style>
 /* Mobile masthead. The links used to wrap into two and three ragged rows that
@@ -48,12 +48,12 @@ h1{font-size:clamp(30px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:38
 h2{font-size:clamp(23px,3vw,28px);margin:34px 0 10px;letter-spacing:.01em}
 .lede{font-size:clamp(20px,2.2vw,23px);color:var(--sec);margin:0 0 26px;max-width:680px}
 p{color:var(--sec);margin:0 0 16px}
-.eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);margin-top:42px}
-.btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:14px 28px;letter-spacing:.02em;border:none;cursor:pointer;box-shadow:0 8px 26px rgba(191,145,0,.28)}
-.btn:hover{filter:brightness(1.06);text-decoration:none}
-.btn.alt{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid var(--teal);box-shadow:none}
+.eyebrow{font-size:14.5px;color:var(--teal);margin-top:42px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;background:var(--teal);color:#fff;font-weight:600;border-radius:4px;padding:0 24px;border:none;cursor:pointer}
+.btn:hover{background:var(--teal-hover,#083a50);color:#fff;text-decoration:none}
+.btn.alt{background:var(--teal-tint);color:var(--teal);border:1px solid var(--teal);box-shadow:none}
 .cta-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:22px 0 8px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:14px 0}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .grid .card{margin:0}
 ul.clean{list-style:none;padding:0;margin:14px 0}
@@ -63,10 +63,10 @@ table{width:100%;border-collapse:collapse;font-size:17px;margin:16px 0}
 th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left}
 th{color:var(--sec);font-size:15.5px}
 td.you{color:var(--goldink);font-weight:700}
-.cta-band{background:linear-gradient(180deg,rgba(14,124,99,.07),rgba(14,124,99,.02));border:1px solid rgba(14,124,99,.3);border-radius:16px;padding:28px;text-align:center;margin:40px 0}
+.cta-band{background:var(--teal-tint);border:1px solid var(--teal);border-radius:10px;padding:28px;text-align:center;margin:40px 0}
 .cta-band h2{margin-top:0}
 .related{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
-.related a{background:var(--elev);border:1px solid var(--line);border-radius:20px;padding:7px 14px;font-size:15.5px;color:var(--sec)}
+.related a{background:var(--elev);border:1px solid var(--line);border-radius:4px;padding:7px 14px;font-size:15.5px;color:var(--sec)}
 .related a:hover{border-color:var(--teal);color:var(--text);text-decoration:none}
 @media(max-width:640px){.grid{grid-template-columns:1fr}}
 
@@ -74,9 +74,9 @@ td.you{color:var(--goldink);font-weight:700}
 .call{border-top:1px solid var(--line);padding:26px 0 4px}
 .call:first-of-type{border-top:0}
 .call h2{margin:10px 0 12px}
-.cmeta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+.cmeta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;}
 .chip{border-radius:4px;padding:3px 9px;font-weight:700}
-.chip.up{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid rgba(14,124,99,.42)}
+.chip.up{background:var(--teal-tint);color:var(--teal);border:1px solid var(--teal)}
 .chip.down{background:rgba(192,50,47,.12);color:var(--danger);border:1px solid rgba(192,50,47,.4)}
 .chip.split{background:rgba(191,145,0,.12);color:var(--goldink);border:1px solid rgba(191,145,0,.4)}
 .cpos,.cteam,.cdate{color:var(--muted);font-weight:700}
@@ -85,7 +85,7 @@ td.you{color:var(--goldink);font-weight:700}
 .call p.who b{color:var(--teal)}
 .call p.statline{font-size:15px;font-style:italic;color:var(--muted);margin:2px 0 0}
 .entries{margin-top:10px}
-.method{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:22px 0 8px}
+.method{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:22px 0 8px}
 .method p:last-child{margin-bottom:0}
 
 /* ── The Pick ── */
@@ -93,22 +93,22 @@ td.you{color:var(--goldink);font-weight:700}
    them with the same selectors it already uses. Everything below is the part
    that is this column's own: a theme chip instead of a verdict chip, a dek, and
    a data table that scrolls on a phone instead of squeezing the page. */
-.chip.theme{background:rgba(191,145,0,.12);color:var(--goldink);border:1px solid rgba(191,145,0,.4);letter-spacing:.08em}
+.chip.theme{background:rgba(191,145,0,.12);color:var(--goldink);border:1px solid rgba(191,145,0,.4);}
 .call p.dek{font-size:19px;color:var(--sec);margin:-2px 0 16px;border-left:3px solid var(--line2);padding-left:14px}
 .tbl{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:18px 0}
 .tbl table{margin:0;min-width:460px}
 .tbl caption{caption-side:bottom;text-align:left;font-size:14px;color:var(--muted);padding-top:8px}
 .tbl td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
-.tbl tr.hi td{background:rgba(14,124,99,.07)}
+.tbl tr.hi td{background:var(--teal-tint)}
 .tbl tr.hi td:first-child{box-shadow:inset 3px 0 0 var(--teal)}
 .call p.who b:first-child{color:var(--goldink)}
 </style>
 
-<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"Blog","name":"The Pick: One Fantasy Football Story a Day, With the Numbers Behind It","description":"One story a day, each built on a single theme — positional scarcity, scoring settings, tier cliffs — with the projection numbers that prove it and the exact player to buy because of it. New entry every morning.","url":"https://irontuna.com/the-pick","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/the-pick"},"image":"https://irontuna.com/og.png","articleSection":"The Pick","inLanguage":"en-US","isPartOf":{"@id":"https://irontuna.com/#website"},"isAccessibleForFree":true,"author":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}},"blogPost":[{"@type":"BlogPosting","headline":"There Are Two Tight Ends and Then There Is a Waiting Room, and Brock Bowers Is the Twin You Can Buy Without the Name Tax","url":"https://irontuna.com/the-pick#pick-2026-10-06","datePublished":"2026-10-06","dateModified":"2026-10-06","author":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BlogPosting","headline":"Pittsburgh’s Backfield Is a Coin Flip With Two Heads, and Rico Dowdle Is the Side Nobody Is Pricing","url":"https://irontuna.com/the-pick#pick-2026-10-05","datePublished":"2026-10-05","dateModified":"2026-10-05","author":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BlogPosting","headline":"Switch the Scoring From Standard to PPR and Derrick Henry’s 45‑Point Lead Over Chase Brown Shrinks to 2.5","url":"https://irontuna.com/the-pick#pick-2026-10-04","datePublished":"2026-10-04","dateModified":"2026-10-04","author":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}}]},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"The Pick"}]}]}</script>
+<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"Blog","name":"The Pick: One Fantasy Football Story a Day, With the Numbers Behind It","description":"One story a day, each built on a single theme — positional scarcity, scoring settings, tier cliffs — with the projection numbers that prove it and the exact player to buy because of it. New entry every morning.","url":"https://irontuna.com/the-pick","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/the-pick"},"image":"https://irontuna.com/og.png","articleSection":"The Pick","inLanguage":"en-US","isPartOf":{"@id":"https://irontuna.com/#website"},"isAccessibleForFree":true,"author":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}},"blogPost":[{"@type":"BlogPosting","headline":"Quarterbacks Grow on Trees, Tight Ends Grow on Two Trees: Brock Bowers Is Worth Almost What Josh Allen Is","url":"https://irontuna.com/the-pick#pick-2026-10-10","datePublished":"2026-10-10","dateModified":"2026-10-10","author":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BlogPosting","headline":"A Coin Flip Is Not a Starter: Jonathon Brooks Costs Less Than Chuba Hubbard and Projects Nearly the Same","url":"https://irontuna.com/the-pick#pick-2026-10-09","datePublished":"2026-10-09","dateModified":"2026-10-09","author":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BlogPosting","headline":"Touchdowns Are Weather: Garrett Wilson Is Owed Two, and Davante Adams Is Overdrawn","url":"https://irontuna.com/the-pick#pick-2026-10-08","datePublished":"2026-10-08","dateModified":"2026-10-08","author":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}}]},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"The Pick"}]}]}</script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
-<header class="site"><div class="wrap">
+<header class="site"><!--chrome:line--><p class="site-line" aria-hidden="true"></p><!--/chrome:line--><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
   <!--chrome:nav-->
     <nav class="nav" id="sitenav" aria-label="Main">
@@ -123,11 +123,19 @@ td.you{color:var(--goldink);font-weight:700}
       <span class="nav-toggle-bars"><span></span></span>Menu
     </button>
     <!--/chrome:nav-->
-</div></header>
+</div><!--chrome:tabbar-->
+  <nav class="tabbar" aria-label="Sections">
+    <a href="/fantasy"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h16M12 4v16"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Fantasy</a>
+    <a href="/dfs"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19h16M6 15l4-5 4 3 4-7"/></svg>DFS</a>
+    <a href="/in-season/desk"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 4h14v16H5zM8 9h8M8 13h8M8 17h5"/></svg>Articles</a>
+    <a href="/my-league#settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>My league</a>
+  </nav>
+<!--/chrome:tabbar-->
+</header>
 <main id="main" class="wrap">
 <div class="eyebrow">The Pick</div>
 <h1>The Pick</h1>
-<div class="byline" data-analyst="vega"><b><a href="/analysts/vega">Nate Vega</a></b><span class="dot">&middot;</span>Market Intelligence Analyst<span class="dot">&middot;</span>Iron Tuna</div>
+<div class="byline" data-analyst="vega"><b><a href="/analysts/market">Market Desk</a></b><span class="dot">&middot;</span>Market Intelligence Analyst<span class="dot">&middot;</span>Iron Tuna</div>
 <p class="lede">One story a day. Each one takes a single idea &mdash; scarcity, scoring settings, tier cliffs, the lies a backfield tells &mdash; runs the projection numbers until the idea either holds up or dies, and ends with the one player you should do something about. Read it for fun. Use it on your lineup, your waiver claim and your draft board alike.</p>
 <div class="cta-row"><a class="btn" href="/fantasy">This week&rsquo;s board</a><a class="btn alt" href="/play-caller-premium">The Play-Caller Premium</a></div>
 
@@ -139,82 +147,87 @@ td.you{color:var(--goldink);font-weight:700}
 
 <div class="eyebrow" id="entries">The column</div>
 <div class="entries">
-<article class="call pick" id="pick-2026-10-06">
-<div class="cmeta"><span class="chip theme">Theme: positional scarcity</span><span class="cpos">TE</span><span class="cteam">LV</span><span class="cdate">Oct 6</span></div>
-<h2>There Are Two Tight Ends and Then There Is a Waiting Room, and Brock Bowers Is the Twin You Can Buy Without the Name Tax</h2>
-<p class="dek">Trey McBride projects for 241.1 PPR points and Brock Bowers for 240.4. The next tight end is 30.4 points back, so the position is two real assets and a crowd. Take whichever twin the room charges less for.</p>
-<p>Scarcity is the most overused word in an auction room. Somebody says &ldquo;tight end is thin&rdquo; and three people reach for their wallets, as if thin were a price instead of a shape. Thin only matters if you can measure how thin, so let&rsquo;s measure it. Count how many points a player gives you over the free replacement you could pick up for nothing, and see who is actually scarce.</p>
-<p>Set the replacement bar at the last starter in a 12&#8209;team league: QB12, RB24, WR36, TE12. That bar is 285.6 points at quarterback, 196.8 at running back, 184.4 at receiver and 169.1 at tight end. McBride clears his bar by 72.0 points and Bowers by 71.3. That sounds like a lot until you line it up against the whole pool: McBride is the 23rd most valuable player by that measure, Bowers the 24th. Puka Nacua clears his bar by 171.6. Scarcity at tight end is real, but it is a small number.</p>
-<p>Here is the part the room misses. The cliff after the pair is steep. Tyler Warren (IND) is the TE3 at 210.0, which is 30.4 points behind Bowers, and he is only the 39th most valuable player at 40.9 points over replacement. So you are not buying tight end value in general. You are buying exactly two seats at a table, and a third and fourth chair that are already worth about half as much.</p>
+<article class="call pick" id="pick-2026-10-10">
+<div class="cmeta"><span class="chip theme">Theme: positional scarcity</span><span class="cpos">TE</span><span class="cteam">LV</span><span class="cdate">Oct 10</span></div>
+<h2>Quarterbacks Grow on Trees, Tight Ends Grow on Two Trees: Brock Bowers Is Worth Almost What Josh Allen Is</h2>
+<p class="dek">Brock Bowers is projected 71.3 points above the twelfth tight end. Josh Allen is projected 80.5 above the twelfth quarterback. One of those is a position with twelve usable starters in a row, and the other is a position with two.</p>
+<p>Every auction has a moment when somebody buys the best quarterback and announces it like a man who just found a parking space at the mall. It feels like a win. It is a win, a small one, because the thing he bought is the one thing in the room that is easiest to replace.</p>
+<p>Scarcity is not how good a player is. It is how bad the next guy is. So here is the test, run on the projection set: take the player, subtract the twelfth-best player at his position in full PPR, and see what is left. At quarterback, the twelfth man is Dak Prescott at 283.9. At tight end, the twelfth is Mark Andrews at 169.1. Those are the points you get for free by waiting.</p>
+<p>Now look at the shape. Quarterback is a shelf: after Josh Allen at 364.4, the next ten starters sit between 320.8 (Lamar Jackson) and 283.9. The whole climb from QB12 to QB2 is 36.9 points. Over the same distance, Allen is worth 80.5, but all of that comes from one man standing alone, 43.6 points above anyone else at his position. Tight end is a cliff: Trey McBride is 241.1 and Brock Bowers is 240.4, then Tyler Warren is 210.0. The drop from the second tight end to the third is 30.4 points. The drop from the second quarterback to the third is 3.8.</p>
+<p>That is the whole argument in one sentence. If you miss on the top quarterback, you slide a few spots and lose a few points. If you miss on the top two tight ends, you slide to a man who is 30 points worse, and the whole rest of the position is a parade of players at 190 or below.</p>
 <div class="tbl"><table>
-<caption>Iron Tuna 2026 projections, 17 games. Points is the full PPR total computed from the projection set. Over bar is Points minus the projected TE12 (169.1).</caption>
-<thead><tr><th>Rank</th><th>Player</th><th>Points</th><th>Over bar</th></tr></thead>
+<caption>Iron Tuna 2026 projections, 17 games. Points is the full PPR total computed from the projection set. Over replacement is points minus the twelfth player at the position: QB12 is 283.9 and TE12 is 169.1.</caption>
+<thead><tr><th>Rank</th><th>Player</th><th>Points</th><th>Over replacement</th></tr></thead>
 <tbody>
+<tr><td class="num">QB1</td><td>Josh Allen (BUF)</td><td class="num">364.4</td><td class="num">80.5</td></tr>
+<tr><td class="num">QB2</td><td>Lamar Jackson (BAL)</td><td class="num">320.8</td><td class="num">36.9</td></tr>
+<tr><td class="num">QB3</td><td>Drake Maye (NE)</td><td class="num">317.0</td><td class="num">33.1</td></tr>
 <tr><td class="num">TE1</td><td>Trey McBride (ARI)</td><td class="num">241.1</td><td class="num">72.0</td></tr>
 <tr class="hi"><td class="num">TE2</td><td>Brock Bowers (LV)</td><td class="num">240.4</td><td class="num">71.3</td></tr>
 <tr><td class="num">TE3</td><td>Tyler Warren (IND)</td><td class="num">210.0</td><td class="num">40.9</td></tr>
-<tr><td class="num">TE12</td><td>Mark Andrews (BAL)</td><td class="num">169.1</td><td class="num">0.0</td></tr>
+<tr><td class="num">TE4</td><td>Colston Loveland (CHI)</td><td class="num">204.9</td><td class="num">35.8</td></tr>
 </tbody>
 </table></div>
-<p>Why does that matter for the twins? Because the two are 0.7 points apart over a season, about four hundredths of a point a week, and the room will not price them that way. One of them gets the headline and the dollars that come with it. McBride is the one the site has already backed: the August 30 Play-Caller column says his role is the part of Arizona&rsquo;s offense a bad quarterback cannot shrink, and nothing here disagrees. He catches more, 108 to 99. Bowers scores more, 6.6 receiving touchdowns to 5.3. Different roads, same address.</p>
-<p>So this is not an argument against McBride. It is an argument against paying a tax for him. If the room puts McBride a few dollars above Bowers, the extra money buys you 0.7 points, and you should hand that premium to somebody else. If the room runs it the other way, and Bowers is the one wearing the tax, buy McBride and keep the receipt for the Play-Caller call.</p>
-<p>The alternative is the waiting room. Past Warren the board flattens fast: Harold Fannin Jr. (188.5), Sam LaPorta (188.3), George Kittle (187.8) and Kyle Pitts (184.4) sit inside four points of each other. Andrews at TE12 is projected for 7.1 receiving touchdowns on only 58 catches, which is the kind of line that comes back toward the middle. Paying for that is paying for a tail.</p>
-<p>The risk, out loud: this is a model, and a tight end who touches the ball 99 times is exposed to one bad week of targets or one bad ankle. Las Vegas could also bury him in a game script he cannot catch his way out of. And if your room already prices the pair within a dollar, there is no tax to dodge. Check the board first.</p>
-<p>The line to take to your league: scarcity is not a position, it is a gap. At tight end the gap is 30.4 points wide and exactly two players stand on the good side of it.</p>
-<p class="who"><b>The Pick:</b> <b>Brock Bowers</b> (LV, TE), and bid him within a dollar of what <b>Trey McBride</b> (ARI, TE) costs. If McBride is the one carrying the premium, take Bowers; if Bowers is, take McBride. Either way, one of the two, and nobody from the waiting room.</p>
-<p class="statline">Projected effect: +5% to +9% above his current price</p>
-</article>
-<article class="call pick" id="pick-2026-10-05">
-<div class="cmeta"><span class="chip theme">Theme: committee backfields</span><span class="cpos">RB</span><span class="cteam">PIT</span><span class="cdate">Oct 5</span></div>
-<h2>Pittsburgh&rsquo;s Backfield Is a Coin Flip With Two Heads, and Rico Dowdle Is the Side Nobody Is Pricing</h2>
-<p class="dek">Jaylen Warren projects for 191.3 PPR points and Rico Dowdle for 185.4, a gap of 5.9 over 17 games. Together they are 376.7, more than any single back in this pool. Pay them as a pair, not as a lead back and a spare.</p>
-<p>A committee backfield is a group project. Everybody agrees it will be done, nobody agrees who is doing it, and the one person who handed in a clean page gets the credit. In auction rooms the credit goes to whichever name sounds more like a starter, and that name gets the extra dollars whether the numbers earned them or not.</p>
-<p>Start with what the site has already published. The September 2 camp report says Pittsburgh traded Kaleb Johnson to Green Bay, cut Travis Homer and Lew Nichols, and left Jaylen Warren and Rico Dowdle as the only pure running backs on the 53. It also says Dowdle was signed for early&#8209;down and goal&#8209;line work next to Warren, the passing&#8209;down back. That report said to pay Warren like a clear lead back. The projection set does not agree, and here is why.</p>
-<p>Warren is RB26 at 191.3 points. Dowdle is RB30 at 185.4. That is 5.9 points across a full season, about a third of a point a game. Warren catches more: 46 balls to 29, which is worth 17 points of reception credit before yardage. Dowdle runs more: 975 rushing yards to 791, and 5.5 rushing touchdowns to 4.5. Those two edges almost cancel, which is what a committee is. Neither one is the lead back. They are the lead back, cut in half.</p>
-<p>Now add them up. Warren plus Dowdle is 376.7 points. The top back in this pool, Jahmyr Gibbs, is 364.7. Nobody can roster both halves of a split and play them in one slot, so the pair is not a Gibbs. But it tells you the Steelers have a full backfield&rsquo;s worth of production to hand out, and the only question is how it gets divided. If the room prices that 376.7 as 191.3 for the famous half and 185.4 for the other, it should charge you almost the same for each. If it charges a lot more for the first half, the second half is the bargain.</p>
-<div class="tbl"><table>
-<caption>Iron Tuna 2026 projections, 17 games. Points is the full PPR total computed from the projection set.</caption>
-<thead><tr><th>Rank</th><th>Player</th><th>Points</th></tr></thead>
-<tbody>
-<tr><td class="num">RB26</td><td>Jaylen Warren (PIT)</td><td class="num">191.3</td></tr>
-<tr class="hi"><td class="num">RB30</td><td>Rico Dowdle (PIT)</td><td class="num">185.4</td></tr>
-<tr><td class="num">RB23</td><td>Rhamondre Stevenson (NE)</td><td class="num">202.0</td></tr>
-<tr><td class="num">RB24</td><td>TreVeyon Henderson (NE)</td><td class="num">196.8</td></tr>
-<tr><td class="num">RB34</td><td>Chuba Hubbard (CAR)</td><td class="num">171.5</td></tr>
-<tr><td class="num">RB35</td><td>Jonathon Brooks (CAR)</td><td class="num">169.9</td></tr>
-</tbody>
-</table></div>
-<p>Pittsburgh is not alone. New England has Stevenson and Henderson 5.2 points apart, and Carolina has Hubbard and Brooks 1.6 apart. Those are three committees in a row where the gap between the names is smaller than one good week from either back. The room treats the first name as the starter and the second as the insurance, and the pool says they are twins.</p>
-<p>Why Dowdle and not Warren? Because the touchdowns and the yards point the same way. Dowdle has the early&#8209;down and goal&#8209;line job, and his 184 extra rushing yards and one extra rushing touchdown are worth about 24 points that do not vanish when a game script flips. Warren&rsquo;s catches are real, but they are the part of a back&rsquo;s year that depends most on Pittsburgh trailing. A back who gets the ball when the team leads has a floor. A back who gets it when the team trails has a hope.</p>
-<p>The risk, out loud: these are projections, and a committee can break either way in a week. If Warren&rsquo;s passing&#8209;down role grows, he takes a bigger share and Dowdle shrinks to a touchdown vulture. Pittsburgh could also lean on one of them after an injury to the other, which flips the whole argument. And if your room already prices the two within a dollar of each other, there is no gap to buy. Check what the board says before you bid.</p>
-<p>The line to take to your league: a committee is not a starter and a backup, it is two starters who each get half a season of the other one&rsquo;s work. Do not pay a premium for the name that sounds like the lead.</p>
-<p class="who"><b>The Pick:</b> <b>Rico Dowdle</b> (PIT, RB), and bid him within a dollar or two of what <b>Jaylen Warren</b> (PIT, RB) costs. If the room leaves a bigger gap than that, take Dowdle and let somebody else pay the name premium.</p>
-<p class="statline">Projected effect: +7% to +12% above his current price</p>
-</article>
-<article class="call pick" id="pick-2026-10-04">
-<div class="cmeta"><span class="chip theme">Theme: scoring settings</span><span class="cpos">RB</span><span class="cteam">CIN</span><span class="cdate">Oct 4</span></div>
-<h2>Switch the Scoring From Standard to PPR and Derrick Henry&rsquo;s 45&#8209;Point Lead Over Chase Brown Shrinks to 2.5</h2>
-<p class="dek">Brown gets 23.6 percent of his 270.7 points from 64 catches. Henry gets 7.7 percent of his 273.2 from 21. In full PPR they are a tie, so stop paying a standard&#8209;league price gap for them.</p>
-<p>Every league has a rules page that nobody reads and everybody is governed by. It is the one document in fantasy football that moves money without anybody voting on it. One line, &ldquo;1 point per reception,&rdquo; sounds like a rounding error. It is not. It is a transfer of wealth from the men who carry the ball to the men who catch it, and it happens quietly, at the auction table, while your league argues about a kicker.</p>
-<p>Here is the experiment. Take each back&rsquo;s full PPR projection from this pool and subtract one point per catch to get the standard version. Now look at who moves. Derrick Henry projects for 1,484 rushing yards and 21 catches, so he is 252.2 points in standard and 273.2 in PPR: a 21&#8209;point swing. Chase Brown projects for 1,038 rushing yards and 64 catches, so he is 206.7 in standard and 270.7 in PPR: a 64&#8209;point swing. The 45.5&#8209;point gap between them in standard becomes 2.5 in PPR.</p>
-<p>Brown is not alone. Ashton Jeanty (65 catches) goes from 214.6 to 279.6, and Jeremiyah Love (65) from 211.8 to 276.8. Among the top 24 backs, the average is 48.3 catches, so a back at 64 or 65 is carrying about 16 more points of PPR value than the typical back, and a standard sheet never sees them.</p>
-<div class="tbl"><table>
-<caption>Iron Tuna 2026 projections, 17 games. Points is the full PPR total computed from the projection set. Catches is projected receptions. Standard is Points minus one per catch.</caption>
-<thead><tr><th>Rank</th><th>Player</th><th>Points</th><th>Catches</th><th>Standard</th></tr></thead>
-<tbody>
-<tr><td class="num">RB9</td><td>Derrick Henry (BAL)</td><td class="num">273.2</td><td class="num">21</td><td class="num">252.2</td></tr>
-<tr><td class="num">RB6</td><td>Ashton Jeanty (LV)</td><td class="num">279.6</td><td class="num">65</td><td class="num">214.6</td></tr>
-<tr class="hi"><td class="num">RB13</td><td>Chase Brown (CIN)</td><td class="num">270.7</td><td class="num">64</td><td class="num">206.7</td></tr>
-<tr><td class="num">RB15</td><td>Javonte Williams (DAL)</td><td class="num">258.6</td><td class="num">37</td><td class="num">221.6</td></tr>
-</tbody>
-</table></div>
-<p>Why Brown, and not the other two catch&#8209;heavy backs? Because the role behind the catches is the one the site has already vouched for. Cincinnati&rsquo;s camp reports had him around 69 to 70 percent of the backfield snaps with Samaje Perine well behind him, and his 435 projected receiving yards sit on top of the rushing line. That is a passing&#8209;game role, and a role like that does not need a big touchdown total to pay off.</p>
-<p>Now the mechanism. Many auction rooms carry a price memory from older, standard&#8209;flavored rankings, where a 1,484&#8209;yard bruiser outranks a 1,038&#8209;yard back by a mile. If your league pays a point per catch, that gap is imaginary. Henry at RB9 money and Brown at RB13 money differ by 2.5 points over the whole season, which is about a seventh of a point a week.</p>
-<p>The risk, out loud: this is an entry about your settings, and it flips if you play standard. In standard, Brown is the RB15 among the top 24 and Henry is the RB5, and everything above reverses. It also depends on the catches showing up. Sixty&#8209;four is a projection, not a contract, and a Cincinnati offense that falls behind more or less than expected changes the number. Check the rules page before you bid.</p>
-<p>The line to take to your league: a scoring setting is not a footnote, it is a price list. If a catch is worth a point, a running back who catches 64 passes has already been paid.</p>
-<p class="who"><b>The Pick:</b> <b>Chase Brown</b> (CIN, RB), and in a full PPR room the move is to treat him as a Henry&#8209;sized asset: bid within a dollar or two of what <b>Derrick Henry</b> (BAL, RB) costs and let somebody else pay for the extra 446 rushing yards that PPR does not reward.</p>
+<p>A note on the site&rsquo;s own calls, so this does not read as a quiet contradiction. The September 3 quarterback board called Allen correctly priced, not a bargain, and said to pay only for the floor. This column agrees with that and adds the reason: his 80.5 is real, but it is the one quarterback line that you can only get by paying the most. The July 4 insight drop made the good case for McBride, and it was right about the shape. The only change here is who gets the money, because the same board that likes McBride also noted Arizona&rsquo;s quarterback downgrade, and Bowers gives you the same 71 points without that tax.</p>
+<p>The mechanism is how rooms spend. Bidders feel the QB1 tag and the TE1 tag as equal, so they reach for both and do the math on neither. But the two tags buy different things. One buys a place on a shelf. The other buys a seat before the cliff.</p>
+<p>The risk, out loud: a tight end is one target tree. If Las Vegas&rsquo;s offense stalls or Bowers gets hurt, there is no one on the shelf to catch you, and that is the cost of a scarce position. Also, a lineup that starts two quarterbacks changes the math, because then the twelfth quarterback is not free. This entry is for one&#8209;quarterback leagues, which is most of them.</p>
+<p>The line for your league: do not pay for the position that has eleven spares. Pay for the one that has none.</p>
+<p class="who"><b>The Pick:</b> <b>Brock Bowers</b> (LV, TE). Spend the quarterback money on him, and do not stop at McBride&rsquo;s number if the room pushes you there. If you already own <b>Josh Allen</b> (BUF, QB), you did not make a mistake; just do not buy the second best quarterback to go with him.</p>
 <p class="statline">Projected effect: +6% to +10% above his current price</p>
 </article>
+<article class="call pick" id="pick-2026-10-09">
+<div class="cmeta"><span class="chip theme">Theme: committee backfields</span><span class="cpos">RB</span><span class="cteam">CAR</span><span class="cdate">Oct 9</span></div>
+<h2>A Coin Flip Is Not a Starter: Jonathon Brooks Costs Less Than Chuba Hubbard and Projects Nearly the Same</h2>
+<p class="dek">Carolina&rsquo;s two backs are projected 1.6 points apart, 171.5 for Chuba Hubbard and 169.9 for Jonathon Brooks. When a backfield splits like that, you are bidding on one pie, and you should only pay for one slice of it.</p>
+<p>There is a kind of auction bidder who sees &ldquo;starting running back&rdquo; on a name card and treats it like a title of nobility. Meanwhile the other back on the same team, who the projection says will do almost the same job, sits on the board at a discount and nobody lifts a paddle. It is the fantasy version of paying full price for the left shoe.</p>
+<p>The test is simple. In the projection set, look at the teams that put two backs in the top 45 and see how far apart the two are. Four of them are within six points: New England (Rhamondre Stevenson 202.0, TreVeyon Henderson 196.8), Pittsburgh (Jaylen Warren 191.3, Rico Dowdle 185.4), Washington (Rachaad White 163.7, Jacory Croskey&#8209;Merritt 158.3) and Carolina. Carolina is the tightest of the four, at 1.6 points. Compare that to Detroit, where Jahmyr Gibbs is 364.7 and the next back is a rounding error, or Baltimore, where Derrick Henry leads Justice Hill by 159.2.</p>
+<p>That gap is the whole story. Every back in the top 12 of the position is the unquestioned lead on his team. Once you leave that group, the &ldquo;starter&rdquo; label stops meaning one man, and the points sit in a pie that two players share. Carolina&rsquo;s pie is 341.4 points. Hubbard gets 171.5 of it on 709 rushing yards and 41 catches. Brooks gets 169.9 on 810 rushing yards, 4.3 rushing touchdowns and 33 catches. Brooks carries more yardage and more touchdowns; Hubbard has the extra catches. That is a split, not a depth chart.</p>
+<div class="tbl"><table>
+<caption>Iron Tuna 2026 projections, 17 games. Points is the full PPR total computed from the projection set. Teams shown are those whose top two backs are within six points of each other and both rank in the top 45 at the position.</caption>
+<thead><tr><th>Rank</th><th>Player</th><th>Points</th><th>Rush yd</th><th>Rec</th></tr></thead>
+<tbody>
+<tr><td class="num">RB23</td><td>Rhamondre Stevenson (NE)</td><td class="num">202.0</td><td class="num">740</td><td class="num">42</td></tr>
+<tr><td class="num">RB24</td><td>TreVeyon Henderson (NE)</td><td class="num">196.8</td><td class="num">837</td><td class="num">39</td></tr>
+<tr><td class="num">RB26</td><td>Jaylen Warren (PIT)</td><td class="num">191.3</td><td class="num">791</td><td class="num">46</td></tr>
+<tr><td class="num">RB30</td><td>Rico Dowdle (PIT)</td><td class="num">185.4</td><td class="num">975</td><td class="num">29</td></tr>
+<tr><td class="num">RB34</td><td>Chuba Hubbard (CAR)</td><td class="num">171.5</td><td class="num">709</td><td class="num">41</td></tr>
+<tr class="hi"><td class="num">RB35</td><td>Jonathon Brooks (CAR)</td><td class="num">169.9</td><td class="num">810</td><td class="num">33</td></tr>
+<tr><td class="num">RB37</td><td>Rachaad White (WAS)</td><td class="num">163.7</td><td class="num">568</td><td class="num">40</td></tr>
+<tr><td class="num">RB39</td><td>Jacory Croskey&#8209;Merritt (WAS)</td><td class="num">158.3</td><td class="num">848</td><td class="num">16</td></tr>
+</tbody>
+</table></div>
+<p>Now the disagreement, out loud. The site&rsquo;s own Auction Watch has said two things about Carolina. On August 22 it called Brooks the clear lead back, playing nearly every snap with the starters. On September 1 it said to pay Hubbard like a true starter and treat Brooks as a handcuff, with Hubbard expected back from a hamstring strain for the opener. This column leans toward the first read, and here is the reason: the projection set does not agree that Hubbard is the starter. It has the two backs a hair apart, with Brooks ahead on rushing yards. If you pay starter money for Hubbard and handcuff money for Brooks, you are paying a premium for a gap the numbers do not show.</p>
+<p>The mechanism is price, not talent. A bidder pays for the label, so the label back goes for more and the other back goes for less, even when the points are equal. The market is rounding a 1.6&#8209;point gap up to a role gap. You do not have to bet on who is better. You only have to refuse to pay the difference.</p>
+<p>The risk is the obvious one. If Hubbard is healthy and the coaches simply prefer him in the red zone, the split tilts his way and Brooks&rsquo;s 4.3 touchdowns shrink. Brooks has also been through a long recovery, and a back with that history is one bad Sunday from a smaller number. Both are real. They are why this is a price call and not a prediction: take Brooks at a handcuff&rsquo;s price, and do not chase him up to Hubbard&rsquo;s.</p>
+<p>The line for your league: when two backs split one pie, buy the cheaper slice. The pie does not care which name is on the card.</p>
+<p class="who"><b>The Pick:</b> <b>Jonathon Brooks</b> (CAR, RB). Bid him as RB35 and stop if the room pushes him toward Hubbard&rsquo;s number. If you already hold <b>Chuba Hubbard</b> (CAR, RB) at a starter&rsquo;s price, you have already paid for the label; the 1.6 points are the same whichever of them you own.</p>
+<p class="statline">Projected effect: +6% to +11% above his current price</p>
+</article>
+<article class="call pick" id="pick-2026-10-08">
+<div class="cmeta"><span class="chip theme">Theme: touchdown regression</span><span class="cpos">WR</span><span class="cteam">NYJ</span><span class="cdate">Oct 8</span></div>
+<h2>Touchdowns Are Weather: Garrett Wilson Is Owed Two, and Davante Adams Is Overdrawn</h2>
+<p class="dek">The top 36 receivers score a touchdown every 160 yards. Davante Adams is projected to score one every 96. Garrett Wilson is projected to score one every 225. Both lines bend back toward the middle.</p>
+<p>A receiving yard is a skill. A receiving touchdown is a skill that has to wait for the offense to reach the three&#8209;yard line, wait for the play call, wait for the safety to blink. Every analyst knows this, and every auction room forgets it the moment a name has a big number next to the touchdown column. Touchdowns are weather. You can dress for it, but you should not pay for it in advance.</p>
+<p>So here is the test, and anyone can run it on their own sheet. Take the top 36 receivers in the projection set by full PPR points. Together they carry 40,039 receiving yards and 250.5 receiving touchdowns, which works out to 0.63 touchdowns per 100 yards. That is the room&rsquo;s normal. Now ask who sits far from it.</p>
+<p>Davante Adams (LAR) is the loud answer. He is WR18 at 232.4 points, on 1,016 yards, and he is projected for 10.6 touchdowns. That is 1.04 per 100 yards, about two thirds above the normal. Put him at the normal rate and he scores 6.4 touchdowns, which is 25.5 points fewer, and he lands at about 206.9. That is a WR27 outcome priced like a WR18, in an offense where Puka Nacua soaks up the first look and where the red&#8209;zone targets are shared. Nobody is saying he is finished. We are saying the touchdown line is the part of his season that is borrowed.</p>
+<p>Now the other side of the ledger. Garrett Wilson (NYJ) is WR12 at 247.9 points on 1,172 yards, more yardage than Rashee Rice or Chris Olave, and he is projected for only 5.2 touchdowns, a rate of 0.44 per 100. At the normal rate he scores 7.3, which is 12.8 points more, and he lands at about 260.7. That would put him ahead of Rice (260.0) and behind only Drake London (269.0) among the receivers who are not in the top six. Same player, same targets, same catches. The only change is that the end zone treats him like everyone else.</p>
+<div class="tbl"><table>
+<caption>Iron Tuna 2026 projections, 17 games. Points is the full PPR total computed from the projection set. TD per 100 yd is projected receiving touchdowns divided by receiving yards; the top&#8209;36 receiver rate is 0.63.</caption>
+<thead><tr><th>Rank</th><th>Player</th><th>Points</th><th>Rec yd</th><th>Rec TD</th><th>TD per 100 yd</th></tr></thead>
+<tbody>
+<tr><td class="num">WR8</td><td>Rashee Rice (KC)</td><td class="num">260.0</td><td class="num">1,085</td><td class="num">8.8</td><td class="num">0.81</td></tr>
+<tr class="hi"><td class="num">WR12</td><td>Garrett Wilson (NYJ)</td><td class="num">247.9</td><td class="num">1,172</td><td class="num">5.2</td><td class="num">0.44</td></tr>
+<tr><td class="num">WR18</td><td>Davante Adams (LAR)</td><td class="num">232.4</td><td class="num">1,016</td><td class="num">10.6</td><td class="num">1.04</td></tr>
+<tr><td class="num">WR21</td><td>Tee Higgins (CIN)</td><td class="num">218.2</td><td class="num">956</td><td class="num">8.4</td><td class="num">0.88</td></tr>
+</tbody>
+</table></div>
+<p>A word on the site&rsquo;s own calls, because this column should not quietly contradict them. The July 3 Auction Watch said to pay up for a healthy Wilson, and the camp reports have him a full participant and on track for Week 1. This is the same call with an extra reason: the price you pay for his health is already fair, and the touchdown correction is the part nobody is charging you for.</p>
+<p>The risk, out loud: regression is a lean, not a law. The Jets can be a bad offense that never gets to the goal line, in which case 5.2 was generous and he sits where the projection says. Adams, for his part, has been a touchdown machine for a decade, and a player can hold a rate above the normal for years. The entry assumes the average, and the average is a good bet, not a sure thing.</p>
+<p>The line to take to your league: yards are what a receiver is, touchdowns are what happened to him. Bid on the first and rent the second.</p>
+<p class="who"><b>The Pick:</b> <b>Garrett Wilson</b> (NYJ, WR). Bid him as a WR8 and treat the first touchdown rebound as free. On the other side, let <b>Davante Adams</b> (LAR, WR) go to whoever wants to pay for 10.6 touchdowns, and do not cross the WR18 price for him. If the room starts bidding on Adams by the touchdown, you are the seller.</p>
+<p class="statline">Projected effect: +5% to +9% above his current price</p>
+</article>
+
 
 
 
@@ -294,7 +307,7 @@ function itInsSignup(e){e.preventDefault();var em=document.getElementById('itIns
   <div class="foot-note">
    <p>Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.</p>
    <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site — projections, odds, salaries and contract prices alike — is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-MY-RESET</b>.</p>
-   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span></p>
+   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span><a class="foot-admin" href="/admin" rel="nofollow">Admin</a></p>
   </div>
   <!--/chrome:foot-->
 </div></footer>

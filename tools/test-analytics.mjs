@@ -363,6 +363,35 @@ const track = (h, body) => h.hit('/api/track', { method: 'POST', headers: { 'use
   ok('the admin read says so rather than 500ing blind', j.ok === false && j.error === 'no_db', JSON.stringify(j));
 }
 
+// ── 5b. a refused read is reported, not drawn as zeros ──
+// 2026-10-10: D1 refused every read for the day (the account's free-tier
+// row-read allowance was spent) and the route answered ok:true with every
+// count zero, so /admin read as if the data had been wiped. A refused read
+// must say so; only a read that fails AFTER the window total may leave the
+// rest of the page standing, and then the payload says it is partial.
+{
+  const LIMIT = "D1_ERROR: Your account has exceeded D1's free tier daily row read limit. Upgrade to a paid plan or wait until tomorrow (midnight UTC) to continue.";
+  const refusing = msg => ({
+    batch: async () => [],
+    prepare: () => { const s = { bind: () => s, run: async () => ({ meta: {} }), all: async () => { throw new Error(msg); }, first: async () => { throw new Error(msg); } }; return s; },
+  });
+  let r = await harness(makeEnv(refusing(LIMIT))).hit('/api/admin/traffic?key=testkey');
+  let j = await r.json();
+  ok('the allowance refusal is named, not drawn as zeros', r.status === 503 && j.ok === false && j.error === 'd1_limit', `${r.status} ${JSON.stringify(j)}`);
+  ok('and the refusal text is carried for the page', /row read limit/.test(j.detail || ''), j.detail);
+  j = await (await harness(makeEnv(refusing('no such column: nope'))).hit('/api/admin/traffic?key=testkey')).json();
+  ok('any other refused read is a read error, not zeros', j.ok === false && j.error === 'd1_read', JSON.stringify(j));
+
+  const real = makeDb(), h = harness(makeEnv(real));
+  await view(h, '/guides', CHROME, '1.1.1.1'); await h.settle();
+  const stmtRefusing = { bind() { return this; }, run: async () => ({ meta: {} }), all: async () => { throw new Error(LIMIT); }, first: async () => { throw new Error(LIMIT); } };
+  const lateFail = { sqlite: real.sqlite, batch: real.batch, prepare: sql => /FROM site_events/.test(sql) ? stmtRefusing : real.prepare(sql) };
+  j = await (await harness(makeEnv(lateFail)).hit('/api/admin/traffic?key=testkey')).json();
+  ok('a late refusal keeps the numbers that were read', j.ok === true && j.totals.window.views === 1, JSON.stringify(j.totals));
+  ok('and says the payload is partial', !!(j.readError && j.readError.limit === true && /row read limit/.test(j.readError.detail)), JSON.stringify(j.readError));
+  ok('a clean read carries no partial mark', !(await traffic(h)).readError);
+}
+
 // ── 6. a visitor id cannot be walked back to a person ──
 {
   const db = makeDb(), h = harness(makeEnv(db));

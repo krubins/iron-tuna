@@ -1,5 +1,7 @@
 # Iron Tuna — Project Handoff
 
+**The design system changed on 2026-10-08.** Paper-white ground, one navy band (header ribbon, KPI band, footer), one teal accent (#0b4f6c), green only for a positive market edge, amber only for a disclosure label, and one self-hosted family (Geist, `/fonts`). The homepage at `/` is a ledger-style front (hero with the search field, six position tiles, the newest desk pieces, two lane tiles for DFS and season long, three How-it-works cards, the KPI band) and takes the shared chrome from `tools/build-chrome.mjs` like every other page. The brief, the generic-default removal list and the post-build critique are in `docs/design/brief.md`. Token NAMES in `site.css` were kept and their VALUES moved: `--gold`/`--goldink` are the amber label now, `--mast` is the navy, `--mast-accent` the mint. The cover rotation, the hero photograph, the lead story and the lane cards came off the homepage with it; tools/test-homepage.mjs asserts the new composition.
+
 **The league-platform connectors were removed on 2026-09-18.** Sleeper, Yahoo, CBS and the ESPN placeholder are gone, and with them the OAuth flow, the sealed provider tokens, the scheduled refresh and the CBS browser extension: none of them ever carried a reader's league in production. What stays is the half that works and that main is still building on — the league model, the player crosswalk, `POST /api/leagues/manual`, every personalized module and My Week. A league is the reader's own entry now: typed, pasted, or read off a roster-grid screenshot. See §89, and `docs/saved-league.md` for the long record.
 
 CBS browser connector 0.2.0: the token-declaration approach failed on the live CBS league. The extension now reads whitelisted settings/scoring, roster-grid team names and every team roster through same-origin requests in the signed-in CBS tab, then posts a bounded snapshot to the existing connect route as provider cbs_browser. No CBS credentials leave the browser. The existing API-token adapter and encryption are retained separately; as of 2026-09-16 it sends the token as CBS's `access_token` query parameter (and the Authorization header), tries the documented `api.cbssports.com/fantasy` base before the league host's `/api/league`, treats a sign-in redirect as a refused token instead of a generic failure, and every failure shows a redacted diagnostic (resource, what each host answered, redirect host/path) on the form and in the league's last error. The first live run after that change answered `CBS details: HTTP 302 to www.cbssports.com/login` from the league host alone, so the league host does not honor `access_token`; whether the documented base still does is unproven and now untestable: on 2026-09-17 a signed-in live league page carried no `var token = "..."` at all, in the served HTML or on `window`, so the technique the public token fetchers rely on no longer yields a value and there is nothing left to authenticate a probe of either host with. Treat the API-token adapter as dead rather than merely unverified; it is retained, still behind `FLAG_CBS_SYNC`, only because removing it would cost more than leaving it off. Browser leagues never run in the scheduled sync job and expose no next automatic refresh time.
@@ -430,6 +432,12 @@ It grants, mints the magic link itself, emails it, and reports **what actually h
 - The email is deliberately **not** `sendLoginEmail`. That one says "unlock your purchase", which is the wrong sentence for someone who never bought anything, and it swallows every failure.
 
 `node tools/test-admin-comp.mjs` covers the gate, the validation, the mail-shim assertions, every "looks like success and is not" case above — and follows the link the route emits all the way through `/api/auth/verify` to `/api/auth/me`, because a link that does not actually sign anyone in is the whole failure this route exists to prevent. It also asserts `admin.html` still sends the parameters the route reads, since the page is hand-written and a renamed parameter would only show up as a form that silently 400s. Both this and the grant suite run in CI, along with a parse check on `admin.html`'s scripts.
+
+## 9g-ii. The admin password (added 2026-10-10)
+
+`/admin` used to open only with `LEADS_EXPORT_KEY`, a long secret that is awkward to paste from a phone. `adminOk` in `_worker.js` now accepts a second credential, `ADMIN_PASSWORD`, set as a plain var in `wrangler.jsonc` (currently `Claude`). It is the same gate every `/api/admin/*` route, the `?preview=` escape hatch and the Tuna Market refresh go through, so the password opens all of them, exactly as the key does. The key still works; nothing that used it changes.
+
+To change the password, edit the var in `wrangler.jsonc` and deploy. It is deliberately a var and not a secret so the value is in the repo and survives a dashboard reset. That also means it is as public as the repo: treat it as a convenience lock on a page that can grant paid access, post to X and read Stripe, not as the thing that keeps strangers out. `tools/test-admin-grant.mjs` proves the password opens the gate, that it is case-sensitive, that a near miss and an empty key are refused, and that it is inert when the var is unset.
 
 ## 9h. What a quarterback costs (re-cut August 2026)
 
@@ -7848,11 +7856,13 @@ that failed rather than one that has not published yet.
 
 ### The byline
 
-The column runs under **Artie Kesselman**, a pen name, and the method box says
-so in as many words under "About the byline". The name exists because a standing
-weekly column needs someone answering for last week's calls, and because the
-voice — dry, mildly exasperated, observational — is a voice rather than the
-site's institutional register. **The JSON-LD author stays `Iron Tuna`, the
+The column ran under a pen name until 2026-10-10, when every fictional byline
+on the site was retired (§127); it carries the Rankings Desk byline now, and the
+method box says so under "About the byline". The pen name existed because a
+standing weekly column needs someone answering for last week's calls, and
+because the voice — dry, mildly exasperated, observational — is a voice rather
+than the site's institutional register. The desk answers for the calls now; the
+voice is the column's own. **The JSON-LD author stays `Iron Tuna`, the
 organization.** Do not put the pen name in structured data: a fictional byline
 in prose is a column convention, and a fictional byline in machine-readable
 authorship metadata is a claim about a person who does not exist.
@@ -7988,7 +7998,7 @@ table and the code cannot disagree.
   the regular season and the `/lead` archive stays readable.
 - **Retained (Routines):** the projection updates (data jobs, not stories)
   and The Tell (a distinct function nothing on the calendar duplicates;
-  registered on Evan Brooks's desk, byline unchanged, see 68j).
+  registered on the Rankings Desk, byline unchanged, see 68j).
 - **Retired / merged (desk kinds):** all eleven of §56's kinds. Their rows
   in `content_pieces` stay readable at their old URLs (`/in-season/desk/
   <kind>/<week>` renders a legacy row with its original sections); none can
@@ -8033,11 +8043,11 @@ behavior at the quarter hours.
 
 ### 68d. The staff, and the one rivalry
 
-`ANALYSTS`: Jack Mercer (editor), Nate Vega (market), Evan Brooks
-(rankings), Mike Raines (usage), Chris Dalton (QB/offense), Tyler Grant
-(waivers), Sam Porter (matchups, K/DST), Lena Park (DFS). Each has a beat, a
+`ANALYSTS`: Editorial Desk (editor), Market Desk (market), Rankings Desk
+(rankings), Usage Desk (usage), Quarterback Desk (QB/offense), Waiver Desk
+(waivers), Matchups Desk (matchups, K/DST), DFS Desk (DFS). Each has a beat, a
 personality, a philosophy, assignments and a `voice` the writer is handed.
-`RIVALRY_PAIR` is Vega/Brooks and `newsroomAudit()` fails if a second pair
+`RIVALRY_PAIR` is Market/Rankings and `newsroomAudit()` fails if a second pair
 ever appears. `/analysts` is the staff page with the AI disclosure
 (`AI_DISCLOSURE`, also on every piece payload); `/analysts/<id>` is one
 analyst: beat, recent pieces, the record of calls, and for the two rivals
@@ -8083,7 +8093,7 @@ and at `w`. `/api/blend?horizon=&pos=&scoring=&w=` serves it;
 recomputes in the browser from the same two components (the same shrink
 table, `tools/test-vegas-weight.mjs`-style discipline: a calculation, never
 a reorder). `/api/disagreements` lists where the two ends disagree, and carries the
-week's **Vega vs. Brooks** column (§68q); the front page and `/fantasy`
+week's **Market Desk vs. Rankings Desk** column (§68q); the front page and `/fantasy`
 print that column.
 
 ### 68g. The writer and the fact check
@@ -8130,7 +8140,7 @@ defaults from `?lens=`, the referrer, or the lane the reader last chose on
 the front page), the byline, the rivalry module, the calls, the prior
 calls, the sources-and-freshness table and the packet; `analysts.html`,
 `analyst.html`; the front page's **The Newsroom** band in both lanes and
-**Vega vs. Brooks** in the fantasy lane; `/fantasy` and `/dfs` each carry
+**Market Desk vs. Rankings Desk** in the fantasy lane; `/fantasy` and `/dfs` each carry
 the feed in their lens, `/dfs` the contest selector and the **Value &
 Leverage** board.
 
@@ -8164,10 +8174,10 @@ re-enables the retired social threads.
 ### 68j. Open items, and what was left alone
 
 - **The Tell's byline.** The specification's roster has eight names and no
-  ninth. The Tell is bylined to a pen name, Artie Kesselman, written by the
-  owner hours before this migration. It is registered on Evan Brooks's desk
-  (his page links it and says so) and its Routine, page and prompt are
-  untouched pending the owner's call on re-bylining it.
+  ninth. The Tell was bylined to a pen name, written by the owner hours
+  before this migration. It is registered on the Rankings Desk (its page
+  links it and says so). Resolved 2026-10-10 (§127): the pen name went with
+  every other fictional byline and the column runs under the desk's name.
 - **The projection Routine ends with September.** The ROS boards price off
   the committed set; a weekly Monday cadence through Week 17 is the
   recommendation.
@@ -8382,14 +8392,14 @@ refresh summary if it recurs.
 
 ---
 
-### 68q. Vega vs. Brooks, the column on the record
+### 68q. Market Desk vs. Rankings Desk, the column on the record
 
 The band the front page and `/fantasy` print under the newsroom is not a
 table of rank gaps. Each man files five picks a week — the players his own
 end of the slider ranks ahead of the other man's board — with a pitch in his
 own voice. `rivalryColumns(rows, { week })` builds both: a player qualifies
 only for the man who has him higher, so the two lists cannot be the same
-list, and Vega never pitches a player no book has priced (`marketBasis` of
+list, and the Market Desk never pitches a player no book has priced (`marketBasis` of
 `none` is dropped from his side), because that is the one claim his method
 cannot make. If a week is quiet the thresholds relax once
 (`RIVALRY_LOOSE`, gap 3 and 10%) rather than the column printing three
@@ -8512,10 +8522,10 @@ on hover, and each position has a page of its own.
 
 | URL | What it is |
 |---|---|
-| `/weekly-rankings` | this week, every position pooled |
-| `/weekly-<pos>-rankings` | this week, one position (`qb rb wr te flex k dst`) |
-| `/season-long-rankings` | rest of season, every position pooled |
-| `/season-long-<pos>-rankings` | rest of season, one position |
+| `/weekly-rankings` | this week, the hub; opens on quarterbacks |
+| `/weekly-<pos>-rankings` | this week, one position (`qb rb wr te flex k dst`), or every position pooled (`overall`) |
+| `/season-long-rankings` | rest of season, the hub; opens on quarterbacks |
+| `/season-long-<pos>-rankings` | rest of season, one position, or `overall` |
 | `/stats` | what has actually been played |
 | `/hidden-value` | where the two boards disagree most |
 | `/previews` | every game this week, off the market |
@@ -9142,7 +9152,7 @@ Taught Us, Thursday Night: What Matters). This adds one per GAME.
 
 ### 73a. The package
 
-`game-recap` in `CONTENT_KINDS`, Mike Raines on the weekly lens and Lena Park
+`game-recap` in `CONTENT_KINDS`, Usage Desk on the weekly lens and DFS Desk
 on DFS, and the first package in the calendar with **`perGame: true`**. It has
 `day: null, hour: null` because it has no weekday slot at all: it fires off
 the feed's own `final`, one piece per game, so a Thursday night game is
@@ -9595,8 +9605,8 @@ for the coming week), the desk should run a series of what Tuna got right,
 with the biggest wins highlighted. Every Monday.
 
 **The piece.** `what-tuna-got-right` in `CONTENT_KINDS`: Monday 6:00 AM ET,
-retrospective, about the week just played (`subject: 'played'`), Jack
-Mercer with Lena Park on the DFS lens, worth-gated. It takes the early
+retrospective, about the week just played (`subject: 'played'`), the
+Editorial Desk with the DFS Desk on the DFS lens, worth-gated. It takes the early
 rankings' slot; `early-rankings` moved to `LEGACY_CONTENT` as merged into
 `ros-rankings`, because Tuesday already ranks the coming week (the next-3
 horizon) and the Monday board was the same week ranked a day earlier. Its
@@ -12674,7 +12684,7 @@ section listing a whole week has no lead to give.
 
 | Where | What |
 |---|---|
-| `fantasy.html` | The Newsroom moves out of the reading band to directly under the hero, unnumbered; `#fnDesk` ships as `.nr-well`; the painter builds the lead card and the rail instead of six cards; the ribbon reorders; Vega vs. Brooks and Everything else become 04 and 05. |
+| `fantasy.html` | The Newsroom moves out of the reading band to directly under the hero, unnumbered; `#fnDesk` ships as `.nr-well`; the painter builds the lead card and the rail instead of six cards; the ribbon reorders; Market Desk vs. Rankings Desk and Everything else become 04 and 05. |
 | `site.css` | `.nr-well`, `.nr-well-solo`, `.nr-lead`, `.nr-lead-go`, `.nr-flag`, `.nr-rail` under the story card block. |
 
 **Checked:** every node gate in `checks.yml` passes, `test-dry-run` included,
@@ -12847,7 +12857,7 @@ balance. Rendered in Chromium at 1360px and 430px against a stubbed
 `/api/newsroom?lens=dfs` in three shapes — six pieces, one piece, an empty feed
 — with no page errors and no horizontal overflow. The well paints at y=926 and
 `#sec-lineup` at y=1693, so the order on the rendered page is Setup, the desk,
-the lineup; the byline reads Lena Park and the kicker reads the DFS title.
+the lineup; the byline reads DFS Desk and the kicker reads the DFS title.
 
 ---
 
@@ -12906,7 +12916,7 @@ welcome.' should be more prominent. We want to boast about our successes."
 
 The opening band runs a headline at up to 52px over a 20px lede. Everything
 under it was 14px — section intros, card bodies, the plate's own states, the
-two columns of Vega vs. Brooks — and the deck's card copy and the page's
+two columns of Market Desk vs. Rankings Desk — and the deck's card copy and the page's
 standing notes were 13px. That is a drop of more than a third at the exact
 point where a reader stops scanning the page and starts reading it, and it is
 why the whole page under the band read as fine print.
@@ -13107,7 +13117,7 @@ A piece has exactly one `headline` and one `dek` — single columns on
 only as `body.dfs`, the sections in `NEWSROOM_SECTIONS[kind].dfs`. So
 `/api/newsroom?lens=dfs` hands `/dfs` a piece whose DFS body is real analysis
 and whose headline is the week's fantasy story, and the page prints that
-headline under Lena Park's byline. "The clearest roster add of the week" is a
+headline under DFS Desk's byline. "The clearest roster add of the week" is a
 waiver call; it is not wrong, it is simply not a DFS sentence, and no page
 change can make it one. The fix is a DFS headline and deck of its own, which
 means the writer, the schema and the feed. It is not in this change.
@@ -13135,7 +13145,7 @@ DFS headline."
 §117 could not fix the complaint it recorded. A piece had exactly one
 `headline` and one `dek` — single columns on `content_pieces`, written for the
 Weekly Fantasy lens — so `/dfs` printed "Parker Washington's 43% target share
-makes him the clearest roster add of the week" under Lena Park's byline. The
+makes him the clearest roster add of the week" under DFS Desk's byline. The
 DFS *body* was real analysis; the sentence over it was a waiver call, and no
 page change could make it anything else. A package that runs in both lenses is
 WRITTEN twice and was HEADLINED once.
@@ -13275,7 +13285,477 @@ owner should also move the account to Workers Paid, whose D1 allowance is
 orders of magnitude larger; this change makes the free allowance survivable,
 not generous.
 
-## 127. October 10: the D1 read allowance, spent a third time; the market digest
+## 121. October 7: Jaxson Dart was QB10 on the week board, two weeks after his season ended
+
+The report: Dart was still top ten on `/weekly-qb-rankings`. He hurt his left
+knee on the opening drive of the Week 3 Monday night game at the Rams (Sept.
+21), had surgery, went on injured reserve, and the Giants said he would miss
+the rest of the regular season (giants.com and The Athletic, Sept. 23).
+
+**The live list had him, and then it did not.** §48 made the availability
+list two things: the hand-kept `tools/availability.json`, and a live row the
+11:00Z cron rebuilds from ESPN's injury report. The rule for the committed
+file was written down at the time: *"the feed dropping him is not evidence he
+plays; ESPN clears reserve designations in bulk."* The live row had no such
+rule. It was rebuilt from the feed alone every pull, so the day ESPN stopped
+mentioning Dart (by Oct. 7 the Giants' list carried Jameis Winston, Active,
+and no Dart at all) the row forgot him, his full-season line came back, and
+`buildBoards` divided it over seventeen games and ranked him. `apply-availability
+--fetch` on Oct. 7 shows the same thing for every preseason season-ender in
+the file: Higgins, Neal, Chandler, Austin are all "not on the injury report."
+ESPN's report is the week's news, not a register of who is on reserve.
+
+Three things, and a hand entry:
+
+- **A carry.** `buildAvailabilityOverlay(feed, prior)` now takes the last
+  row the pull wrote (`runAvailabilityRefresh` reads it first; a row too old
+  to serve is too old to carry from). A prior entry the feed no longer
+  **mentions at all** is carried while its window is open: he is out through
+  Week `gamesOut`, and it is not past that week (`_availWeekAt`, the week
+  turning on the Tuesday after Monday night). An entry the feed still lists
+  in any status — Active, Questionable, back on IR-R — is the feed's to
+  decide, as before. A committed entry at `gamesOut: 0` is a hand
+  reinstatement and ends a carry. Carried entries are marked `carried`,
+  `matched` still counts the feed alone (a carry never makes a thin pull look
+  whole), and the admin report prints `from: carried`.
+- **The mid-season floor.** `gamesOut` counts from Week 1. A reserve
+  placement with no return date took the list's minimum from kickoff, so a
+  Week 5 IR placement read as "out Weeks 1–4" and the man was back on the
+  week board at his full line the afternoon he went on IR. `_availGamesOut`
+  now takes the pull's timestamp and counts the floor from the week it falls
+  in: Week 5, no date, IR is out through Week 8. A return date is read as it
+  was. A preseason pull is unchanged.
+- **The phrasing.** `AVAIL_SEASON_ENDING` required "rest of the season" with
+  nothing in between; the Giants' line was "miss the rest of the regular
+  season." It now reads the regular-season, "his season", "ends his season"
+  and "entire season" forms, and still not "the season opener."
+- **The hand entry.** Dart in `tools/availability.json`: IR, 17, `asOf`
+  2026-09-23, with the source. Entries now carry their own `asOf` (the date
+  the absence began, which is the week `buildBoards` starts counting from);
+  `apply-availability.mjs` writes `e.asOf || file.asOf` into the block and
+  validates the shape. The file's own `asOf` is 2026-10-07 and every
+  preseason entry says 2026-09-02 explicitly, so the generated block is
+  byte-identical for them. Without that, bumping the file date would have
+  moved every Week 1 entry's first missed week to Week 5.
+
+**What the reader sees.** Dart's row is zeroed, so he is off the week and
+rest-of-season boards (`af <= 0` in `buildBoards`), off the `it-league.js`
+default board (zero-point rows are dropped; regenerated), Out on the DFS
+slate by the reserve-list rule, and the client's `INJURIES` fallback reads
+"IR: out for the season." `PROJ_VERSION` is 2026.10.7.
+
+**Checked and left alone.** The `--fetch` list of fourteen "no longer listed"
+file entries is this same ESPN behaviour, not fourteen reinstatements: the
+four-game group has run its course by the file's own arithmetic (Weeks 1–4),
+Jacobs is still on the exempt list with two to four more games expected (the
+file says six), and Tyson is still on IR and "weeks away" (the file says
+eight). Both numbers are due a look next week, by hand, as §48 says.
+
+Guarded by `tools/test-worker-availability.mjs` (139, from 111: the week
+arithmetic, the floor from the pull's week, the phrasing both ways, the
+carry in isolation and through the row the pull writes, the hand
+reinstatement, the Active-again case, and the too-old row) and
+`tools/test-boards.mjs` (148: a player out for the year is on neither the
+week nor the ROS board). Every node gate in `checks.yml` but the dry run was
+run locally: 70 pass. Not verified against production: the sandbox cannot
+reach irontuna.com, so the first live pull after deploy is the proof; the
+hand entry holds Dart off the board on its own either way.
+
+## 122. October 9: the Trade Finder, simplified to screenshots and two modes
+
+**The brief.** Make `/trade-finder` simpler: screenshot up to five teams'
+rosters, then either evaluate a proposed trade or have Iron Tuna recommend one.
+
+- **Screenshots are the front door.** Step 1 is one large paste-or-drop zone
+  ("Up to 5 teams, yours first"). `readImages` now sends at most five images
+  (the worker's own cap stays 8) and says so when more were dropped. The text
+  paste still works, folded under "No screenshots? Paste the rosters as text"
+  (`#tf-text-box`), and opens itself on load when a saved paste exists. The
+  first team into an empty page is taken as the reader's.
+- **Two modes** (`#tf-mode`, persisted as `mode` in `it_trade_v1`). *Recommend*
+  is the old search; a new "Trade with" select (`#tf-partner`) narrows it to one
+  manager by passing just the two rosters to `findTrades`. *Evaluate* shows both
+  rosters as tick lists (`#tf-send`, `#tf-get`, priced per week on each side's
+  horizon) and judges the trade with the new `ITTrade.evaluateTrade`.
+- **`evaluateTrade(teams, opts)`** in `it-trade.js` uses the same lineup fill,
+  per-week scale and per-team horizons as `findTrades`, and calls each side
+  `gain` (≥ +0.75/wk), `loss` (≤ −0.75/wk) or `even`. The page turns that into a
+  one-line verdict ("Both sides win. Send it." / "Don't do it." / "Good for you,
+  but expect a no." ...) and, when the offer is not a yes for both, shows the top
+  three both-sided trades with the same partner.
+- **Five teams, hard cap** (`MAX_TEAMS` in the page script). Every way a team
+  arrives stops at five: `mergeTeams` (screenshots, the reader's text pass, a
+  paste) refuses a new name past five and the status line names what was left
+  out; a restore is sliced to five; "Add an empty team" disables at five; a
+  saved league opens a picker (`#tf-league-pick`): every league team as a
+  checkbox, the reader's team plus the next four ticked and loaded at once, the
+  rest switched off while five are ticked, and "Load these teams" reloads the
+  pick with the reader's team first. The desk's server-side matches still
+  cover the whole league.
+  The FAAB Advisor's roster paste is a different page and is not capped.
+- **Settings fold away.** Scoring, board, starters, horizons, balance and package
+  size sit under one `<details id="tf-settings">`; every control kept its id.
+- **Tests.** The page test also stubs `/api/leagues` and a seven-team
+  `/advice?module=trades` (only in its last section, in a fresh context) to
+  drive the picker: seven offered, five ticked and loaded, the cap, a swap.
+  `test-trade-finder.mjs` +9 (the search's top trade judged alone keeps
+  its gains; an overpay is a loss for one side and a gain for the other; horizons
+  per side; an empty trade is even). `test-trade-finder-page.mjs` +14 (folded
+  paste, first team is mine, partner-narrowed search, the evaluate flow end to
+  end, nothing-ticked prompt). The meta description and JSON-LD were left alone,
+  so `build-seo` has nothing to regenerate. `test-homepage.mjs` fails one
+  date-relative assertion on `main` too, unrelated to this change.
+
+## 123. October 10: the Admin link back on the footer, and /admin is the usage page
+
+**The brief.** Put the "Admin" link back at the bottom of the site, where it
+used to be, and make the page behind it about one thing: how many people use
+the site, what they look at and how long they stay.
+
+- **Where it went.** `front.html` carried `<a class="foot-admin" href="/admin"
+  rel="nofollow">Admin</a>` at the end of its own footer. The 2026-10-08 design
+  pass (§118, `e54df10`) moved the homepage onto the shared chrome footer,
+  which had never had the link, so the only way into `/admin` from the site
+  went with it. (`index.html`, now `/hub`, still has its React copy.)
+- **Where it is now.** `tools/build-chrome.mjs` stamps `ADMIN_LINK` on the
+  `.foot-legal` line of every page, after the copyright: the operator's way
+  in, not a destination, in the line's own dim grey (`site.css`,
+  `.foot-legal .foot-admin`). It rides the legal line rather than the link row
+  so the ten-item footer shape `test-chrome.mjs` pins is unchanged; the same
+  test now asserts the link, nofollow, on every page and on `/`.
+- **`/admin` leads with Users & usage.** The Traffic section (unique users per
+  day, user-days, page views, active now, time on site both ways, the daily
+  chart, top pages, sources, click events) is the page. The key is checked
+  against `/api/admin/traffic`, one D1 round trip, instead of
+  `/api/admin/dashboard`, which pages through Stripe and used to hold the
+  whole page until it finished.
+- **The operator tools are folded, not gone.** Free access, DFS salaries, the
+  health board, newsroom control, saved leagues, editorial, and sales & leads
+  sit under one `<details id="ops">` at the foot, closed by default, with
+  every id and action intact (`test-health`, `test-jobs`, `test-admin-comp`
+  still read them). Nothing under it is fetched until it is opened; Refresh
+  re-reads it only while it is open; Lock closes it. The leads CSV button moved
+  off the header into the Leads card.
+- **Nothing in the worker changed.** The time-spent figures are the ones
+  `/api/admin/traffic` already computes between page views (§time on site);
+  a per-page dwell column would need a `LEAD(ts)` read there and is not in
+  this change.
+
+## 124. October 10: Trade Tools, two tabs: the Trade Evaluator leads with the deal, the Trade Finder with the rosters
+
+**The brief.** A "Trade Tools" entry with two tools under it, Trade Evaluator
+and Trade Finder. The Evaluator is the existing form with the players in the
+trade first; the teams' rosters come second and are optional, entered by
+typing (with the same fill-in the trade boxes have), by pasting text, or by
+pasting or dropping a screenshot.
+
+- **One page, two tabs.** `/trade-finder` keeps its URL and its one script.
+  A tab bar (`#tf-tool`, two `role="tab"` buttons) sits under the lede and
+  the three steps live inside `#tf-flow[data-tool]`. The tab reorders the
+  steps with flex `order` and hides what the other tool has no use for: the
+  Evaluator shows the deal (`#tf-deal`, "1. The players in the trade"), then
+  the rosters ("2. The teams' rosters (optional)"), then the notes and the
+  Evaluate button; the Finder hides the deal and leads with the rosters
+  ("1. The teams and their rosters"), then the notes and the Find button.
+  The team-count dropdown (`#tf-count-row`) is moved into whichever step is
+  first. Nothing is duplicated, so a roster typed under one tool is there
+  under the other. The tool is `tool` in `it_trade_v2`; `#evaluator` /
+  `#finder` on the URL name one directly (hashchange switches in place) and
+  the Evaluator is the default. Switching tools hides the last result.
+- **Rosters optional in the Evaluator.** A player typed into a trade box
+  joins his team's roster (the engine scores a team before and after) and
+  is flagged in `viaDeal`; the flag clears the moment he arrives any other
+  way (typed in the roster box, pasted, read off a screenshot, loaded from
+  the league). `rosterEntered(i)` is "holds a player not so flagged". Taking
+  a flagged player out of the trade takes him off the roster too
+  (`dropIfDealOnly`), as does shrinking the team count past his team. The
+  trade box's type-ahead offers the team's own un-sent players first and
+  then the board, minus anyone a team in the trade holds; it used to offer
+  the board only while the roster was empty, which under this order meant
+  one pick and then nothing.
+- **What a bare side is scored on.** With no roster entered, a side is what
+  it sends against what it gets, filled into the slots: fair-names, not
+  lineup change. The side card says "No roster entered: scored on the
+  players alone" in place of the starts/bench line, the bar shows no lineup
+  figure, the note says what adding the rosters changes, the model's brief
+  carries the same caveat, and the "trades among these teams that work for
+  both" search runs only when every active team has a roster (with none, the
+  only players to search would be the deal's own). The Finder's "fill in two
+  rosters" guard reads `rosterEntered` too.
+- **A paste lands on the right box.** `fill()` used to put the second and
+  later teams of a paste into the next *empty* boxes. Under the Evaluator a
+  box is rarely empty (it holds the players already typed into the trade),
+  and the old rule skipped it, put the team one box over, moved the traded
+  player there and dropped him from the deal. A pasted team now goes first
+  to an unused box whose trade list already names one of its players, then
+  to the next box with no roster entered.
+- **Links.** The Fantasy hub deck tile and shelf entry, the in-season list,
+  the Waivers, Value Coach, Weekly Intel and My Week cards, the search index
+  (`player-search.js`) and `llms.txt` say "Trade Tools" and describe both.
+  Title, description and og copy changed, so `build-seo` regenerated the
+  twitter meta and the JSON-LD; `build-seo --check` is clean.
+- **Tests.** `test-trade-finder-page.mjs` 106 → 135: the tab bar and the
+  default, the step order and the dropdown's home under each tool, the hash,
+  a reload keeping the tool, and a new section with no rosters: the trade
+  box offers the board before and after the first pick, a player taken out
+  of the trade leaves the roster, a bare deal is judged and says so (the
+  fourth back for the seventh receiver is a loss on the names and a win
+  once the back-heavy roster is pasted in), and `#finder` opening the
+  Finder both in place and on a fresh load. `test-trade-finder.mjs` and the
+  engine are unchanged. The full node suite (less the dry run) passes.
+
+## 125. October 10: /admin read as wiped; D1 had refused every read for the day
+
+**The report.** "On the admin page, all of the prior data is gone." Unique
+users, page views, best day, time on site, every table: zero, "nothing
+recorded yet", a day after §123 made the usage numbers the page.
+
+**What it was.** Nothing had been deleted. A read of the live database from
+this session answered `D1_ERROR: Your account has exceeded D1's free tier
+daily row read limit. Upgrade to a paid plan or wait until tomorrow (midnight
+UTC)`: the §120 failure again, eleven days later. Both analytics tables are
+still in `sqlite_master` with their indexes; the database is 192 MB. The
+reads come back at 00:00 UTC on their own, or at once on Workers Paid.
+
+**Why it looked like loss.** The `rows` and `one` helpers inside
+`/api/admin/traffic` caught every D1 error and answered with `[]` and `{}`,
+so a refused read and an empty site produced the same payload: `ok: true`,
+every count zero, `collectingSince: null`. `renderTraffic` drew it
+faithfully. The same swallowing is deliberate in `logPageView`, where a
+counter that breaks a page view is worse than no counter; on the read side
+it hid the one error the operator needed to see.
+
+- **The route now says so.** The helpers remember the first error. If the
+  window total (the first read) fails, the route answers `503 { ok:false,
+  error: 'd1_limit' | 'd1_read', detail }` instead of a dashboard of zeros;
+  `d1ReadLimit()` recognizes the allowance message. If only a later read
+  fails, the payload is still `ok: true` and carries `readError`, and the
+  page's meta line marks it PARTIAL so an empty table is read as refused,
+  not zero.
+- **The page names the cause.** `trafficUnavailable` on `d1_limit` says the
+  numbers are not gone, when they return, and that the account's D1 Query
+  Insights name what spent the allowance. The gate still unlocks on a
+  refused read (`showDash` runs before the `ok` check), so the operator
+  tools stay reachable.
+- **Not fixed here: what spent it.** This session cannot read D1's query
+  insights (no Cloudflare API token; the MCP read tool reaches the database
+  but not the metrics), and with reads refused it cannot measure a query's
+  `rows_read` either. The suspects, for the owner to check against Query
+  Insights (dashboard → D1 → the database → Query Insights, sort by rows
+  read): `marketHistoryWeek` (§120 left it at up to 40,000 rows per cold
+  board, memoized five minutes per isolate, ~80 boards); the traffic route
+  itself, which makes about nine passes over `page_views` in the window per
+  load and up to 90 days of them; and the October 9 front-page work (#378,
+  #382, #383) if any of it reads a season table per request. Until the
+  burner is found, the free allowance (5M rows/day) will be spent again and
+  the page will say so rather than go blank.
+- **Tests.** `test-analytics.mjs` gains the refused-read cases: a database
+  that rejects every read answers `d1_read`, the allowance message answers
+  `d1_limit`, and one read failing late leaves `ok: true` with `readError`.
+
+## 126. October 10: the NFL clock strip came off every page
+
+Ken: remove the NFL clock. The strip that `it-season.js` painted on every
+in-season page and the homepage (phase, week, games in progress, next kickoff,
+and "NFL clock unavailable" when `/api/season` did not answer) is gone.
+
+- **Markup.** Every `[data-season-strip]` mount is deleted: the hero datelines
+  on /fantasy, /dfs, /rankings, /my-week and /vegas-edge keep only their
+  eyebrow; the plate under the lede on /waivers, /value-coach, the desk pages
+  and the fourteen generated position pages (`tools/build-ranks.mjs`) is gone;
+  the DFS setup band lost its copy too. The homepage dropped the `.itl-clock`
+  row, its CSS and the React state and effect that filled it.
+- **`it-season.js`** no longer auto-renders anything or stamps
+  `html[data-season]` (nothing read the stamp). It keeps `load`, `get`,
+  `error`, `kickoff`, `dayLabel`, `until`, `statusLabel` and `esc`, which the
+  page scripts on /fantasy, /waivers, /weekly-intel, /game-intel,
+  /player-intel, /my-league and /weekly-wrap still date themselves by. The
+  `strip` and `render` exports are gone with the strip; nothing else called
+  them.
+- **Not touched.** `/api/season` itself, the waiver clock on /fantasy, the
+  `.its-strip` rules in `site.css` (now unused), and every page's
+  `<script src="/it-season.js">`.
+
+
+## 127. October 10: the fictional bylines are retired
+
+Ken: *"Remove all fictional author names."* Until today the eight analyst
+personas carried invented human names, the surname was the URL
+(`/analysts/vega`), the rivalry column wrote about "each man" and "his
+board", and The Tell ran under a pen name. The AI disclosure said they were
+not people; the bylines read as if they were. Every one of those names is
+gone from the repository.
+
+### What changed
+
+- **The roster.** `ANALYSTS` in `_worker.js` names each desk for its beat:
+  Editorial Desk, Market Desk, Rankings Desk, Usage Desk, Quarterback Desk,
+  Waiver Desk, Matchups Desk, DFS Desk. The roles, beats, philosophies,
+  assignments and voices are unchanged except where a voice wrote about the
+  desk as "he". The avatars are beat initials.
+- **The storage id stays; the URL does not.** `id` (`mercer`, `vega`, …) is
+  what `content_pieces.analyst`, `analyst_calls`, the stored rivalry JSON
+  (`rv.brooks`, `rv.vega`), `RIVALRY_PAIR` and the `data-analyst` attribute
+  on ninety static pages key on, so it is untouched: renaming it is a D1
+  migration, not a rename. Each desk gained a `slug` (`editor`, `market`,
+  `rankings`, `usage`, `quarterback`, `waivers`, `matchups`, `dfs`), which is
+  the only form a reader meets: `analystUrl(a)` builds every link, the byline
+  payload carries `url` and `dfsUrl`, `/api/newsroom` kinds carry
+  `analystUrl`, `/api/analyst?id=` answers to either, and the old surname
+  URLs 301 to the slug (next to the `/wagers` redirect in `fetch()`).
+  `sitemap.xml` advertises the slugs.
+- **The rivalry column** (`RIV_STANDFIRST`, `RIV_NEEDLE`, `_rivEvidence`,
+  `_rivGap`, `gradeRivalryCall`) argues desk against desk. The writer's
+  system prompt and `_voiceBlock` say "the Market Desk" and "the Rankings
+  Desk"; the fact check's bare-surname branch is gone, because a desk is
+  named in full or not at all.
+- **The Tell** carries the Rankings Desk byline, the desk it was registered
+  on since §68j, and its method box says the column is not written by a
+  person. `tools/the-tell-routine-prompt.md` says the same; **the Routine
+  prompt outside the repository must be updated to match**, or Tuesday's
+  edition arrives with the pen name back on it.
+- **The static pages** were restamped with `node tools/build-bylines.mjs`;
+  `tools/analyst-pages.mjs` reads the slug out of the worker and links by it.
+  `tools/test-bylines.mjs` now fails a byline that links to the storage id,
+  and `tools/test-newsroom.mjs` fails a roster entry shaped like a person's
+  name, a desk without a slug, or a pitch that names a man.
+- `llms.txt`, `docs/editorial-migration.md`, `docs/saved-league.md`, the
+  pages that named a desk in prose (`rankings.html`, `dfs.html`, `my-week.html`,
+  `fantasy.html`, `desk.html`, `hidden-value.html`, `analysts.html`,
+  `analyst.html`) and the test fixtures that used invented names.
+
+### What this cannot reach
+
+Pieces already published to D1 were written when the desks had names: a
+stored `rivalry.line`, an `outcome_note` ("… had him WR5") or a prose
+sentence naming a colleague still carries the old name in the row. The
+byline on those pieces reads the roster at request time and shows the desk;
+the body is the body. Regenerating or rewriting those rows is a data job,
+not a repository change, and is left to the owner.
+
+---
+
+---
+
+## 128. October 10: the CBS browser import comes back, as the one CBS path
+
+**What was asked.** Another try at pulling a reader's CBS league with
+credentials they enter. **What the record says.** Two live attempts (§89): the
+API-token form died on 2026-09-17 when a signed-in CBS league page stopped
+carrying any token, in the served HTML or on `window`, so the technique every
+public token fetcher relies on no longer yields a value; the browser extension
+passed a full end-to-end run on 2026-09-16 and was cut two days later with the
+rest of the connectors, its one live import never run. A password-based
+server login was not built: this session's sandbox cannot reach any CBS host,
+so it would have been a third fixture-tested, never-live attempt, and it would
+have meant holding readers' CBS passwords, which the privacy page and the
+model were written to avoid.
+
+**What came back.** The extension, 0.2.1 unchanged (`extensions/cbs-connector`,
+now in `.assetsignore`), and its worker half rewritten onto the saved-league
+model rather than restored: `cbsLeagueId`, `cbsBrowserNormalize` and
+`PROVIDER_CBS_BROWSER` beside `PROVIDER_MANUAL` in `LEAGUE_PROVIDERS`;
+`leagueBrowserImport`, which validates the whole snapshot first, maps CBS's
+player ids under provider `cbs`, creates the `cbs_browser` row keyed on the
+CBS league id on the first import and refreshes it after, and keeps the
+reader's chosen team while that team is still in the room; and
+`POST /api/leagues/connect`, session-gated, rate-limited, refusing a malformed
+snapshot with `invalid_browser_import` before a row moves and deleting a first
+import that could not be saved. `POST /api/leagues/:id/sync` answers 409
+`browser_refresh_required` for a browser league and is still not a route for
+anything else. `CBS_SYNC` is back in `NEWSROOM_FLAGS`, **on by default**: it
+gates a route that only validates and writes what the reader's own browser
+posts, and `FLAG_CBS_SYNC=0` refuses it. Nothing in the worker contacts CBS;
+`tools/test-data-sources.mjs` still asserts that no fantasy-platform host is
+reachable, and the league suite's fetch stub still throws.
+
+On /my-league, §01 gains a "CBS leagues" box under the list — where the
+extension is, the four steps, what is and is not imported — and a browser
+league's card says "CBS import", names when the extension last read it, and
+drops "Edit league": the by-hand form would re-save the room as a manual
+league with name-matched players in place of CBS's ids. The privacy details
+on the page and the privacy policy both say what the extension sends and what
+it never reads.
+
+**Tests.** `tools/test-league-sync.mjs` ends with "the CBS browser import":
+the snapshot fixture through the route (import, team choice, idempotent
+refresh keeping the team, no automatic refresh time, the 409, eleven malformed
+snapshots refused with the saved rosters untouched, an unmodeled rule kept as
+unsupported, on by default and off by flag, sign-in required, unknown provider
+refused, the personalized modules reading it, delete leaving nothing behind);
+110 assertions. `tools/test-cbs-extension.mjs` is back in CI (the extension's
+boundaries, the reader against DOM fixtures, the popup against a stubbed
+browser API) and now also pins the page and worker surfaces the extension
+depends on. `tools/test-cbs-e2e.mjs` is restored for a local Chromium run (not
+in CI). `test-newsroom` keeps "every flag defaults on" and now names CBS_SYNC
+as the one connector flag that is allowed to exist.
+
+**What this cannot prove, and the release check.** CBS's live markup. The
+harness renders the reader's own expectations back at it. The one step never
+taken is still the one step: load the folder unpacked, open the live league
+signed in, run the popup, and look for the league card on My Leagues. A CBS
+markup change shows as a "No import was sent" message in the popup naming the
+page it could not read; that message is the next bug report, and `reader.js`
+is where it is fixed.
+
+## 129. October 10: the Trade Evaluator's gauge: short term, long term, the reader's situation, and a Go / No go
+
+**The brief.** Once the players are in, a visual gauge of whether the trade
+is worth it for the reader, weighing the short term, the long term and what
+the reader needs given their current status; which team is helped more on
+each of those two horizons; and a go / no-go recommendation.
+
+- **Two more passes, same engine.** `evaluate()` already scores every side
+  on its own horizon. It now also loads `next3` and the reader's long
+  horizon (`longHorizon(mi)`: the fantasy playoffs when the reader's own
+  horizon is `playoffs`, else `ros`) and scores every side on each, through
+  `sideOf(i, give, get, h)` (the new fourth argument forces a horizon). The
+  engine (`it-trade.js`) is unchanged.
+- **The needle is the reader's weighted gain.** `gaugeOf(sides, mi)`
+  weights the reader's short and long gains by their situation (`WEIGHTS`:
+  week 80/20, next3 70/30, ros 35/65, playoffs 25/75; the situation is
+  `horizonFor(mi)`, so the notes and the settings both reach it). The track
+  runs −3 to +3 pts/week (`SPAN`), the zone edges sit at ±0.75, the
+  engine's own floor. Go at +0.75 or better, No go at −0.75 or worse;
+  between, the roster fit decides and the call is marked "narrow".
+- **Roster fit.** `fitOf()` compares the reader's weakest starter before and
+  after on their horizon, per week, with `TR.lineupValue` directly. A slot
+  nobody fills counts as the weakest starter at zero: a reader sending
+  their only quarterback has a hole at QB, not a weak QB, which the weakest
+  of the starters left would have missed (the page test's overpay case).
+  With no roster entered the fit is unknown and the row says to add one.
+- **The rows.** Short term and long term each state the reader's gain and
+  which team the trade helps most, with every other side's figure ("Helps
+  The Hammers most, +8.3 a week against +5.9 for you"); when nobody clears
+  the floor the row lists every side. The situation row gives the status
+  word (`STATUS`), where it was read from (the notes, quoted, or the
+  settings), the weights, and the fit.
+- **Rendering.** `#tf-gauge` sits between `#tf-verdict` and `#tf-trades`,
+  two columns on a hairline: the call as the 34px figure with
+  `data-call="go|no|none"`, a sentence (`gaugeWhy`, which also names any
+  side that would refuse), the meter (track in `--elev`, fill from the
+  centre in teal or, under `.no`, the danger brown, as `.is-meter` and
+  `.is-meter.tight` in site.css; ticks at 37.5% and 62.5%; the pin in ink
+  with `data-pos`), and the three rows. The meter carries `role="img"` and
+  an `aria-label` with the call and the figure. The Finder empties and
+  hides it. When the reader's team is not in the deal the call reads "Not
+  your call" and the rows still say whom it helps.
+- **The model's brief** (`summarize`) now carries both horizon rows, the
+  situation and the engine's call, so the notes are read against them.
+- **The method** has a paragraph on the gauge.
+- **Tests.** `test-trade-finder-page.mjs` 136 → 157: the gauge under the
+  win (Go, needle past 62.5, teal, rows and situation from the settings,
+  fit read off the lineup, aria), the overpay (No go, needle under 37.5,
+  danger brown, nobody gains, the QB hole), the three-team deal with notes
+  (long term is the playoffs for a clinched reader, situation from the
+  notes at 25/75, the brief carries the gauge), no rosters (No go, fit asks
+  for a roster; Go once the rosters are pasted), and the Finder showing no
+  gauge. `IT_SHOT` also writes `*-gauge.png`. Rendered at 1280 and 390;
+  nothing throws. `playwright-core` is not installed in a fresh remote
+  session; a symlink to `/opt/node-tools/node_modules/playwright-core`
+  inside an (ignored) `node_modules/` lets the browser gates run.
+
+## 130. October 10: the D1 read allowance, spent a third time; the market digest
 
 **The report.** "On the trade evaluator tool, I am typing in a player's name,
 but it is not auto populating." On a phone. The type-ahead was fine (its own

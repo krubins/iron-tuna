@@ -98,6 +98,15 @@ h1.sec{margin-top:34px;padding-top:26px;border-top:1px solid var(--line)}
 details.tbl{margin-top:12px}
 details.tbl summary{color:var(--muted);font-size:14px;cursor:pointer}
 footer.site{border-top:1px solid var(--line);padding:22px 0;color:var(--muted);font-size:14.5px}
+/* The operator tools sit under one closed disclosure at the foot of the page,
+   below the usage numbers the page exists for. */
+details.ops{margin-top:34px;padding-top:22px;border-top:1px solid var(--line)}
+details.ops>summary{cursor:pointer;color:var(--muted);font-size:15px;list-style:none;display:flex;align-items:center;gap:8px;padding:6px 0}
+details.ops>summary::-webkit-details-marker{display:none}
+details.ops>summary::before{content:'\25B8';font-size:13px}
+details.ops[open]>summary::before{content:'\25BE'}
+details.ops>summary b{color:var(--sec);font-weight:600}
+details.ops>summary:hover b{color:var(--text)}
 
 /* Visible keyboard focus (WCAG 2.4.7). Gold reads >=9:1 on every surface in this palette.
    Listed per element so this beats the `outline:none` in the input rules above. */
@@ -108,7 +117,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 <header class="site"><div class="wrap">
   <a class="brand" href="/">IRON <b>TUNA</b><span class="tag">Admin</span></a>
   <div class="actions" id="hdrActions" hidden>
-    <button class="btn" id="csvBtn" type="button">Export leads CSV</button>
     <button class="btn" id="reloadBtn" type="button">Refresh</button>
     <button class="btn" id="lockBtn" type="button">Lock</button>
   </div>
@@ -118,14 +126,69 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 <section id="gate">
   <div class="card">
     <h2>Admin access</h2>
-    <p style="color:var(--sec);font-size:15.5px;margin:0">Enter the admin key (<code>LEADS_EXPORT_KEY</code>) to load the dashboard. It stays in this browser only.</p>
-    <input id="keyInput" type="password" placeholder="Admin key" autocomplete="off">
+    <p style="color:var(--sec);font-size:15.5px;margin:0">Enter the admin password to see who is using the site: how many people, what they looked at and how long they stayed. The owner key (<code>LEADS_EXPORT_KEY</code>) works here too. It stays in this browser only.</p>
+    <input id="keyInput" type="password" placeholder="Password" autocomplete="off">
     <div id="gateErr"></div>
     <button class="btn primary" id="unlockBtn" type="button">Unlock dashboard</button>
   </div>
 </section>
 
 <section id="dash" hidden>
+  <h1>Users &amp; usage</h1>
+  <p class="meta" id="trafMeta">Loading traffic…</p>
+
+  <div class="ranges" id="ranges">
+    <button class="btn" data-range="7" type="button">7 days</button>
+    <button class="btn primary" data-range="30" type="button">30 days</button>
+    <button class="btn" data-range="90" type="button">90 days</button>
+    <button class="btn" id="meBtn" type="button" style="margin-left:auto" hidden></button>
+  </div>
+
+  <div class="tiles" id="trafTiles"></div>
+  <p class="note" id="timeNote" style="margin:-4px 0 6px"></p>
+  <p class="note" id="meNote" style="margin:0 0 18px"></p>
+
+  <div class="card">
+    <h2>Unique users per day</h2>
+    <div class="legend">
+      <span class="key"><span class="swatch" style="background:var(--series-visitors)"></span>Unique users</span>
+      <span class="key"><span class="swatch" style="background:var(--series-views)"></span>Page views</span>
+    </div>
+    <div id="trafChartbox">
+      <svg id="trafChart" viewBox="0 0 760 250" role="img" aria-label="Unique users and page views per day"></svg>
+      <div id="trafTip"></div>
+    </div>
+    <details class="tbl"><summary>View as table</summary><div class="tblwrap"><table id="trafDailyTbl"></table></div></details>
+    <div class="note">A user is one browser on one UTC day, identified by a hash that is thrown away at midnight. That makes the daily figure a true unique count, and means someone who comes back on three days is three user-days over the window, not one returning person.</div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Top pages</h2>
+      <div class="tblwrap"><table id="pagesTbl"></table></div>
+    </div>
+    <div class="card">
+      <h2>Where users came from</h2>
+      <div class="tblwrap"><table id="srcTbl"></table></div>
+      <div class="chips" id="ctryChips" style="margin:14px 0 0"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Clicks &amp; actions</h2>
+    <div class="tblwrap"><table id="evTbl"></table></div>
+    <div class="note">Named events the site fires — nav clicks, paywall views, coach usage, shares. "People" counts distinct anonymous browser IDs, so one person clicking twice is 2 events but 1 person.</div>
+  </div>
+
+  <!-- Everything that is not the audience. Ken, 2026-10-10: the Admin link
+       exists for the usage numbers — how many people, what they read, how
+       long they stayed — so that is the page. The operator tools (comp
+       access, DFS salaries, the health board, newsroom control, sales and
+       leads) are kept, unchanged, under one disclosure that is closed until
+       opened and loads nothing until then: the Stripe pull behind the sales
+       board used to hold the whole page until it finished. -->
+  <details id="ops" class="ops">
+    <summary><b>Operator tools</b> — free access, DFS salaries, in-season health, newsroom, sales &amp; leads</summary>
   <h1>Free access</h1>
   <p class="meta">Comp the full bundle to one address and email them the link that opens it. The link signs them in once; the access itself does not expire.</p>
 
@@ -251,52 +314,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     </div>
   </div>
 
-  <h1 class="sec">Traffic</h1>
-  <p class="meta" id="trafMeta">Loading traffic…</p>
-
-  <div class="ranges" id="ranges">
-    <button class="btn" data-range="7" type="button">7 days</button>
-    <button class="btn primary" data-range="30" type="button">30 days</button>
-    <button class="btn" data-range="90" type="button">90 days</button>
-    <button class="btn" id="meBtn" type="button" style="margin-left:auto" hidden></button>
-  </div>
-
-  <div class="tiles" id="trafTiles"></div>
-  <p class="note" id="timeNote" style="margin:-4px 0 6px"></p>
-  <p class="note" id="meNote" style="margin:0 0 18px"></p>
-
-  <div class="card">
-    <h2>Unique users per day</h2>
-    <div class="legend">
-      <span class="key"><span class="swatch" style="background:var(--series-visitors)"></span>Unique users</span>
-      <span class="key"><span class="swatch" style="background:var(--series-views)"></span>Page views</span>
-    </div>
-    <div id="trafChartbox">
-      <svg id="trafChart" viewBox="0 0 760 250" role="img" aria-label="Unique users and page views per day"></svg>
-      <div id="trafTip"></div>
-    </div>
-    <details class="tbl"><summary>View as table</summary><div class="tblwrap"><table id="trafDailyTbl"></table></div></details>
-    <div class="note">A user is one browser on one UTC day, identified by a hash that is thrown away at midnight. That makes the daily figure a true unique count, and means someone who comes back on three days is three user-days over the window, not one returning person.</div>
-  </div>
-
-  <div class="grid2">
-    <div class="card">
-      <h2>Top pages</h2>
-      <div class="tblwrap"><table id="pagesTbl"></table></div>
-    </div>
-    <div class="card">
-      <h2>Where users came from</h2>
-      <div class="tblwrap"><table id="srcTbl"></table></div>
-      <div class="chips" id="ctryChips" style="margin:14px 0 0"></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>Clicks &amp; actions</h2>
-    <div class="tblwrap"><table id="evTbl"></table></div>
-    <div class="note">Named events the site fires — nav clicks, paywall views, coach usage, shares. "People" counts distinct anonymous browser IDs, so one person clicking twice is 2 events but 1 person.</div>
-  </div>
-
   <h1 class="sec">Sales &amp; referrals</h1>
   <p class="meta" id="metaLine"></p>
 
@@ -337,8 +354,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       <h2>Leads</h2>
       <div class="chips" id="srcChips"></div>
       <div class="tblwrap"><table id="leadsTbl"></table></div>
+      <div class="field" style="margin-top:12px"><button class="btn" id="csvBtn" type="button">Export leads CSV</button></div>
     </div>
   </div>
+  </details>
 </section>
 
 </main>
@@ -370,18 +389,45 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     $('gate').hidden = true; $('dash').hidden = false; $('hdrActions').hidden = false;
   }
 
+  // The key is checked against the traffic read, because the traffic IS the
+  // page now. It answers in one D1 round trip; the sales dashboard behind the
+  // operator tools pages through Stripe, and until 2026-10-10 the whole page
+  // waited on that before it would show a single number.
   function load(){
     var key = getKey();
     if (!key) { showGate(''); return; }
     $('gateErr').textContent = '';
+    fetch('/api/admin/traffic?days=' + trafDays + '&key=' + encodeURIComponent(key))
+      .then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
+      .then(function(res){
+        if (res.status === 403 || (res.j && res.j.error === 'forbidden')) { setKey(''); showGate('That password was rejected. Try again.'); return; }
+        showDash();
+        if (!res.j || !res.j.ok) { trafficUnavailable(res.j); return; }
+        renderTraffic(res.j);
+        if ($('ops').open) opsLoad();
+      })
+      .catch(function(e){ showGate('Network error: ' + esc(e && e.message)); });
+  }
+  // The sales and leads board, loaded only once the operator tools are opened.
+  function loadDashboard(){
+    var key = getKey();
+    if (!key) return;
+    $('metaLine').textContent = 'Loading sales and leads…';
     fetch('/api/admin/dashboard?key=' + encodeURIComponent(key))
       .then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
       .then(function(res){
-        if (res.status === 403 || (res.j && res.j.error === 'forbidden')) { setKey(''); showGate('That key was rejected. Try again.'); return; }
-        if (!res.j || !res.j.ok) { showGate('Server error: ' + esc((res.j && (res.j.error + (res.j.detail ? ' — ' + res.j.detail : ''))) || res.status)); return; }
-        render(res.j); showDash(); loadTraffic();
+        if (res.status === 403 || (res.j && res.j.error === 'forbidden')) { setKey(''); showGate('That password was rejected. Try again.'); return; }
+        if (!res.j || !res.j.ok) { $('metaLine').textContent = 'Sales and leads unavailable: ' + ((res.j && (res.j.error + (res.j.detail ? ' — ' + res.j.detail : ''))) || res.status); return; }
+        render(res.j);
       })
-      .catch(function(e){ showGate('Network error: ' + esc(e && e.message)); });
+      .catch(function(e){ $('metaLine').textContent = 'Sales and leads unavailable: ' + (e && e.message); });
+  }
+  // Everything under the Operator tools disclosure, fetched when it opens and
+  // again on Refresh while it is open; never before.
+  var opsLoaded = false;
+  function opsLoad(){
+    opsLoaded = true;
+    loadDashboard(); hlthLoad(); dfsLoad();
   }
 
   function tile(label, val, sub, hero){
@@ -543,17 +589,23 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     fetch('/api/admin/traffic?days=' + trafDays + '&key=' + encodeURIComponent(key))
       .then(function(r){ return r.json(); })
       .then(function(j){
-        if (!j || !j.ok) {
-          // A missing table just means nothing has been recorded yet — say that
-          // plainly instead of showing an error the first time it is opened.
-          $('trafMeta').textContent = j && j.error === 'no_tables'
-            ? 'No traffic recorded yet — the counter starts with the next page view.'
-            : 'Traffic unavailable: ' + ((j && (j.detail || j.error)) || 'unknown error');
-          return;
-        }
+        if (!j || !j.ok) { trafficUnavailable(j); return; }
         renderTraffic(j);
       })
       .catch(function(e){ $('trafMeta').textContent = 'Traffic unavailable: ' + (e && e.message); });
+  }
+  // A missing table just means nothing has been recorded yet — say that
+  // plainly instead of showing an error the first time it is opened.
+  // d1_limit is the one refusal that is not a fault in the site: Cloudflare has
+  // stopped reading the account's D1 for the day. On 2026-10-10 the route
+  // answered it with zeros and the page read as if every number had been
+  // wiped; the numbers were there, D1 would not read them until midnight UTC.
+  function trafficUnavailable(j){
+    $('trafMeta').textContent = j && j.error === 'no_tables'
+      ? 'No traffic recorded yet — the counter starts with the next page view.'
+      : j && j.error === 'd1_limit'
+      ? 'The numbers are not gone — Cloudflare has stopped reading them for today. The account has spent D1\'s free-tier daily row-read allowance, so every read on this page is refused until midnight UTC, when they come back on their own. Moving the account to Workers Paid (Cloudflare dashboard) brings them back now; the database\'s Query Insights there name what spent the allowance. Detail: ' + (j.detail || '')
+      : 'Traffic unavailable: ' + ((j && (j.detail || j.error)) || 'unknown error');
   }
 
   function renderTraffic(d){
@@ -563,7 +615,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 
     $('trafMeta').textContent = 'Last ' + d.days + ' days · generated ' + new Date(d.generatedAt || Date.now()).toLocaleString() +
       (d.collectingSince ? ' · collecting since ' + new Date(d.collectingSince).toLocaleDateString() : '') +
-      (d.includeMe ? ' · including your own visits' : '');
+      (d.includeMe ? ' · including your own visits' : '') +
+      (d.readError ? ' · PARTIAL: a read was refused' + (d.readError.limit ? ' (D1 daily read allowance spent)' : '') + ', so some tables below are empty, not zero: ' + (d.readError.detail || '') : '');
 
     // Today's headline is a real unique count, so it leads. Everything wider than
     // a day is user-days and is labeled that way rather than passed off as people.
@@ -655,9 +708,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   }
 
   // wire up
-  $('unlockBtn').addEventListener('click', function(){ var k = $('keyInput').value.trim(); if (!k) { $('gateErr').textContent = 'Enter the key.'; return; } setKey(k); load(); });
+  $('unlockBtn').addEventListener('click', function(){ var k = $('keyInput').value.trim(); if (!k) { $('gateErr').textContent = 'Enter the password.'; return; } setKey(k); load(); });
   $('keyInput').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('unlockBtn').click(); });
-  $('reloadBtn').addEventListener('click', function(){ load(); loadTraffic(); });
+  $('reloadBtn').addEventListener('click', function(){ load(); });
+  $('ops').addEventListener('toggle', function(){ if ($('ops').open && !opsLoaded && getKey()) opsLoad(); });
   // [data-range], not .btn: the exclude-me button shares this row and is not a window.
   Array.prototype.forEach.call(document.querySelectorAll('#ranges .btn[data-range]'), function(b){
     b.addEventListener('click', function(){
@@ -677,7 +731,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       .then(function(){ $('meBtn').disabled = false; loadTraffic(); })
       .catch(function(){ $('meBtn').disabled = false; });
   });
-  $('lockBtn').addEventListener('click', function(){ setKey(''); $('keyInput').value = ''; showGate(''); });
+  $('lockBtn').addEventListener('click', function(){ setKey(''); $('keyInput').value = ''; $('ops').open = false; opsLoaded = false; showGate(''); });
   $('csvBtn').addEventListener('click', function(){ var k = getKey(); if (k) window.open('/api/leads/export?key=' + encodeURIComponent(k), '_blank'); });
 
   // ── free access: grant + email the sign-in link ──
@@ -707,7 +761,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       .then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
       .then(function(res){
         var j = res.j || {};
-        if (res.status === 403 || j.error === 'forbidden') { setKey(''); showGate('That key was rejected. Try again.'); return; }
+        if (res.status === 403 || j.error === 'forbidden') { setKey(''); showGate('That password was rejected. Try again.'); return; }
         if (!j.ok) {
           var why = { invalid_email:'That is not a valid email address.', no_db:'No database is bound, so access cannot be granted.',
             no_auth_secret:'AUTH_SECRET is not set, so no sign-in link can be signed.', bad_days:'Pick a link lifetime between 1 and 90 days.',
@@ -720,7 +774,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
           '<b>' + esc(j.email) + (j.changed ? ' now has full access.' : ' already had access.') + '</b> ' + esc(j.note || '') +
           (j.expiresAt ? ' <span style="color:var(--muted)">Link expires ' + esc(new Date(j.expiresAt).toLocaleString()) + '.</span>' : ''),
           j.link || '');
-        if (j.ok && j.changed) load();
+        if (j.ok && j.changed) loadDashboard();
       })
       .catch(function(e){ compResult('bad', '<b>Network error.</b> ' + esc((e && e.message) || ''), ''); })
       .then(function(){ btn.disabled = false; btn.textContent = was; });
@@ -981,7 +1035,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     });
   });
   $('hlthEditorClose').addEventListener('click', function(){ $('hlthEditor').hidden = true; hlthOpen = null; });
-  hlthLoad();
 
   // DFS salaries: the lobby CSV import and the status of both sites.
   function dfsStatus(j){
@@ -1016,7 +1069,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       .then(function(){ btn.disabled = false; btn.textContent = was; });
   }
   $('dfsBtn').addEventListener('click', dfsImport);
-  dfsLoad();
 
   load();
 })();

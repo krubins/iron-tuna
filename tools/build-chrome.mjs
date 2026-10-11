@@ -19,12 +19,11 @@
 // sentinels, so this tool finds and replaces only its own output and never
 // touches the page body.
 //
-// SCOPE — three pages are deliberately excluded and keep hand-written chrome:
+// SCOPE — two pages are deliberately excluded and keep hand-written chrome:
 //   index.html   the React app; its header is rendered by React, not HTML
-//   front.html   the news front page; its three-row masthead is its own design.
-//                Its ribbon and footer carry the same link set (see LINKS below)
-//                so every destination stays reachable from it.
 //   admin.html   internal; its header holds admin tools, not the marketing nav
+// front.html took the shared chrome in October 2026: it used to carry a
+// three-row masthead of its own, which meant clicking off "/" changed sites.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -32,7 +31,7 @@ import { putWordmark } from './wordmark.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CHECK = process.argv.includes('--check');
-const EXCLUDE = new Set(['index.html', 'front.html', 'admin.html']);
+const EXCLUDE = new Set(['index.html', 'admin.html']);
 
 // The READING pages. tools/test-reading-view.mjs states the rule they exist
 // under: the app, the front page and the guides are one zone; the standing
@@ -100,6 +99,20 @@ const NAV = [
 // actually does and lands on that form.
 const CTA = { label: 'Customize My League', href: '/my-league#settings', cta: true };
 
+// The bar above the ribbon. It carried a key phrase until 2026-10-09; it is now
+// an empty navy rule matching the one under the ribbon, so it is hidden
+// from assistive tech.
+
+// The phone's bottom tab bar: four labelled icon tabs, the four places a
+// reader goes most. Search is the hero field and the menu; the league form
+// takes the fourth slot so the one header button has a home on a phone too.
+const TABS = [
+  { label: 'Fantasy', href: '/fantasy', icon: '<path d="M4 12h16M12 4v16"/><rect x="3" y="3" width="18" height="18" rx="2"/>' },
+  { label: 'DFS', href: '/dfs', icon: '<path d="M4 19h16M6 15l4-5 4 3 4-7"/>' },
+  { label: 'Articles', href: '/in-season/desk', icon: '<path d="M5 4h14v16H5zM8 9h8M8 13h8M8 17h5"/>' },
+  { label: 'My league', href: '/my-league#settings', icon: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>' },
+];
+
 // The footer is the nav plus the pages that belong to no lane: the data
 // inventory, the FAQ, the two legal documents and support. Nine links, one row.
 // Everything else that used to be here — the rankings shelf, the market column,
@@ -125,6 +138,8 @@ const FOOT_LINKS = [
   { label: 'Terms', href: '/terms' },
   { label: 'Support', href: '/support' },
 ];
+
+const ADMIN_LINK = '<a class="foot-admin" href="/admin" rel="nofollow">Admin</a>';
 
 const BLURB = 'Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.';
 
@@ -179,6 +194,18 @@ function navHtml(file) {
   ].join('\n');
 }
 
+function lineHtml() {
+  return '<p class="site-line" aria-hidden="true"></p>';
+}
+
+function tabbarHtml(file) {
+  const items = TABS.map((t) => {
+    const cur = isCurrent(t.href, file) ? ' aria-current="page"' : '';
+    return `    <a href="${t.href}"${cur}><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${t.icon}</svg>${esc(t.label)}</a>`;
+  }).join('\n');
+  return ['  <nav class="tabbar" aria-label="Sections">', items, '  </nav>'].join('\n');
+}
+
 function footHtml() {
   const lis = FOOT_LINKS
     .map((l) => `    <li><a href="${l.href}">${esc(l.label)}</a></li>`)
@@ -192,7 +219,14 @@ function footHtml() {
     '  <div class="foot-note">',
     `   <p>${BLURB}</p>`,
     `   <p class="foot-21">${LEGAL}</p>`,
-    '   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span></p>',
+    // The Admin link rides the legal line, not the link row: /admin is not a
+    // destination a reader navigates to, it is the operator's only way into
+    // the usage numbers from the site. front.html carried exactly this link in
+    // its own footer until the 2026-10-08 design pass put it on the shared
+    // chrome, where it had never been — so the way in vanished with the
+    // redesign. rel=nofollow keeps a noindex page out of the crawl, and
+    // tools/test-chrome.mjs now asserts the link on every page.
+    `   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span>${ADMIN_LINK}</p>`,
     '  </div>',
   ].join('\n');
 }
@@ -201,6 +235,29 @@ function footHtml() {
 // Each returns the next html. All are idempotent: the sentinels make the
 // generated region findable, so a second run replaces it with the same bytes.
 const NAV_OPEN = '<!--chrome:nav-->', NAV_CLOSE = '<!--/chrome:nav-->';
+const LINE_OPEN = '<!--chrome:line-->', LINE_CLOSE = '<!--/chrome:line-->';
+const TAB_OPEN = '<!--chrome:tabbar-->', TAB_CLOSE = '<!--/chrome:tabbar-->';
+
+// The key-phrase line goes directly inside <header class="site">, before the
+// ribbon's .wrap; the tab bar goes directly before </header>. Both are owned
+// here so a page copied from an older one heals on the next run.
+function putLine(html) {
+  const block = `${LINE_OPEN}${lineHtml()}${LINE_CLOSE}`;
+  if (html.includes(LINE_OPEN)) {
+    return html.replace(new RegExp(LINE_OPEN + '[\\s\\S]*?' + LINE_CLOSE.replace(/\//g, '\\/')), () => block);
+  }
+  return html.replace('<header class="site">', () => '<header class="site">' + block);
+}
+function putTabbar(html, file) {
+  const block = `${TAB_OPEN}\n${tabbarHtml(file)}\n${TAB_CLOSE}`;
+  if (html.includes(TAB_OPEN)) {
+    return html.replace(new RegExp(TAB_OPEN + '[\\s\\S]*?' + TAB_CLOSE.replace(/\//g, '\\/')), () => block);
+  }
+  const m = html.match(/<header class="site">[\s\S]*?<\/header>/);
+  if (!m) return html;
+  const next = m[0].replace(/<\/header>$/, () => block + '\n</header>');
+  return html.replace(m[0], () => next);
+}
 const FOOT_OPEN = '<!--chrome:foot-->', FOOT_CLOSE = '<!--/chrome:foot-->';
 
 function putNav(html, file) {
@@ -238,20 +295,24 @@ function putFoot(html) {
 // Link the shared stylesheet, immediately before the page's own <style> so the
 // page keeps the last word on anything it still declares itself.
 const CSS_LINK = '<link rel="stylesheet" href="/site.css">';
-const GSTATIC = '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>';
+// ONE FAMILY, SELF-HOSTED. Geist ships from /fonts (site.css carries the
+// @font-face); the Google Fonts links every page used to carry for Bebas Neue,
+// Inter and JetBrains Mono come off here, so a page copied from an older one
+// cannot bring a second face back. The preload sits before the stylesheet so
+// the file is requested as soon as the head is parsed.
+const FONT_LINK = '<link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>';
 function putCss(html) {
   let next = html;
+  next = next.replace(/<link rel="preconnect" href="https:\/\/fonts\.googleapis\.com"[^>]*>\s*/g, '');
+  next = next.replace(/<link rel="preconnect" href="https:\/\/fonts\.gstatic\.com"[^>]*>\s*/g, '');
+  next = next.replace(/<link href="https:\/\/fonts\.googleapis\.com\/css2\?[^"]*" rel="stylesheet"\s*\/?>\s*/g, '');
   if (!next.includes(CSS_LINK)) {
     const i = next.indexOf('<style>');
     if (i === -1) return html;
     next = next.slice(0, i) + CSS_LINK + '\n' + next.slice(i);
   }
-  // fonts.gstatic.com is where the font FILES come from; preconnecting only to
-  // fonts.googleapis.com warms the wrong handshake. Owned here so a new page
-  // cannot ship without it.
-  if (!next.includes('fonts.gstatic.com')) {
-    next = next.replace('<link rel="preconnect" href="https://fonts.googleapis.com">',
-      '<link rel="preconnect" href="https://fonts.googleapis.com">' + GSTATIC);
+  if (!next.includes(FONT_LINK)) {
+    next = next.replace(CSS_LINK, () => FONT_LINK + '\n' + CSS_LINK);
   }
   return next;
 }
@@ -411,7 +472,9 @@ for (const f of pages) {
   // What they still keep is their own palette: stripOwned would delete the
   // inline :root that makes them white, which test-reading-view.mjs requires
   // them to carry.
+  next = putLine(next);
   next = putNav(next, f);
+  next = putTabbar(next, f);
   next = stripOwned(next, STYLE_EXCLUDE.has(f) ? READING_OWNED : OWNED);
   next = putNavJs(next);
   next = putFoot(next);

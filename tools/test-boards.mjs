@@ -127,6 +127,14 @@ console.log('\nhorizons');
   ok('the playoffs are exactly 15-17', JSON.stringify(H.horizonWeeks('playoffs', state)) === '[15,16,17]');
   const nov = H.nflSeasonState(SCHED, ET(16, 9, 0));
   ok('NEXT 3 does not run past 18 late in the year', JSON.stringify(H.horizonWeeks('next3', nov)) === '[16,17,18]');
+  ok('NEXT WEEK is the one week after the clock\'s', JSON.stringify(H.horizonWeeks('next', state)) === '[3]');
+  ok('GET ME TO THE PLAYOFFS runs from now to the week before they start', JSON.stringify(H.horizonWeeks('untilPlayoffs', state)) === '[2,3,4,5,6,7,8,9,10,11,12,13,14]');
+  ok('...ends where the league says its playoffs start', JSON.stringify(H.horizonWeeks('untilPlayoffs', state, 13)) === '[2,3,4,5,6,7,8,9,10,11,12,13]');
+  ok('...and is empty once they have begun', H.horizonWeeks('untilPlayoffs', nov).length === 0);
+  const spent = H.buildBoards({ ...ctx(), state: nov }, { horizon: 'untilPlayoffs', preset: 'ppr' });
+  ok('a horizon with no week left is refused, not served as a board of zeros', spent.ok === false && spent.error === 'no_weeks' && spent.players.length === 0);
+  const nx = H.buildBoards(ctx(), { horizon: 'next', preset: 'ppr' });
+  ok('the next-week board is one fixture per player', nx.ok && nx.horizon.weeks.join() === '3' && nx.players.every(p => p.weeks.length === 1 && p.weeks[0].week === 3));
 }
 
 console.log('\nweekly stat lines');
@@ -216,6 +224,22 @@ console.log('\nbyes, injuries and the multi-week sums');
   const alpha = b.players.find(p => p.name === 'Alpha Quarterback');
   const aaaWeeks = games.filter(g => g.week >= 2 && g.week <= 17 && (g.home === 'AAA' || g.away === 'AAA')).length;
   ok('a healthy player plays every week he has a game', alpha.games === aaaWeeks && alpha.byes.includes(7));
+  // The per-game ranking beside the totals (10 Oct 2026): the same points
+  // divided by the games he plays, ranked by the worker's rules and graded by
+  // marketDelta itself, so the board in the browser divides nothing.
+  ok('the rest-of-season row carries its average per game',
+     !!beta.perGame && near(beta.perGame.consensus.points, beta.consensus.points / beta.games, 0.06) &&
+     near(beta.perGame.vegas.points, beta.vegas.points / beta.games, 0.06), JSON.stringify(beta.perGame));
+  const ranked = (f) => b.players.filter(p => p.position === 'RB' && p.perGame[f].points != null)
+    .sort((x, y) => x.perGame[f].rank - y.perGame[f].rank).map(p => p.perGame[f].points);
+  ok('ranked on the average within the position, 1..n',
+     ['consensus', 'vegas', 'ironTuna'].every(f => ranked(f).every((v, i, a) => i === 0 || a[i - 1] >= v)) &&
+     b.players.filter(p => p.position === 'RB').map(p => p.perGame.vegas.rank).sort((x, y) => x - y).every((r, i) => r === i + 1));
+  ok('FLEX is pooled on the average too',
+     b.players.filter(p => /^(RB|WR|TE)$/.test(p.position)).every(p => p.perGame.vegas.flexRank > 0));
+  ok('and the gap is the worker\'s own classification of the averages',
+     JSON.stringify(beta.perGame.marketDelta) === JSON.stringify(H.marketDelta(beta.perGame.consensus.points, beta.perGame.consensus.rank, beta.perGame.vegas.points, beta.perGame.vegas.rank)));
+  ok('the week board carries no average', !H.buildBoards(ctx({ avail }), { horizon: 'week', preset: 'ppr' }).players.some(p => p.perGame));
   // The season line was PRO-RATED for the listed player (as the app ships it);
   // his per-game line must be the full line over the games he plays, not the
   // pro-rated line over 17.
@@ -239,6 +263,16 @@ console.log('\nbyes, injuries and the multi-week sums');
     .players.find(p => p.name === 'Beta Back');
   ok('a live placement is counted from kickoff', live.weeks.filter(w => w.out).map(w => w.week).join() === '2,3,4',
      JSON.stringify(live.weeks.filter(w => w.out).map(w => w.week)));
+  // Out for the year is off the board, whatever week it is and whenever the
+  // placement happened: a Week 3 season-ender (Jaxson Dart, 23 Sep 2026) was
+  // still QB10 on the week board two weeks later because nothing carried him.
+  const gone = { 'betaback|RB': { status: 'IR', gamesOut: 17, asOf: '2026-09-23', note: 'Knee: out for the rest of the regular season' } };
+  const zeroed = POOL.map(p => p.name === 'Beta Back' ? { ...p, projectedStats: { rushYd: 0, rushTD: 0, rec: 0, recYd: 0, recTD: 0 } } : p);
+  for (const horizon of ['week', 'ros']) {
+    const out = H.buildBoards(ctx({ avail: gone, pool: zeroed }), { horizon, preset: 'ppr' });
+    ok(`a player out for the year is not on the ${horizon} board at all`,
+       !out.players.some(p => p.name === 'Beta Back') && out.players.length === POOL.length - 1, out.players.map(p => p.name).join(', '));
+  }
   const n3 = H.buildBoards(ctx(), { horizon: 'next3', preset: 'ppr' });
   const a3 = n3.players.find(p => p.name === 'Alpha Quarterback');
   ok('NEXT 3 sums three posted weeks', a3.games === 3 && a3.vegas.postedWeeks === 3 && a3.vegas.basis === 'gamelines');
