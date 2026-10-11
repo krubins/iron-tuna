@@ -127,6 +127,22 @@ select.tf-sel{font:inherit;font-size:var(--fs-16);min-height:40px;padding:0 var(
 .tf-slider{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
 .tf-slider input[type=range]{width:220px;accent-color:var(--teal)}
 .tf-slider .end{font-size:var(--fs-14);color:var(--muted);font-weight:600}
+/* Your focus (2026-10-11): one slider with four stops rather than four
+   segments, because the question is one dial, from the nearest week to the
+   whole season, not four unrelated choices. The stop labels sit under the
+   thumb: the grid is 1fr 2fr 2fr 1fr so the two middle labels centre on 1/3
+   and 2/3 of the track, where the thumb lands, and the end labels hug the
+   ends. The labels are buttons too, so a tap picks a stop without dragging. */
+.tf-focus{flex:1 1 280px;max-width:540px}
+.tf-focus input[type=range]{display:block;width:100%;margin:0;min-height:40px;accent-color:var(--teal)}
+.tf-focus-stops{display:grid;grid-template-columns:1fr 2fr 2fr 1fr;margin-top:2px}
+.tf-focus-stops button{appearance:none;border:0;background:transparent;padding:4px 0;font:inherit;font-size:var(--fs-13);font-weight:600;line-height:1.25;color:var(--muted);cursor:pointer;text-align:center}
+.tf-focus-stops button:first-child{text-align:left}
+.tf-focus-stops button:last-child{text-align:right}
+.tf-focus-stops button:hover{color:var(--text)}
+.tf-focus-stops button[aria-pressed="true"]{color:var(--teal);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+.tf-focus-stops button:focus-visible{outline:3px solid var(--focus);outline-offset:1px;border-radius:2px}
+.tf-focus-note{font-size:var(--fs-14);color:var(--muted);margin:4px 0 0;min-height:1.2em}
 textarea.tf-paste{width:100%;min-height:200px;padding:var(--space-3);border-radius:var(--radius-input);border:1px solid var(--line2);background:#fff;color:var(--text);font:inherit;font-size:var(--fs-16);line-height:1.5;resize:vertical}
 textarea.tf-factors{min-height:110px}
 textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,.tf-slots input:focus,select.tf-sel:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-tint)}
@@ -394,10 +410,15 @@ button.tf-shot{font-family:inherit;line-height:inherit}
       </div>
     </div>
     <p class="tf-status" id="tf-league-note"></p>
-    <p class="sub">A team chasing a playoff spot needs the next three weeks; a team that has clinched needs weeks 15&ndash;17. Score each side on its own clock. A team your notes describe uses the horizon its situation implies; these two set the rest.</p>
-    <div class="tf-row"><span class="tf-lab">Your horizon</span>
-      <div class="tf-seg" id="tf-hA" role="group" aria-label="Your horizon">
-        <button type="button" data-h="week">This week</button><button type="button" data-h="next3">Next 3 weeks</button><button type="button" data-h="ros">Rest of season</button><button type="button" data-h="playoffs">Fantasy playoffs</button>
+    <p class="sub">A team chasing a playoff spot needs the next three weeks; a team that has clinched needs weeks 15&ndash;17. Score each side on its own clock. A team your notes describe uses the horizon its situation implies; your focus sets your clock, and the control below it sets everyone else&rsquo;s.</p>
+    <div class="tf-row"><span class="tf-lab" id="tf-focus-lab">Your focus</span>
+      <div class="tf-focus" id="tf-hA">
+        <input type="range" id="tf-focus-range" min="0" max="3" step="1" value="3" list="tf-focus-ticks" aria-labelledby="tf-focus-lab" aria-valuetext="Rest of the season">
+        <datalist id="tf-focus-ticks"><option value="0"></option><option value="1"></option><option value="2"></option><option value="3"></option></datalist>
+        <div class="tf-focus-stops" role="group" aria-label="Your focus">
+          <button type="button" data-h="week">This week</button><button type="button" data-h="next3">Get me to the playoffs</button><button type="button" data-h="playoffs">Playoffs</button><button type="button" data-h="ros">Rest of the season</button>
+        </div>
+        <p class="tf-focus-note" id="tf-focus-note"></p>
       </div>
     </div>
     <div class="tf-row"><span class="tf-lab">Other teams&rsquo; horizon</span>
@@ -469,6 +490,20 @@ button.tf-shot{font-family:inherit;line-height:inherit}
   'use strict';
   var KEY = 'it_trade_v2';
   var HORIZONS = { week: 'This week', next3: 'Next 3 weeks', ros: 'Rest of season', playoffs: 'Fantasy playoffs' };
+  // The focus slider's stops, left to right, and what each one says. The
+  // stops are named for the reader's question ("get me to the playoffs"),
+  // while HORIZONS keeps the engine's names, which the results, the team
+  // boxes and the other teams' control still use. The order is a dial from
+  // the nearest week outward: this week, the three that decide a playoff
+  // spot, the playoff weeks themselves, then everything left.
+  var FOCUS = ['week', 'next3', 'playoffs', 'ros'];
+  var FOCUS_LABEL = { week: 'This week', next3: 'Get me to the playoffs', playoffs: 'Playoffs', ros: 'Rest of the season' };
+  var FOCUS_NOTE = {
+    week: 'Scored on this week alone: win now, whatever it costs later.',
+    next3: 'Scored on the next three weeks, the games that decide whether you get in.',
+    playoffs: 'Scored on the fantasy playoff weeks: you are in, so build for them.',
+    ros: 'Scored on every week left in the season.'
+  };
   var L = window.ITLeague || null, TR = window.ITTrade;
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
@@ -515,7 +550,7 @@ button.tf-shot{font-family:inherit;line-height:inherit}
   function paintSettings() {
     setPressed($('tf-scoring'), 'data-preset', preset);
     setPressed($('tf-board'), 'data-board', board);
-    setPressed($('tf-hA'), 'data-h', hA); setPressed($('tf-hB'), 'data-h', hB);
+    paintFocus(); setPressed($('tf-hB'), 'data-h', hB);
     setPressed($('tf-size'), 'data-size', String(size));
     $('tf-tilt').value = String(Math.round(tilt * 100));
     tiltNote();
@@ -523,6 +558,14 @@ button.tf-shot{font-family:inherit;line-height:inherit}
     $('tf-league-note').innerHTML = (L && L.has)
       ? 'Saved league: <b>' + esc(L.label()) + '</b>' + (L.scoringLabel ? ' &middot; ' + esc(L.scoringLabel()) : '') + '. <a href="/auctiondraft?screen=cheat">Change it</a>.'
       : 'No saved league. Presets only &mdash; <a href="/auctiondraft?screen=cheat">set your league up</a> and every player is scored at your exact settings.';
+  }
+  function paintFocus() {
+    if (FOCUS.indexOf(hA) < 0) hA = 'ros';   // a saved key the slider has no stop for
+    var r = $('tf-focus-range');
+    r.value = String(FOCUS.indexOf(hA));
+    r.setAttribute('aria-valuetext', FOCUS_LABEL[hA]);
+    setPressed($('tf-hA'), 'data-h', hA);
+    $('tf-focus-note').textContent = FOCUS_NOTE[hA];
   }
   function tiltNote() {
     $('tf-tilt-note').textContent = tilt < 0.15 ? 'ranked by the smaller gain' : tilt > 0.85 ? 'ranked by your gain; theirs still has to be real' : 'leaning your way';
@@ -1160,7 +1203,11 @@ button.tf-shot{font-family:inherit;line-height:inherit}
   // ── settings events ──────────────────────────────────────────────────────
   $('tf-scoring').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b || b.disabled) return; preset = b.getAttribute('data-preset'); writeState({ preset: preset }); paintSettings(); });
   $('tf-board').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); writeState({ board: board }); paintSettings(); });
-  $('tf-hA').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; hA = b.getAttribute('data-h'); writeState({ hA: hA }); paintSettings(); paintHz(); loadHorizon(hA).catch(function () {}); });
+  // The slider and the stop labels under it are one control: dragging or
+  // arrowing the thumb picks a stop, and so does tapping a label.
+  function setFocus(h) { if (!FOCUS_LABEL[h]) return; hA = h; writeState({ hA: hA }); paintSettings(); paintHz(); loadHorizon(hA).catch(function () {}); }
+  $('tf-focus-range').addEventListener('input', function () { setFocus(FOCUS[+this.value]); });
+  $('tf-hA').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; setFocus(b.getAttribute('data-h')); });
   $('tf-hB').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; hB = b.getAttribute('data-h'); writeState({ hB: hB }); paintSettings(); paintHz(); loadHorizon(hB).catch(function () {}); });
   $('tf-size').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; size = +b.getAttribute('data-size'); writeState({ size: size }); paintSettings(); });
   $('tf-tilt').addEventListener('input', function () { tilt = (+this.value) / 100; writeState({ tilt: tilt }); tiltNote(); });
