@@ -154,7 +154,7 @@
         : '') +
       '<div class="mg-drop" data-drop tabindex="0" role="group" aria-label="Paste, drop or choose roster screenshots">' +
         '<b>Paste a screenshot, or drop one in</b>' +
-        '<span>Copy the roster grid and press <kbd>' + (mac ? '⌘' : 'Ctrl+') + 'V</kbd> — here or anywhere on this form — or drag the image onto this box, or <button type="button" class="mg-pick" data-pick>choose files</button>.</span>' +
+        '<span>Copy the roster grid and press <kbd>' + (mac ? '⌘' : 'Ctrl+') + 'V</kbd> — here or anywhere on this form — or drag the image onto this box, or <button type="button" class="mg-pick" data-paste>paste it from the clipboard</button>, or <button type="button" class="mg-pick" data-pick>choose files</button>.</span>' +
       '</div>' +
       '<input type="file" accept="image/*" multiple hidden data-file>' +
       (wantText ? '<div class="is-btns" style="margin:8px 0 0"><button type="button" class="is-btn sec" data-read>Read this</button></div>' : '') +
@@ -167,6 +167,7 @@
     function msg(t, bad) { msgEl.textContent = t || ''; msgEl.style.color = bad ? 'var(--danger)' : ''; }
 
     host.querySelector('[data-pick]').addEventListener('click', function () { fileIn.click(); });
+    host.querySelector('[data-paste]').addEventListener('click', function () { pasteFromClipboard(); });
     // The picker is cleared after every read so choosing the same file twice
     // still fires change the second time.
     fileIn.addEventListener('change', function (e) { read(e.target.files); e.target.value = ''; });
@@ -178,6 +179,30 @@
       if (!imgs.length) { msg('There is no image on the clipboard. Copy the roster grid as a screenshot first.', true); return; }
       e.preventDefault(); read(imgs);
     });
+
+    // The link reads the clipboard itself, where the browser lets a page do
+    // that (Chrome and Edge ask once; Safari and Firefox put up their own Paste
+    // callout to confirm). The shortcut above already worked, but a phone has
+    // no Ctrl+V: its Paste menu only appears over a text field, and hands that
+    // field the words rather than the image, so a reader on a phone had to save
+    // the screenshot and pick it from the gallery (2026-10-11, the same button
+    // the Trade Tools cards got the day before). Where the browser offers no
+    // reader, or the reader is refused, the box is focused and the shortcut
+    // named, so the next Ctrl+V lands here through the box's own listener.
+    function pasteFromClipboard() {
+      lastFocused = inst; drop.focus();
+      var hint = 'Press ' + (mac ? '\u2318' : 'Ctrl+') + 'V with this box selected to paste the screenshot.';
+      var cb = root.navigator && root.navigator.clipboard;
+      if (!(cb && cb.read)) { msg('This browser does not let a button read the clipboard. ' + hint, true); return; }
+      cb.read().then(function (items) {
+        var blobs = [];
+        [].forEach.call(items || [], function (it) {
+          [].forEach.call(it.types || [], function (t) { if (/^image\//.test(t)) blobs.push(it.getType(t)); });
+        });
+        if (!blobs.length) { msg('There is no image on the clipboard. Copy the roster grid as a screenshot first, then try again.', true); return; }
+        return Promise.all(blobs).then(read);
+      }).catch(function () { msg('The browser did not hand over the clipboard. ' + hint, true); });
+    }
 
     if (textEl) {
       // A screenshot pasted while the cursor sits in the box is still a
