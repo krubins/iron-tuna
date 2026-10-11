@@ -566,7 +566,8 @@ footer.site {margin-top:0}
 // the position boards or /in-season/desk do:
 //   /api/vegas-edge   consensus / market / Iron Tuna projections per player
 //   /api/rankings     the board behind the sixteen position pages: who is
-//                     ranked, who carries a market line, when the odds were read
+//                     ranked, and who a book quoted a prop on this week (the
+//                     same store the week boards price from)
 //   /api/newsroom     the desk's current pieces (published, one per story)
 (function () {
   'use strict';
@@ -914,7 +915,7 @@ footer.site {margin-top:0}
     // and it is 32 every week of the season, which is furniture, not a figure.
     var cells = [
       ['Players ranked this week', kpi.players, ''],
-      ['Priced off a market line', kpi.priced, 'good'],
+      ['Priced off a prop this week', kpi.priced, 'good'],
       ['Pieces the desk published', kpi.pieces, '']
     ].filter(function (c) { return c[1] != null; });
     $('kpiGrid').innerHTML = cells.map(function (c) {
@@ -925,6 +926,11 @@ footer.site {margin-top:0}
   grab('/api/rankings', function (j) {
     var players = (j.players || []).filter(function (p) { return p && p.name && POS_KEY[p.position]; });
     if (!players.length) return;
+    // `priced` is a figure only while the prop store behind it is live. With
+    // nothing quoted this week every row comes back unpriced, and a zero
+    // printed in mint reads as "the books priced nobody" rather than "the
+    // props have not been read". The tiles and the band both drop it then.
+    var propsLive = !!(j.props && j.props.live);
     var by = {};
     players.forEach(function (p) {
       var k = POS_KEY[p.position];
@@ -936,11 +942,11 @@ footer.site {margin-top:0}
     for (var i = 0; i < tiles.length; i++) {
       var k = tiles[i].getAttribute('data-pos'), c = by[k], live = tiles[i].querySelector('.hm-tile-live');
       if (!c || !c.n || !live) continue;
-      live.textContent = c.n + ' ranked · ' + c.priced + ' priced';
+      live.textContent = c.n + ' ranked' + (propsLive ? ' · ' + c.priced + ' priced' : '');
       live.hidden = false;
     }
     kpi.players = players.length;
-    kpi.priced = players.filter(function (p) { return p.priced; }).length;
+    kpi.priced = propsLive ? players.filter(function (p) { return p.priced; }).length : null;   // null drops the cell (paintKpi)
     kpi.week = j.week && j.week.label ? j.week.label : null;
     if (j.oddsAsOf) {
       oddsStamp = when(j.oddsAsOf);
