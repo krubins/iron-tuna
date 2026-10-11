@@ -300,10 +300,13 @@ console.log('\nevery row says what the player is and what is in front of him');
   ok('an unranked player gets no tier at all, rather than the bottom one', H.tierOf('WR', null) === '');
   ok('every horizon either board can ask for has words of its own',
     ['week', 'next', 'next3', 'untilPlayoffs', 'ros', 'playoffs'].every((k) => H.HZ[k] && H.HZ[k].when && H.HZ[k].slate));
-  ok('and the five the /rankings row offers are the five the worker knows',
+  // Four chips since 11 Oct 2026: this week, the run-in to the playoffs, the
+  // playoffs, the rest of the season. Next Week stays a board the worker knows
+  // (the newsroom and the player pages read it); it just has no chip.
+  ok('and the four the /rankings chip row offers are boards the worker knows',
     (() => { const row = read('rankings.html').match(/id="rkHorizon"[\s\S]*?<\/div>/)[0];
              const keys = [...row.matchAll(/data-horizon="(\w+)"/g)].map((m) => m[1]);
-             return keys.join() === 'week,next,untilPlayoffs,playoffs,ros' && keys.every((k) => H.HZ[k]); })());
+             return keys.join() === 'week,untilPlayoffs,playoffs,ros' && keys.every((k) => H.HZ[k]); })());
 
   // The function's own body, not a window of N characters after its name: a
   // window is a test that fails the next time the function grows a comment.

@@ -13755,6 +13755,39 @@ each of those two horizons; and a go / no-go recommendation.
   session; a symlink to `/opt/node-tools/node_modules/playwright-core`
   inside an (ignored) `node_modules/` lets the browser gates run.
 
+## 131. October 11: the Trade Evaluator's gauge, made easier to follow
+
+**The report.** A screenshot of the gauge under "Don't do it." with the ask
+"make this clearer, simpler, easier to follow". What was hard: three
+different per-week figures with no visible link between them (the verdict's
+6.4, the call's weighted 8.3, the rows' 11.9 and 6.4); every row repeating
+its figure in prose ("−11.9 pts / week for you" beside "+11.9 a week against
+−11.9 for you"); and one situation cell carrying an instruction, the weights
+and the roster fit in a single run of text, with "Fills a need" in bold under
+a No go.
+
+- **Every figure names its horizon.** `verdictOf` appends the reader's
+  horizon to its figure (`OVER`: "over the rest of the season", "over the
+  next 3 weeks", "this week", "in the fantasy playoffs"), so the verdict's
+  number is visibly the rest-of-season row's number. "Helps X" became
+  "improves X's".
+- **The call's sentence carries one figure.** `gaugeWhy` says "A clear
+  loss: −8.3 pts a week for you." and nothing about the weighting; the
+  weights live in the situation row alone. The label is "For you".
+- **Four rows, figures not prose.** Rows are labelled by horizon ("Next 3
+  weeks", "Rest of season" or "Fantasy playoffs"), the reader's figure is
+  "−11.9 for you", and the words cell lists every other side as "Name
+  +x.x" with the team helped most in bold; a lead word only when the figures
+  alone would not say it ("Nobody gains.", "About even.", "Helps you most.",
+  and "Helps X most." in a deal with more than one other side). The
+  situation row keeps the status word, the weights ("Counts the next 3 weeks
+  35% and rest of season 65%") and the source. The fit is its own row,
+  "Lineup fit", with a figure of its own: Fills a need, Opens a hole, No
+  change, or Not known (no roster entered).
+- **Tests.** `test-trade-finder-page.mjs` 165 → 166, rewritten to the four
+  rows; the `IT_SHOT` gauge copy is now `#tf-results` whole, because the
+  element shot of `#tf-gauge` was clipped by the sticky masthead.
+
 ## 130. October 10: the D1 read allowance, spent a third time; the market digest
 
 **The report.** "On the trade evaluator tool, I am typing in a player's name,
