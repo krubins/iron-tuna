@@ -60,14 +60,17 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
    own illustrated tool tiles, hairlines and whitespace doing the grouping.
    The left rail stays; the right rail folded into it. Every rule below is a
    value front.html declares, restated here because that page keeps its sheet
-   inline; when one moves, both move. */
-:root{
+   inline; when one moves, both move. They are declared on the body, not on
+   :root: a content page may not carry a palette of its own
+   (tools/test-reading-view.mjs), and these are spacing and type tokens
+   under front.html's names, not colours site.css does not already set. */
+body.fn-page{
   --ink:#111418;--ink-2:#454c57;--ink-3:#5f6672;--card:#ffffff;--good:#0a6a4c;
   --fs-hero:clamp(44px,5.2vw,68px);
   --sp-4:4px;--sp-8:8px;--sp-12:12px;--sp-16:16px;--sp-24:24px;--sp-32:32px;--sp-48:48px;--sp-64:64px;
   --sec-gap:72px;
 }
-@media(max-width:860px){:root{--sec-gap:48px}}
+@media(max-width:860px){body.fn-page{--sec-gap:48px}}
 .hm-sec{margin:var(--sec-gap) 0 0}
 .sl-main>.hm-sec:first-child{margin-top:0}
 .hm-sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-16);flex-wrap:wrap;margin:0 0 var(--sp-16)}
