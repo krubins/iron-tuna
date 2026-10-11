@@ -792,6 +792,29 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
       return '<li data-k="' + k + '"' + (k === 0 ? ' class="on"' : '') + '>' + esc(p.name) + '<i>' + esc(p.pos + (p.team ? ' · ' + p.team : '') + where) + '</i></li>';
     }).join('');
     ul.hidden = false;
+    keepSugInView(input);
+  }
+  // On a phone the on-screen keyboard takes the bottom half of the screen,
+  // and the list drops below the box: a box in the bottom half of what the
+  // keyboard leaves opens its list straight under the keyboard, and the
+  // reader types and sees nothing. The visual viewport is what the keyboard
+  // leaves (the layout viewport does not shrink for it), so when the list,
+  // or the room a list will need, runs past it, the page scrolls just enough
+  // to fit it, and no further than the box at the top, under the sticky
+  // masthead. The keyboard arrives after focus, so a visual-viewport resize
+  // while a box has focus checks again. The phone tab bar is fixed at the
+  // foot and counts as covered when it is on screen.
+  function keepSugInView(input) {
+    if (document.activeElement !== input) return;
+    var vv = window.visualViewport, vTop = vv ? vv.offsetTop : 0, vBottom = vTop + (vv ? vv.height : window.innerHeight);
+    var head = document.querySelector('header.site'), tab = document.querySelector('.tabbar');
+    var top = vTop + (head ? head.getBoundingClientRect().height : 0);
+    var tabR = tab && tab.offsetParent !== null ? tab.getBoundingClientRect() : null;
+    if (tabR && tabR.top < vBottom && tabR.height) vBottom = tabR.top;
+    var r = input.getBoundingClientRect(), ul = sugList(input);
+    var need = ul && !ul.hidden ? ul.offsetHeight + 4 : 180;
+    var by = Math.min(r.top - top - 8, r.bottom + need - vBottom);
+    if (by > 1) window.scrollBy(0, by);
   }
   function moveSug(input, d) {
     var list = input._sug || []; if (!list.length) return;
@@ -847,12 +870,21 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     var input = ev.target; if (!input.classList || !input.classList.contains('tf-type')) return;
     setTimeout(function () { var ul = sugList(input); if (ul) ul.hidden = true; }, 120);
   }
+  function onFocus(ev) {
+    var input = ev.target; if (!input.classList || !input.classList.contains('tf-type')) return;
+    keepSugInView(input);
+  }
   ['tf-teams', 'tf-sends'].forEach(function (id) {
     var host = $(id);
     host.addEventListener('input', onType);
     host.addEventListener('keydown', onKey);
     host.addEventListener('mousedown', onSugDown);
+    host.addEventListener('focusin', onFocus);
     host.addEventListener('focusout', onBlur);
+  });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', function () {
+    var a = document.activeElement;
+    if (a && a.classList && a.classList.contains('tf-type')) keepSugInView(a);
   });
 
   // A list pasted into a roster box is a roster: every line is read, the
