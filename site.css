@@ -2483,3 +2483,190 @@ tbody tr[id^="g-"]:target > td:first-child { box-shadow: inset 3px 0 0 var(--tea
 }
 .gm-share:hover { border-color: var(--teal); color: var(--text) }
 .gm-share[data-copied] { border-color: var(--teal); color: var(--teal) }
+
+/* ══ THE LANE FRONT (2026-10-11) ═══════════════════════════════════════════
+   Worn by adding `ln-front` to <body>, beside `sl-dress`. /fantasy and /dfs
+   wear it; nothing else does.
+
+   WHY IT EXISTS. Ken, 2026-10-11, of /fantasy: it still "looks very AI".
+   The homepage (front.html) had moved onto paper on 2026-10-08 and the two
+   lane pages were still a tinted nameplate with an eyebrow and two buttons
+   over nine labelled sections of outlined cards at one weight, each with a
+   kicker, a heading, a paragraph and an arrow. This block is the homepage's
+   composition restated for a page that keeps a rail down the left: a white
+   centred hero (one headline, one sentence, the search field, text-link
+   entry points), section heads at 28px with the one link on the right,
+   illustrated tiles for the places a reader goes, outlined cards only where
+   a live sentence has to sit, empty states as a sentence, the desk as the
+   homepage's story cards, and whitespace and hairlines doing the grouping.
+
+   WHY IT IS HERE. The first copy was inline in fantasy.html; /dfs asked for
+   the same thing the next day, and a second page wearing a second copy is
+   how the chrome drifted the last time (see the shell's own comment above).
+   front.html keeps its sheet inline because it is not a lane page and has
+   no rail; the values below are its, under its names. When one moves, both
+   move.
+
+   The tokens are declared on the body, not on :root: a content page may not
+   carry a palette of its own (tools/test-reading-view.mjs), and these are
+   spacing and type tokens under front.html's names, not colours this file
+   does not already set. */
+body.ln-front{
+  --ink:#111418;--ink-2:#454c57;--ink-3:#5f6672;--card:#ffffff;--good:#0a6a4c;
+  --fs-hero:clamp(44px,5.2vw,68px);
+  --sp-4:4px;--sp-8:8px;--sp-12:12px;--sp-16:16px;--sp-24:24px;--sp-32:32px;--sp-48:48px;--sp-64:64px;
+  --sec-gap:72px;
+}
+@media(max-width:860px){body.ln-front{--sec-gap:48px}}
+body.ln-front .hm-sec{margin:var(--sec-gap) 0 0}
+body.ln-front .sl-main>.hm-sec:first-child{margin-top:0}
+body.ln-front .hm-sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-16);flex-wrap:wrap;margin:0 0 var(--sp-16)}
+body.ln-front .hm-sec-head h2{margin:0;font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.15;text-transform:none}
+body.ln-front .hm-sec-head a{font-size:var(--fs-14);font-weight:600;white-space:nowrap}
+body.ln-front .hm-sub{margin:0 0 var(--sp-24);font-size:var(--fs-16);color:var(--ink-2);max-width:60ch;line-height:1.5}
+body.ln-front .hm-sub a{font-weight:600}
+
+/* ── 1 · the hero ─────────────────────────────────────────────────────────
+   White, centred: the headline, one sentence, the search field (the one pill
+   on the page, and it is a field), the entry points as text links, a note,
+   a hairline. The element keeps the class .sl-mast because the browser gate
+   finds a lane page's nameplate by it; every dress rule on .sl-mast is
+   undone here. */
+body.ln-front .sl-mast{background:none;border:0}
+body.ln-front .hm-hero{padding:var(--sp-64) 0 0;text-align:center}
+body.ln-front .hm-hero h1{margin:0 auto var(--sp-16);font-size:var(--fs-hero);font-weight:700;letter-spacing:-.03em;line-height:1.02;max-width:20ch;text-wrap:balance;color:var(--ink);text-transform:none}
+@media(max-width:480px){body.ln-front .hm-hero h1{font-size:var(--fs-34)}}
+body.ln-front .hm-lede{margin:0 auto var(--sp-32);font-size:var(--fs-19);color:var(--ink-2);max-width:56ch;line-height:1.5}
+body.ln-front .hm-find{max-width:640px;margin:0 auto}
+body.ln-front .hm-entry{display:flex;justify-content:center;flex-wrap:wrap;gap:var(--sp-8) var(--sp-32);margin:var(--sp-24) 0 0;padding:0;list-style:none}
+body.ln-front .hm-entry a{font-size:var(--fs-16);font-weight:600}
+body.ln-front .hm-entry li[hidden]{display:none}
+body.ln-front .hm-fine{margin:var(--sp-12) 0 0;font-size:var(--fs-14);color:var(--ink-3)}
+body.ln-front .hm-fine b{color:var(--ink);font-weight:600}
+body.ln-front .hm-rule{border:0;height:1px;background:var(--line);margin:var(--sp-48) 0 0}
+@media(max-width:860px){body.ln-front .hm-hero{padding-top:var(--sp-48)}body.ln-front .hm-rule{margin-top:var(--sp-32)}}
+/* The league strip rides between the rule and the shell, at the shell's width. */
+body.ln-front .ln-state{padding-top:var(--sp-16)}
+body.ln-front .ln-state:empty,body.ln-front .ln-state:has(> [hidden]:only-child){display:none}
+
+/* ── 2 · the shell: the rail, and one wide column ─────────────────────────
+   The shell above draws three columns. The player rail now sits in the left
+   rail under the navigation, so the shell is the rail and the front. Inside
+   min-width, because the shell's own two-step collapse is written (0,1,0)
+   and an unconditional (0,2,0) here would hold the phone at two columns. */
+@media(min-width:861px){
+  body.ln-front .sl-shell{grid-template-columns:232px minmax(0,1fr);grid-template-areas:"nav main";column-gap:var(--sp-48)}
+}
+@media(min-width:1181px){body.ln-front .sl-shell{grid-template-columns:248px minmax(0,1fr);column-gap:var(--sp-64)}}
+body.ln-front .sl-shell{padding-top:var(--sp-32)}
+/* The rail on paper: no shade, no box. Whitespace and hairlines group it,
+   the same way the homepage groups everything. */
+body.ln-front .sl-left{background:none;border:0;border-radius:0;padding:0}
+body.ln-front .sl-nav{border-top:0;padding-top:0}
+body.ln-front .sl-nav-h{font-size:var(--fs-14);color:var(--ink-3);margin-bottom:var(--sp-8)}
+body.ln-front .sl-nav li{border-bottom-color:var(--line)}
+body.ln-front .sl-nav li:first-child{border-top:1px solid var(--line)}
+body.ln-front .sl-nav a{padding:10px 0}
+body.ln-front .sl-nav b{font-size:var(--fs-16)}
+body.ln-front .sl-nav span{font-size:var(--fs-13);color:var(--ink-3)}
+body.ln-front .sl-nav-more{border-top-color:var(--line)}
+body.ln-front .sl-nav-more p{color:var(--ink-3)}
+/* The player rail, under the navigation. */
+body.ln-front .ln-rail-upd{margin-top:var(--sp-32)}
+body.ln-front .sl-upd{border-color:var(--line);border-radius:10px}
+body.ln-front .sl-upd-h{background:var(--card);border-bottom-color:var(--line)}
+body.ln-front .sl-upd-note{font-size:var(--fs-13);color:var(--ink-3);line-height:1.5;margin:var(--sp-12) 0 0;padding:0}
+@media(max-width:860px){
+  body.ln-front .sl-nav li:first-child{border-top:0}
+  /* The updates module is a column object; between a chip row and the front
+     on a phone it would be the first thing on the screen. */
+  body.ln-front .ln-rail-upd{display:none}
+}
+
+/* ── 3 · the tiles ────────────────────────────────────────────────────────
+   front.html's, as they are: six portrait position tiles, and the four
+   smaller function tiles that sit under a lane on the homepage, here four
+   across as the lane's own tool row. Each a link, its illustration in its
+   own palette, the name over a dark fade at the foot. */
+body.ln-front .hm-tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:var(--sp-24);margin:0;padding:0;list-style:none}
+body.ln-front .hm-tile{position:relative;display:block;aspect-ratio:3/4;border-radius:10px;overflow:hidden;color:#fff;background:var(--t1)}
+body.ln-front .hm-tile:hover{color:#fff;text-decoration:none}
+body.ln-front .hm-tile:hover .hm-tile-name{text-decoration:underline}
+body.ln-front .hm-tile svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+body.ln-front .hm-tile-cap{position:absolute;left:0;right:0;bottom:0;padding:var(--sp-48) var(--sp-16) var(--sp-16);background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.72))}
+body.ln-front .hm-tile-name{display:block;font-size:var(--fs-19);font-weight:600;line-height:1.2}
+body.ln-front .hm-tile-live{display:block;font-size:var(--fs-13);color:rgba(255,255,255,.86);margin-top:2px;font-variant-numeric:tabular-nums}
+@media(max-width:1180px){body.ln-front .hm-tiles{gap:var(--sp-12)}body.ln-front .hm-tile-name{font-size:var(--fs-14);overflow-wrap:anywhere}body.ln-front .hm-tile-cap{padding:var(--sp-32) var(--sp-12) var(--sp-12)}}
+@media(max-width:860px){
+  body.ln-front .hm-tiles{display:flex;overflow-x:auto;margin:0 calc(-1 * var(--space-4));padding:0 var(--space-4);gap:var(--sp-12);scrollbar-width:none;scroll-snap-type:x proximity;scroll-padding-inline:var(--space-4)}
+  body.ln-front .hm-tiles::-webkit-scrollbar{display:none}
+  body.ln-front .hm-tiles li{flex:0 0 44%;scroll-snap-align:start}
+  body.ln-front .hm-tile{width:100%}
+}
+body.ln-front .hm-lane-kit{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-24);margin:0;padding:0;list-style:none}
+body.ln-front .hm-lane-fn{position:relative;display:block;aspect-ratio:4/3;border-radius:10px;overflow:hidden;color:#fff;background:var(--t1)}
+body.ln-front .hm-lane-fn:hover{color:#fff;text-decoration:none}
+body.ln-front .hm-lane-fn:hover .hm-lane-fn-name{text-decoration:underline}
+body.ln-front .hm-lane-fn svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+body.ln-front .hm-lane-fn-cap{position:absolute;left:0;right:0;bottom:0;padding:var(--sp-48) var(--sp-16) var(--sp-16);background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.72))}
+body.ln-front .hm-lane-fn-name{display:block;font-size:var(--fs-19);font-weight:600;line-height:1.2}
+body.ln-front .hm-lane-fn-sub{display:block;font-size:var(--fs-14);color:rgba(255,255,255,.86);margin-top:2px}
+@media(max-width:1100px){body.ln-front .hm-lane-kit{gap:var(--sp-12)}body.ln-front .hm-lane-fn-name{font-size:var(--fs-16)}body.ln-front .hm-lane-fn-sub{font-size:var(--fs-13)}}
+@media(max-width:600px){body.ln-front .hm-lane-kit{grid-template-columns:repeat(2,minmax(0,1fr))}body.ln-front .hm-lane-fn-cap{padding:var(--sp-24) var(--sp-12) var(--sp-12)}}
+/* The rest of a lane as an index: two columns of links on hairlines. */
+body.ln-front .ln-index{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--sp-48);margin:var(--sp-32) 0 0;padding:0;list-style:none;border-top:1px solid var(--line)}
+body.ln-front .ln-index a{display:block;padding:12px 0;border-bottom:1px solid var(--line);color:var(--ink)}
+body.ln-front .ln-index a:hover{text-decoration:none}
+body.ln-front .ln-index a:hover b{text-decoration:underline}
+body.ln-front .ln-index b{display:block;font-size:var(--fs-16);font-weight:600;line-height:1.3}
+body.ln-front .ln-index span{display:block;margin-top:2px;font-size:var(--fs-14);color:var(--ink-3);line-height:1.45}
+@media(max-width:700px){body.ln-front .ln-index{grid-template-columns:1fr}}
+
+/* ── 4 · the cards ────────────────────────────────────────────────────────
+   front.html's How-it-works cards: outlined, 10px, a heading over a
+   sentence. The only enclosed surface on a lane page that is not a ledger or
+   a form, used only where a live sentence has to sit somewhere. A card that
+   is a link is the whole card; nothing inside it says "→". */
+body.ln-front .hm-how-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-24)}
+body.ln-front .hm-how-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+body.ln-front .hm-how-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+body.ln-front .hm-input{display:block;border:1px solid var(--line);border-radius:10px;padding:var(--sp-24);background:var(--card);color:var(--ink);min-width:0}
+body.ln-front a.hm-input:hover{text-decoration:none;border-color:var(--line2);color:var(--ink)}
+body.ln-front a.hm-input:hover h3{text-decoration:underline}
+body.ln-front .hm-input .k{display:block;margin:0 0 var(--sp-8);font-size:var(--fs-14);color:var(--ink-3)}
+body.ln-front .hm-input h3{margin:0 0 var(--sp-8);font-size:var(--fs-19);font-weight:600;line-height:1.3;letter-spacing:-.005em;color:var(--ink)}
+body.ln-front .hm-input h3 em{font-style:normal;color:var(--teal)}
+body.ln-front .hm-input p{margin:0;font-size:var(--fs-16);color:var(--ink-2);line-height:1.5}
+body.ln-front .hm-input p+p{margin-top:var(--sp-8)}
+body.ln-front .hm-input .is-note{font-size:var(--fs-14);color:var(--ink-3)}
+body.ln-front .hm-input .is-btns{margin-top:var(--sp-16)}
+body.ln-front .hm-input .is-btn{border-radius:4px}
+@media(max-width:1100px){body.ln-front .hm-how-grid,body.ln-front .hm-how-grid.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){body.ln-front .hm-how-grid,body.ln-front .hm-how-grid.two,body.ln-front .hm-how-grid.four{grid-template-columns:1fr;gap:var(--sp-16)}}
+
+/* ── 5 · what is empty says so, in a sentence ─────────────────────────────
+   Not a box with an icon: a line of text where the thing would be, and the
+   link to where it is. */
+body.ln-front .is-vacant{border:0;border-radius:0;background:none;padding:var(--sp-8) 0;gap:var(--sp-16)}
+body.ln-front .is-vacant b{font-size:var(--fs-16);font-weight:600;color:var(--ink)}
+body.ln-front .is-vacant span{font-size:var(--fs-14);color:var(--ink-3)}
+body.ln-front .is-vacant .is-btn{border-radius:4px}
+
+/* ── 6 · the desk ─────────────────────────────────────────────────────────
+   front.html's story cards: white, 10px, a soft lift off the paper, the
+   newest as the wide lead and the two under it in a row. */
+body.ln-front .sl-stories{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-24);margin:0}
+body.ln-front .sl-story{border:0;border-radius:10px;padding:var(--sp-24);gap:var(--sp-12);
+  box-shadow:0 1px 2px rgba(17,20,24,.06),0 4px 14px rgba(17,20,24,.10);transition:box-shadow .15s ease}
+body.ln-front .sl-story:hover{border:0;box-shadow:0 2px 4px rgba(17,20,24,.08),0 8px 24px rgba(17,20,24,.14)}
+body.ln-front .sl-story.lead{grid-column:1/-1;padding:var(--sp-32)}
+body.ln-front .sl-story.lead h3{font-size:var(--fs-28);font-weight:700;line-height:1.25;letter-spacing:-.01em}
+body.ln-front .sl-story.lead p{font-size:var(--fs-16);line-height:1.5}
+body.ln-front .sl-story h3{font-size:var(--fs-19);line-height:1.3}
+body.ln-front .sl-story p{font-size:var(--fs-14);line-height:1.5}
+body.ln-front .sl-story .nr-kicker{font-size:var(--fs-13);color:var(--ink-3);font-weight:400;letter-spacing:0;text-transform:none}
+body.ln-front .sl-story .nr-flag{display:none}
+body.ln-front .sl-story .nr-by{border-top-color:var(--line)}
+body.ln-front .sl-story.is-boast{background:var(--card)}
+@media(max-width:700px){body.ln-front .sl-stories{grid-template-columns:1fr;gap:var(--sp-16)}
+  body.ln-front .sl-story.lead{padding:var(--sp-24)}body.ln-front .sl-story.lead h3{font-size:var(--fs-23)}}
