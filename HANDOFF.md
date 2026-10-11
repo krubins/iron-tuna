@@ -1,5 +1,7 @@
 # Iron Tuna — Project Handoff
 
+**There is one rankings page, dressed like the homepage (2026-10-11).** `/rankings` opens white and centred (the headline, one sentence, the filter field as its one pill, two entry points, a hairline), then a row of four horizon tabs (This Week, Next 3 Weeks, Playoffs, Rest of Season; the worker's `week`, `next3`, `playoffs`, `ros`), then the homepage's illustrated position tiles as the position control (plus a Flex tile), then two hairline rows for whose numbers and at what scoring, the table, and the navy KPI band. The "Rest of Season update" box and its `/api/ros-update` fetch came off the page. The section ribbon (`tools/build-ranks.mjs`) lists one "Rankings" destination whose menu drops every position onto `/rankings#pos=RB`; the page reads `#horizon=` and `#pos=` on load and on hashchange. The homepage tiles, the search box's tool entries, the hub cards on Stats, Previews, The Line, Hidden Value and Value Coach, the Fantasy lane links, the Washington notice and llms.txt all point at the one page now. The sixteen `/weekly-*` and `/season-long-*` position pages and their two hubs are gone from the repo: `_worker.js` 301s each address onto `/rankings#horizon=…&pos=…`, the player card's board button opens the same page, and the worker's pre-render for those pages, their board script `it-ranks.js` and the generator's page scaffolding came out with them. `site.css` still carries the `.rk-vs`, `.rk-chips` and `.rk-board` rules those pages wore; they are dead and can go on the next stylesheet pass.
+
 **The design system changed on 2026-10-08.** Paper-white ground, one navy band (header ribbon, KPI band, footer), one teal accent (#0b4f6c), green only for a positive market edge, amber only for a disclosure label, and one self-hosted family (Geist, `/fonts`). The homepage at `/` is a ledger-style front (hero with the search field, six position tiles, the newest desk pieces, two lane tiles for DFS and season long, three How-it-works cards, the KPI band) and takes the shared chrome from `tools/build-chrome.mjs` like every other page. The brief, the generic-default removal list and the post-build critique are in `docs/design/brief.md`. Token NAMES in `site.css` were kept and their VALUES moved: `--gold`/`--goldink` are the amber label now, `--mast` is the navy, `--mast-accent` the mint. The cover rotation, the hero photograph, the lead story and the lane cards came off the homepage with it; tools/test-homepage.mjs asserts the new composition.
 
 **The league-platform connectors were removed on 2026-09-18.** Sleeper, Yahoo, CBS and the ESPN placeholder are gone, and with them the OAuth flow, the sealed provider tokens, the scheduled refresh and the CBS browser extension: none of them ever carried a reader's league in production. What stays is the half that works and that main is still building on — the league model, the player crosswalk, `POST /api/leagues/manual`, every personalized module and My Week. A league is the reader's own entry now: typed, pasted, or read off a roster-grid screenshot. See §89, and `docs/saved-league.md` for the long record.
@@ -13754,6 +13756,39 @@ each of those two horizons; and a go / no-go recommendation.
   nothing throws. `playwright-core` is not installed in a fresh remote
   session; a symlink to `/opt/node-tools/node_modules/playwright-core`
   inside an (ignored) `node_modules/` lets the browser gates run.
+
+## 131. October 11: the Trade Evaluator's gauge, made easier to follow
+
+**The report.** A screenshot of the gauge under "Don't do it." with the ask
+"make this clearer, simpler, easier to follow". What was hard: three
+different per-week figures with no visible link between them (the verdict's
+6.4, the call's weighted 8.3, the rows' 11.9 and 6.4); every row repeating
+its figure in prose ("−11.9 pts / week for you" beside "+11.9 a week against
+−11.9 for you"); and one situation cell carrying an instruction, the weights
+and the roster fit in a single run of text, with "Fills a need" in bold under
+a No go.
+
+- **Every figure names its horizon.** `verdictOf` appends the reader's
+  horizon to its figure (`OVER`: "over the rest of the season", "over the
+  next 3 weeks", "this week", "in the fantasy playoffs"), so the verdict's
+  number is visibly the rest-of-season row's number. "Helps X" became
+  "improves X's".
+- **The call's sentence carries one figure.** `gaugeWhy` says "A clear
+  loss: −8.3 pts a week for you." and nothing about the weighting; the
+  weights live in the situation row alone. The label is "For you".
+- **Four rows, figures not prose.** Rows are labelled by horizon ("Next 3
+  weeks", "Rest of season" or "Fantasy playoffs"), the reader's figure is
+  "−11.9 for you", and the words cell lists every other side as "Name
+  +x.x" with the team helped most in bold; a lead word only when the figures
+  alone would not say it ("Nobody gains.", "About even.", "Helps you most.",
+  and "Helps X most." in a deal with more than one other side). The
+  situation row keeps the status word, the weights ("Counts the next 3 weeks
+  35% and rest of season 65%") and the source. The fit is its own row,
+  "Lineup fit", with a figure of its own: Fills a need, Opens a hole, No
+  change, or Not known (no roster entered).
+- **Tests.** `test-trade-finder-page.mjs` 165 → 166, rewritten to the four
+  rows; the `IT_SHOT` gauge copy is now `#tf-results` whole, because the
+  element shot of `#tf-gauge` was clipped by the sticky masthead.
 
 ## 130. October 10: the D1 read allowance, spent a third time; the market digest
 

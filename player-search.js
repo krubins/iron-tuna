@@ -535,7 +535,7 @@
   // `w` is the words a reader might type for it; matching is by prefix, either
   // way round, so "rank", "rankings" and "rb rankings" all land.
   var TOOLS = [
-    { n: 'Rankings', d: 'Quarterbacks first, every position a chip away, priced off the betting market', h: '/weekly-rankings', w: 'rankings ranks rank weekly week board top' },
+    { n: 'Rankings', d: 'Every position, this week or the rest of the season, priced off the betting market', h: '/rankings', w: 'rankings ranks rank weekly week season playoffs board top' },
     { n: 'Trade advice', d: 'Trade Tools: judge a trade, or find one both sides say yes to', h: '/trade-finder', w: 'trade trades trading advice value values finder evaluator evaluate offer' },
     { n: 'DFS lineups', d: 'The market read, aimed at one slate', h: '/dfs', w: 'dfs daily lineup lineups draftkings fanduel optimizer salary slate' },
     { n: 'Player lookup', d: 'Every player Iron Tuna prices, one page', h: '/players', w: 'players player lookup search find card cards' },
@@ -546,13 +546,15 @@
     { n: 'Depth charts', d: 'Every NFL depth chart', h: '/depth-charts', w: 'depth charts chart starters backups handcuffs' },
     { n: 'Articles', d: 'The desk’s stories this week', h: '/in-season/desk', w: 'articles news stories desk analysis reads' },
     { n: 'My league', d: 'Save your league’s scoring', h: '/my-league', w: 'my league settings scoring sync import' },
-    { n: 'QB rankings', d: 'Quarterbacks, this week', h: '/weekly-qb-rankings', w: 'qb qbs quarterback quarterbacks', pos: 1 },
-    { n: 'RB rankings', d: 'Running backs, this week', h: '/weekly-rb-rankings', w: 'rb rbs running backs back', pos: 1 },
-    { n: 'WR rankings', d: 'Wide receivers, this week', h: '/weekly-wr-rankings', w: 'wr wrs wide receivers receiver', pos: 1 },
-    { n: 'TE rankings', d: 'Tight ends, this week', h: '/weekly-te-rankings', w: 'te tes tight ends end', pos: 1 },
-    { n: 'Flex rankings', d: 'RB, WR and TE together, this week', h: '/weekly-flex-rankings', w: 'flex', pos: 1 },
-    { n: 'Kicker rankings', d: 'Kickers, this week', h: '/weekly-k-rankings', w: 'k kicker kickers', pos: 1 },
-    { n: 'Defense rankings', d: 'Defense / special teams, this week', h: '/weekly-dst-rankings', w: 'dst def defense defenses special teams', pos: 1 }
+    // The one rankings page, opened on the position (11 Oct 2026; these led
+    // to a weekly page per position before).
+    { n: 'QB rankings', d: 'Quarterbacks, at your scoring', h: '/rankings#pos=QB', w: 'qb qbs quarterback quarterbacks', pos: 1 },
+    { n: 'RB rankings', d: 'Running backs, at your scoring', h: '/rankings#pos=RB', w: 'rb rbs running backs back', pos: 1 },
+    { n: 'WR rankings', d: 'Wide receivers, at your scoring', h: '/rankings#pos=WR', w: 'wr wrs wide receivers receiver', pos: 1 },
+    { n: 'TE rankings', d: 'Tight ends, at your scoring', h: '/rankings#pos=TE', w: 'te tes tight ends end', pos: 1 },
+    { n: 'Flex rankings', d: 'RB, WR and TE together', h: '/rankings#pos=FLEX', w: 'flex', pos: 1 },
+    { n: 'Kicker rankings', d: 'Kickers, at your scoring', h: '/rankings#pos=K', w: 'k kicker kickers', pos: 1 },
+    { n: 'Defense rankings', d: 'Defense / special teams, at your scoring', h: '/rankings#pos=DST', w: 'dst def defense defenses special teams', pos: 1 }
   ];
   TOOLS.forEach(function (t) { t.f = fold(t.n); t.ws = fold(t.w + ' ' + t.n).split(' '); });
   var MAX_TOOLS = 4;

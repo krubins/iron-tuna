@@ -4,37 +4,25 @@
 //
 // THE GAP THIS FILLS. Every other gate in this repo is node reading source
 // text, and on 2026-09-21 four board pages, one shared board file and the
-// stylesheet all changed at once: the rankings boards learned to adopt a
-// pre-render served with the page, and /weekly-*-rankings, /fantasy, /previews
-// and /weekly-wrap each learned to keep their view in the URL and hand a
-// reader a link to the row in front of them.
+// stylesheet all changed at once: /fantasy, /previews and /weekly-wrap (and,
+// until 11 Oct 2026, the sixteen per-position rankings pages, since retired
+// onto /rankings) each learned to keep their view in the URL and hand a reader
+// a link to the row in front of them.
 //
 // Not one of those behaviours is visible to a file-reading gate. A board that
-// throws on load, a pre-render that is never removed, a share button wired to
-// nothing and an address bar that never updates all pass every other suite in
-// tools/ — and `main` deploys on merge, so the first reader to find out is a
-// reader on irontuna.com.
+// throws on load, a share button wired to nothing and an address bar that
+// never updates all pass every other suite in tools/ — and `main` deploys on
+// merge, so the first reader to find out is a reader on irontuna.com.
 //
 // WHAT IT ASSERTS, and why each one is here rather than in test-seo.mjs:
 //
-//   - nothing threw. The four pages carry hand-written inline scripts; a
-//     typo in one of them is invisible to `node --check` because the file is
-//     HTML;
-//   - the pre-render is REMOVED once the live board paints. Two tables of the
-//     same rows is two tables a screen reader walks and a crawler weighs, and
-//     the removal is a single line that is easy to lose in a refactor;
-//   - the pre-render STAYS when the board does not answer. The opposite rule,
-//     and the one a well-meaning edit is likely to "fix" into consistency with
-//     the file's usual "nothing rather than something stale";
+//   - nothing threw. The pages carry hand-written inline scripts; a typo in
+//     one of them is invisible to `node --check` because the file is HTML;
 //   - a row links /player/<slug>. The boards pointed at the noindex page until
 //     this changed, and a revert would be silent;
 //   - the URL says what is on screen, and the copy button fills the address
-//     bar before it touches the clipboard.
-//
-// THE PRE-RENDER IS THE REAL ONE. rkPreHtml is lifted out of _worker.js and run
-// here, rather than a hand-written stand-in being pasted in, so this exercises
-// the markup a reader is actually served and a change to that function shows up
-// here instead of in production.
+//     bar before it touches the clipboard;
+//   - /players is rendered into its own directory host, as the worker does it.
 //
 // Needs playwright-core plus a Chromium binary, and follows test-homepage.mjs:
 // it skips cleanly where they are absent so it never blocks a contributor's
@@ -112,24 +100,13 @@ const WRAP = { ok: true, week: 3, games: GAMES.map((g, i) => ({
                      publishedAt: Date.now() } : null,
 })) };
 
-// ── the worker's own pre-render, lifted and run ─────────────────────────────
-const src = read('_worker.js');
-const lift = (a, b) => { const i = src.indexOf(a); return i < 0 ? null : src.slice(i, src.indexOf(b, i) + b.length); };
-const rkPreHtml = new Function(
-  lift('const RK_PRERENDER_ROWS', '\n}') + '\n' + lift('function rkPreHtml(pre) {', '\n}')
-  + '\nreturn rkPreHtml;')();
-const PRERENDER = rkPreHtml({
-  host: '', horizon: 'week', pos: 'ALL', label: 'This week', payload: BOARDS,
-});
-
 // ── the server ──────────────────────────────────────────────────────────────
-// Files off disk, /api/ stubbed, and on the rankings page the pre-render put
-// where the worker puts it: inside the board's own host, ahead of everything
-// /it-ranks.js appends. MODE decides whether the board answers at all.
+// Files off disk, /api/ stubbed, and /players given the directory the worker
+// renders into its own host. MODE decides whether a board answers at all.
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
                 '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png',
                 '.webp': 'image/webp', '.ico': 'image/x-icon', '.txt': 'text/plain' };
-let MODE = 'live', PRE_ON = true;
+let MODE = 'live';
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
   if (u.pathname.startsWith('/api/')) {
@@ -146,13 +123,11 @@ const server = http.createServer((req, res) => {
   const fp = path.join(ROOT, u.pathname === '/' ? 'front.html' : u.pathname.slice(1));
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); return res.end('nf'); }
   let out = fs.readFileSync(fp);
-  if (PRE_ON && fp.endsWith('.html')) {
+  if (fp.endsWith('.html')) {
     const html = out.toString('utf8');
-    // Exactly what _worker.js does: the pre-render goes inside the host, and
-    // /players gets the directory the worker renders into its own.
-    if (/<div class="rk-board"[\s\S]{0,600}?>/.test(html)) {
-      out = Buffer.from(html.replace(/(<div class="rk-board"[\s\S]{0,600}?>)/, (m) => m + PRERENDER), 'utf8');
-    } else if (html.includes('<div class="pl-index" data-players-index></div>')) {
+    // Exactly what _worker.js does: /players gets the directory the worker
+    // renders into its own.
+    if (html.includes('<div class="pl-index" data-players-index></div>')) {
       out = Buffer.from(html.replace('<div class="pl-index" data-players-index></div>',
         () => '<div class="pl-index" data-players-index><section class="pl-sec"><h2 id="qb">Quarterbacks</h2>'
           + '<ul class="pl-list"><li><a href="/player/josh-allen">Josh Allen</a> <span>BUF</span></li></ul></section></div>'), 'utf8');
@@ -176,75 +151,6 @@ async function open(pathname) {
   });
   await page.goto(BASE + pathname, { waitUntil: 'networkidle' });
   return { page, ctx, errs };
-}
-
-console.log('\nthe rankings board adopts what the edge served it');
-{
-  const { page, ctx, errs } = await open('/weekly-rankings.html');
-  ok('nothing threw', errs.length === 0, errs.join(' | '));
-  ok('the pre-render is gone once the live board painted',
-     await page.locator('[data-rk-prerender]').count() === 0);
-  ok('the live board painted its rows', await page.locator('table.rk-vs tbody tr').count() > 10);
-  // The buttons are inserted BEFORE the pre-render, so that for the moment both
-  // are on screen the page still reads controls, board, notes.
-  ok('the scoring buttons sit above the board', await page.locator('.rk-board > .rk-tools').count() === 1);
-  ok('every row carries an id to link to', await page.locator('tbody tr[id^="p-"]').count() > 10);
-  const href = await page.locator('td.rk-who a').first().getAttribute('href');
-  ok('a row links the card', /^\/player\/[a-z0-9-]+$/.test(href || ''), href);
-  ok('and carries no dead ?pos=', !/\?pos=/.test(href || ''), href);
-  await ctx.close();
-}
-
-console.log('\na board that does not answer keeps the rows it was served');
-{
-  MODE = 'dead';
-  const { page, ctx, errs } = await open('/weekly-rankings.html');
-  ok('nothing threw', errs.length === 0, errs.join(' | '));
-  ok('the pre-rendered rows are still on screen',
-     await page.locator('[data-rk-prerender] tbody tr').count() > 10);
-  const note = (await page.locator('.rk-board p.is-empty').textContent()) || '';
-  ok('and the note says where they came from', /served with this page/.test(note), note.slice(0, 80));
-  ok('it does not claim the board is being read', !/Reading the board/.test(note), note.slice(0, 80));
-  await ctx.close();
-  MODE = 'live';
-}
-
-console.log('\nand with no pre-render it still refuses rather than go stale');
-{
-  MODE = 'dead'; PRE_ON = false;
-  const { page, ctx, errs } = await open('/weekly-rankings.html');
-  ok('nothing threw', errs.length === 0, errs.join(' | '));
-  ok('no table is shown', await page.locator('table.rk-vs tbody tr').count() === 0);
-  const note = (await page.locator('.rk-board p.is-empty').textContent()) || '';
-  ok('and it says so in the old words', /rather than a ranking that may be stale/.test(note), note.slice(0, 80));
-  await ctx.close();
-  MODE = 'live'; PRE_ON = true;
-}
-
-console.log('\nthe board says what is on screen, and hands it over');
-{
-  const { page, ctx, errs } = await open('/weekly-rankings.html');
-  await page.locator('button.rk-share').first().click();
-  await page.waitForTimeout(400);
-  ok('nothing threw', errs.length === 0, errs.join(' | '));
-  ok('the copy button puts the row in the address bar', /[?&]player=/.test(page.url()), page.url());
-  ok('and marks exactly that row', await page.locator('tbody tr.rk-hit').count() === 1);
-  const copied = await page.evaluate(() => navigator.clipboard.readText());
-  ok('and copies an absolute link naming it', /^http.*[?&]player=[a-z0-9-]+#p-/.test(copied), copied);
-  await page.locator('th[data-key="gap"]').first().click();
-  await page.waitForTimeout(400);
-  ok('sorting a column lands in the URL', /[?&]sort=gap/.test(page.url()), page.url());
-  await ctx.close();
-}
-
-console.log('\nand a link restores the view it was taken from');
-{
-  const { page, ctx, errs } = await open('/weekly-rankings.html?player=josh-allen&sort=gap&dir=desc');
-  ok('nothing threw', errs.length === 0, errs.join(' | '));
-  ok('the row the link names is marked', await page.locator('tr#p-josh-allen.rk-hit').count() === 1);
-  ok('and the sort it was shared with is applied',
-     await page.locator('th[data-key="gap"]').first().getAttribute('aria-sort') === 'descending');
-  await ctx.close();
 }
 
 console.log('\n/fantasy');

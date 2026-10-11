@@ -17,12 +17,14 @@
  *                matchup and the scoring environment; on a multi-week board the
  *                games, byes and slate still to come.
  *
- * WHY IT IS A FILE OF ITS OWN. Two surfaces print these lines and they compute
- * their inputs differently. /weekly-*-rankings and /season-long-*-rankings
- * (it-ranks.js) publish on the consensus board, scored on the server, two
- * horizons. /rankings re-scores every stat line in the browser at the reader's
+ * WHY IT IS A FILE OF ITS OWN. Until 11 Oct 2026 two surfaces printed these
+ * lines and computed their inputs differently: the sixteen per-position pages
+ * (it-ranks.js) published on the consensus board, scored on the server, two
+ * horizons; /rankings re-scores every stat line in the browser at the reader's
  * own league settings and publishes on whichever of four boards he has picked,
- * across four horizons. If each wrote its own sentences the TIERS would drift
+ * across four horizons. The per-position pages retired onto /rankings; the
+ * grammar stays here, beside the page rather than in it, so a second surface
+ * can never grow its own. If each wrote its own sentences the TIERS would drift
  * apart within a season and the same player would be "a weekly WR1" on one page
  * and "a WR2" on the other. So the grammar and the tiers live here, once, and
  * the caller passes in the two things only it can know: WHICH RANK and WHICH

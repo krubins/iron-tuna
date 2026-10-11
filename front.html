@@ -144,8 +144,8 @@ body{overflow-x:hidden}
 }
 
 /* ── 2 · the position tiles ───────────────────────────────────────────────
-   Six portrait tiles, one per position, each a link to that position's
-   weekly board: its own illustration in its own palette, the name over a
+   Six portrait tiles, one per position, each a link to the rankings page on
+   that position: its own illustration in its own palette, the name over a
    dark fade at the foot, and one line of live data under the name. Six
    across on a desk; on a phone the row scrolls sideways edge to edge. */
 .hm-tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:var(--sp-24);margin:0;padding:0;list-style:none}
@@ -369,37 +369,38 @@ footer.site {margin-top:0}
 </section>
 
 <!-- ── 2 · the position tiles ───────────────────────────────────────────────
-     One tile per position, each a link to that position's weekly board. The
+     One tile per position, each a link to the one rankings page opened on that
+     position (11 Oct 2026; they linked a weekly page per position before). The
      live line under the name comes off /api/rankings and stays hidden until
      it does. -->
 <section class="hm-sec" id="positions" aria-labelledby="posHead">
   <div class="wrap">
     <div class="hm-sec-head">
       <h2 id="posHead">This week, by position</h2>
-      <a href="/weekly-rankings">Every position &rarr;</a>
+      <a href="/rankings">Every position &rarr;</a>
     </div>
     <ul class="hm-tiles">
-      <li><a class="hm-tile" href="/weekly-qb-rankings" style="--t1:#0f4c5c" data-pos="QB">
+      <li><a class="hm-tile" href="/rankings#pos=QB" style="--t1:#0f4c5c" data-pos="QB">
         <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#0f4c5c"/><path d="M-10 170 C 30 60, 90 40, 170 20" fill="none" stroke="#f2c14e" stroke-width="5" stroke-linecap="round"/><path d="M-10 190 C 30 90, 90 70, 170 50" fill="none" stroke="#f2c14e" stroke-width="2" opacity=".45"/><ellipse cx="112" cy="58" rx="22" ry="13" transform="rotate(-28 112 58)" fill="#8c4a2b" stroke="#f6e7d2" stroke-width="2"/><path d="M104 52l14 8M106 48l14 8M108 44l14 8" stroke="#f6e7d2" stroke-width="1.5"/></svg>
         <span class="hm-tile-cap"><span class="hm-tile-name">Quarterbacks</span><span class="hm-tile-live" hidden></span></span>
       </a></li>
-      <li><a class="hm-tile" href="/weekly-rb-rankings" style="--t1:#1f5a3c" data-pos="RB">
+      <li><a class="hm-tile" href="/rankings#pos=RB" style="--t1:#1f5a3c" data-pos="RB">
         <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#1f5a3c"/><g stroke="#e8e3d0" stroke-width="1.5" opacity=".7"><path d="M0 40h150M0 70h150M0 100h150M0 130h150M0 160h150"/></g><path d="M20 190 L55 150 L45 115 L85 80 L75 45 L120 10" fill="none" stroke="#e8e3d0" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="120" cy="10" r="9" fill="#f2c14e"/></svg>
         <span class="hm-tile-cap"><span class="hm-tile-name">Running backs</span><span class="hm-tile-live" hidden></span></span>
       </a></li>
-      <li><a class="hm-tile" href="/weekly-wr-rankings" style="--t1:#2f2a68" data-pos="WR">
+      <li><a class="hm-tile" href="/rankings#pos=WR" style="--t1:#2f2a68" data-pos="WR">
         <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#2f2a68"/><g fill="none" stroke="#ffb4a2" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M75 195V120"/><path d="M75 120L30 80"/><path d="M75 120L120 80"/><path d="M75 120V60"/><path d="M75 60L45 25"/><path d="M75 60L105 25"/><path d="M75 60V15"/></g><g fill="#ffb4a2"><circle cx="30" cy="80" r="5"/><circle cx="120" cy="80" r="5"/><circle cx="45" cy="25" r="5"/><circle cx="105" cy="25" r="5"/><circle cx="75" cy="15" r="5"/></g></svg>
         <span class="hm-tile-cap"><span class="hm-tile-name">Wide receivers</span><span class="hm-tile-live" hidden></span></span>
       </a></li>
-      <li><a class="hm-tile" href="/weekly-te-rankings" style="--t1:#7a3e2b" data-pos="TE">
+      <li><a class="hm-tile" href="/rankings#pos=TE" style="--t1:#7a3e2b" data-pos="TE">
         <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#7a3e2b"/><rect x="22" y="40" width="106" height="26" rx="3" fill="#f5d7c4"/><rect x="62" y="66" width="26" height="110" rx="3" fill="#f5d7c4"/><path d="M22 140h30M98 140h30" stroke="#f5d7c4" stroke-width="4" stroke-linecap="round" opacity=".6"/></svg>
         <span class="hm-tile-cap"><span class="hm-tile-name">Tight ends</span><span class="hm-tile-live" hidden></span></span>
       </a></li>
-      <li><a class="hm-tile" href="/weekly-k-rankings" style="--t1:#324b6e" data-pos="K">
+      <li><a class="hm-tile" href="/rankings#pos=K" style="--t1:#324b6e" data-pos="K">
         <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#324b6e"/><g fill="none" stroke="#dbe4f2" stroke-width="6" stroke-linecap="round"><path d="M40 20v70M110 20v70M40 90h70M75 90v100"/></g><ellipse cx="62" cy="150" rx="12" ry="8" transform="rotate(-60 62 150)" fill="#ffd166"/><path d="M62 150 C 68 120, 72 108, 76 96" fill="none" stroke="#ffd166" stroke-width="2" stroke-dasharray="3 4"/></svg>
         <span class="hm-tile-cap"><span class="hm-tile-name">Kickers</span><span class="hm-tile-live" hidden></span></span>
       </a></li>
-      <li><a class="hm-tile" href="/weekly-dst-rankings" style="--t1:#3b3f46" data-pos="DEF">
+      <li><a class="hm-tile" href="/rankings#pos=DST" style="--t1:#3b3f46" data-pos="DEF">
         <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#3b3f46"/><path d="M75 22 L122 40 V98 C122 134 100 158 75 172 C50 158 28 134 28 98 V40 Z" fill="none" stroke="#9fe0c4" stroke-width="5" stroke-linejoin="round"/><path d="M48 70h54M48 92h54M48 114h40" stroke="#9fe0c4" stroke-width="5" stroke-linecap="round"/></svg>
         <span class="hm-tile-cap"><span class="hm-tile-name">Defenses</span><span class="hm-tile-live" hidden></span></span>
       </a></li>
