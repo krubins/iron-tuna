@@ -110,6 +110,20 @@ p{color:var(--sec);margin:0 0 16px}
 .rk-seg button[aria-pressed="true"]{background:var(--teal);color:#fff}
 .rk-seg button[disabled]{opacity:.45;cursor:not-allowed}
 .rk-seg.rk-pos button{padding:9px 13px;font-size:14.5px}
+/* ── the horizon chips ──────────────────────────────────────────────────
+   The first row of the plate decides what the board IS, so it is a row of
+   chips in the front page's dress (front.html, .hm-cats: the "Which list" row
+   under the hero's market figures) rather than one more segmented control
+   among three: a hairline box at 4px, 14px/600 grey text, teal when chosen.
+   Four of them: this week, the run-in to the playoffs, the playoffs, the rest
+   of the season. Next Week came off the row on 11 Oct 2026 (Ken: four chips);
+   its board stays in the worker for the newsroom and the player pages. */
+.rk-chips-h{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;flex:1 1 auto}
+.rk-chips-h button{appearance:none;font:inherit;font-size:var(--fs-14);font-weight:600;line-height:1.3;color:var(--sec);background:none;border:1px solid var(--line2);border-radius:4px;padding:6px 12px;cursor:pointer}
+.rk-chips-h button:hover{color:var(--text)}
+.rk-chips-h button[aria-pressed="true"]{color:#fff;background:var(--teal);border-color:var(--teal)}
+.rk-chips-h button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+.rk-chips-h button[disabled]{opacity:.45;cursor:not-allowed}
 .rk-table td.p b{color:var(--text)}
 .rk-table td.p span{display:block;font-size:13.5px;color:var(--muted);letter-spacing:.03em}
 .rk-table td.gap.up{color:var(--teal);font-weight:700}
@@ -316,13 +330,12 @@ p{color:var(--sec);margin:0 0 16px}
   <div class="rk-row">
     <span class="rk-lab">Horizon</span>
     <div class="rk-controls">
-    <div class="rk-seg" id="rkHorizon" role="group" aria-label="Horizon">
-    <button type="button" data-horizon="week">This Week</button>
-    <button type="button" data-horizon="next">Next Week</button>
-    <button type="button" data-horizon="untilPlayoffs">Get Me to the Playoffs</button>
-    <button type="button" data-horizon="playoffs">Playoffs</button>
-    <button type="button" data-horizon="ros">Rest of Season</button>
-  </div>
+    <div class="rk-chips-h" id="rkHorizon" role="group" aria-label="Horizon">
+      <button type="button" data-horizon="week">This Week</button>
+      <button type="button" data-horizon="untilPlayoffs">Get Me to the Playoffs</button>
+      <button type="button" data-horizon="playoffs">Playoffs</button>
+      <button type="button" data-horizon="ros">Rest of Season</button>
+    </div>
     </div>
   </div>
 
@@ -397,7 +410,7 @@ p{color:var(--sec);margin:0 0 16px}
 <!-- The two lines under each name, explained where the reader meets them. The
      sixteen published rankings pages carry the same section in their own words;
      the lines themselves come from it-reads.js, shared with them. This one has
-     to cover five horizons rather than two, so it says "a one-week board" and
+     to cover four horizons rather than two, so it says "a one-week board" and
      "a longer one" instead of naming them. -->
 <h2>How to read the two lines under a name</h2>
 <p class="is-note">Every row carries two sentences under the player&rsquo;s name. <b>Player</b> is where he ranks at his own position, then the one or two things about his season that are least like the rest of his position, each with his own numbers and his rank: his share of targets or touches, how much of his scoring came from touchdowns, his yards a catch or a carry, how often he catches his targets, his snaps, a swing in his workload last week, a projection well off the rate he has scored at, or betting odds that rank him well away from the consensus. Two players rarely get the same sentence, because two players are rarely unusual in the same way. One game is called one game rather than read, and an injury rides on the rank. Before he has played there is nothing to report, and the line says what a rank like his is worth at his position instead. <b>Opportunity</b> is what is in front of him: on a one-week board the fixture, how hard the defense across from him has been on points allowed, and what the market implies his offense will score against its own season mean; on a longer board whatever stands out most about the rest of his schedule (soft games now and hard ones later or the reverse, how weeks 15 to 17 grade, an offense projected near the top or bottom of the league, or a slate among the softest or hardest at his position), closed by the games and byes he has left. On either, any work a teammate&rsquo;s absence leaves open. A defense is graded on the other side of the fixture, on what the offense it faces is implied to score. Both sentences are built from the same numbers as the columns beside them, and a clause whose number the board does not carry is left out rather than guessed at.</p>
@@ -465,7 +478,7 @@ p{color:var(--sec);margin:0 0 16px}
 <script src="/it-reads.js" defer></script>
 <script>
 (function () {
-  // Three boards, five horizons, seven position views, four scoring settings,
+  // Three boards, four horizons, seven position views, four scoring settings,
   // and every column sortable. The API ships stat lines and points at PPR;
   // scoring at the chosen setting is done here with it-league.js (the same
   // engine, pinned by tools/test-scoring.mjs), then the three boards are
@@ -652,7 +665,7 @@ p{color:var(--sec);margin:0 0 16px}
     var rankField = (board === 'ironTuna' ? 'i' : board === 'consensus' ? 'c' : board === 'blend' ? 'b' : 'v') + (pos === 'FLEX' ? 'Flex' : 'Rank');
     rows = rows.filter(function (r) { return pos === 'FLEX' ? /^(RB|WR|TE)$/.test(r.p.position) : r.p.position === pos; });
     if (q) { var qq = q.toLowerCase(); rows = rows.filter(function (r) { return r.p.name.toLowerCase().indexOf(qq) >= 0 || r.p.team.toLowerCase() === qq; }); }
-    if (hideOut && (horizon === 'week' || horizon === 'next')) rows = rows.filter(function (r) { return !(r.p.weeks[0] && (r.p.weeks[0].out || r.p.weeks[0].bye)); });
+    if (hideOut && horizon === 'week') rows = rows.filter(function (r) { return !(r.p.weeks[0] && (r.p.weeks[0].out || r.p.weeks[0].bye)); });
     rows.sort(function (a, b) { var x = sortVal(a, sortKey, rankField), y = sortVal(b, sortKey, rankField); return (x < y ? -1 : x > y ? 1 : 0) * sortDir || a[rankField] - b[rankField]; });
     var cols = COLS[horizon];
     $('rkHead').innerHTML = cols.map(function (c) { return '<th data-key="' + c[0] + '"' + (/^(it|ppg|games|crank|vrank)$/.test(c[0]) ? ' class="num"' : '') + (c[0] === sortKey ? ' aria-sort="' + (sortDir > 0 ? 'ascending' : 'descending') + '"' : '') + '>' + c[1] + '</th>'; }).join('');
@@ -694,7 +707,9 @@ p{color:var(--sec);margin:0 0 16px}
       if (!j || !j.ok) return;
       var box = $('rkWed'); box.hidden = false;
       $('rkWedSub').innerHTML = (j.featured && j.featured.builtAt ? 'Updated ' + e(new Date(j.featured.builtAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' })) + ', for Week ' + e(j.featured.week) + '. ' : '') + e(j.snapshotNote || 'Four forward-looking boards, recalculated every Wednesday morning from the weekend’s usage, Monday night, the injury list, and every game line a book has posted.');
-      $('rkWedChoices').innerHTML = j.choices.map(function (c) { return '<div class="is-card" data-goto="' + e(c.horizon) + '"><h3>' + e(c.title) + '</h3><p>' + e(c.blurb) + '</p></div>'; }).join('');
+      // Only the horizons the chip row offers get a card: the worker still
+      // lists Next Week, which has no chip here.
+      $('rkWedChoices').innerHTML = j.choices.filter(function (c) { return !!$('rkHorizon').querySelector('[data-horizon="' + c.horizon + '"]'); }).map(function (c) { return '<div class="is-card" data-goto="' + e(c.horizon) + '"><h3>' + e(c.title) + '</h3><p>' + e(c.blurb) + '</p></div>'; }).join('');
       var movers = '';
       if (j.risers.length || j.fallers.length) {
         movers += '<div class="rk-movers"><div><h3>Biggest risers</h3><ol>' + j.risers.slice(0, 8).map(function (m) { return '<li><b>' + e(m.name) + '</b> ' + e(m.position) + ' · ' + e(m.team) + ': ' + e(m.position) + m.previousRank + ' → ' + e(m.position) + m.currentRank + '<small>' + e(m.reasons.join('; ')) + '</small></li>'; }).join('') + '</ol></div>' +
@@ -721,8 +736,11 @@ p{color:var(--sec);margin:0 0 16px}
     });
     // `next3` was the row's second button until 10 Oct 2026; a link that
     // still carries it lands on the nearest board the row offers now.
-    var hp = (location.hash.match(/horizon=(\w+)/) || [])[1]; if (hp === 'next3') hp = 'next';
-    if (hp && /^(week|next|untilPlayoffs|playoffs|ros)$/.test(hp)) horizon = hp;
+    // Next Week has no chip since 11 Oct 2026; an old deep link to it, or to
+    // the newsroom's next3, opens on this week rather than on a board no chip
+    // is pressed for.
+    var hp = (location.hash.match(/horizon=(\w+)/) || [])[1]; if (hp === 'next' || hp === 'next3') hp = 'week';
+    if (hp && /^(week|untilPlayoffs|playoffs|ros)$/.test(hp)) horizon = hp;
     setPressed($('rkScoring'), 'data-preset', preset); setPressed($('rkHorizon'), 'data-horizon', horizon);
     setPressed($('rkBoard'), 'data-board', board); setPressed($('rkPos'), 'data-pos', pos);
     $('rkScoring').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b || b.disabled) return; preset = b.getAttribute('data-preset'); setPressed(this, 'data-preset', preset); render(); });
