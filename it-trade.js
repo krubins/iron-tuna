@@ -30,6 +30,17 @@
  *      The tilt is a slider from "even" to "favor my side" — but the floor
  *      never moves: a trade the other side does not gain from is not offered.
  *
+ *      A lineup gain is necessary and not sufficient. A manager who is asked
+ *      to send the best player in the deal, or forty points more of
+ *      projection than comes back, for a lineup that improves by half a point
+ *      a week says no, and so did every reader shown that trade. So each side
+ *      gets a CASE (judgeSide): the lineup gain, who gets the best player,
+ *      projected points sent against received, throw-ins that would only be
+ *      cut, the depth left behind, and for a team scored on the next few
+ *      weeks what the deal costs over the season. A trade is offered only
+ *      when both cases come back accepted, and the case is what the page
+ *      shows under each side: why that manager would want it.
+ *
  * Points come from the caller. The engine is handed a function
  * points(player, horizonKey) and never sees a stat line, so the scoring is
  * whatever it-league.js says the reader plays, and this file cannot drift
@@ -524,6 +535,9 @@
   //   minGain    points per week each side must gain (default 0.75)
   //   candidates players per roster considered (default 14), by points
   //   limit      trades returned (default 12)
+  //   season     the horizon key a short-clock team is also checked on
+  //              (default 'ros'); see judgeSide
+  //   label      function(horizonKey) → the words for it in a reason
   function findTrades(teams, opts) {
     var o = opts || {};
     var S = normSlots(o.slots);
@@ -534,6 +548,7 @@
     var CAND = Math.max(4, Math.floor(Number(o.candidates) || 14));
     var limit = Math.max(1, Math.floor(Number(o.limit) || 12));
     var mine = (o.mine == null || o.mine === '' || !isFinite(Number(o.mine))) ? null : Number(o.mine);
+    var caseOpts = { minGain: minGain, season: o.season, weeks: weeks, label: o.label };
 
     // Points per player per horizon, computed once.
     var memo = {};
@@ -547,9 +562,29 @@
       var h = horizonOf(i);
       var roster = (t.players || []).map(function (r) { return r.p || r; }).filter(function (p) { return SFLEX_ELIG[String(p.pos || '').toUpperCase()]; });
       var wk = Math.max(1, Number(weeks(h)) || 1);
-      return { i: i, name: t.name, h: h, wk: wk, roster: roster, base: value(roster, h), slots: S,
+      var starts = {};
+      lineupValue(roster, S, function (p) { return pt(p, h); }).starters.forEach(function (r) { starts[idOf(r.p)] = r.slot; });
+      return { i: i, name: t.name, h: h, wk: wk, roster: roster, base: value(roster, h), slots: S, starts: starts,
                cands: roster.slice().sort(function (a, b) { return pt(b, h) - pt(a, h); }).slice(0, CAND) };
     });
+    // Padding. A package can carry a pair that changes nothing: a player
+    // neither side would start swapped for another neither side would start,
+    // or two near-equal players at one position swapped straight across. The
+    // bench weights make such a pair worth a fraction of a point, enough to
+    // edge the padded package past the clean one in the ranking, so the
+    // clean one is what gets offered and the padded one is dropped here.
+    function churn(A, ga, cA, B, gb, cB) {
+      if (ga.length + gb.length < 3) return false;
+      for (var i = 0; i < ga.length; i++) for (var j = 0; j < gb.length; j++) {
+        var p = ga[i], q = gb[j], pid = idOf(p), qid = idOf(q);
+        var benchBoth = !A.starts[pid] && !cA.starts[qid] && !B.starts[qid] && !cB.starts[pid];
+        if (benchBoth) return true;
+        if (String(p.pos).toUpperCase() === String(q.pos).toUpperCase()
+            && Math.abs(pt(p, A.h) - pt(q, A.h)) / A.wk < 2 * minGain
+            && Math.abs(pt(p, B.h) - pt(q, B.h)) / B.wk < 2 * minGain) return true;
+      }
+      return false;
+    }
     function packages(t) {
       var out = [];
       for (var s = 1; s <= maxSize && s <= t.cands.length; s++) out = out.concat(combos(t.cands, s));
@@ -559,7 +594,7 @@
     if (mine != null) { T.forEach(function (t) { if (t.i !== mine) pairs.push([mine, t.i]); }); }
     else for (var a = 0; a < T.length; a++) for (var b = a + 1; b < T.length; b++) pairs.push([a, b]);
 
-    var found = [];
+    var found = [], refused = 0;
     pairs.forEach(function (pr) {
       var A = T[pr[0]], B = T[pr[1]];
       if (!A.roster.length || !B.roster.length) return;
@@ -572,8 +607,12 @@
           if (gA < minGain) return;
           var gB = (value(rb, B.h) - B.base) / B.wk;
           if (gB < minGain) return;
+          // Both lineups gain. Now: would each manager actually say yes?
+          var cA = judgeSide(A, ga, gb, pt, caseOpts, gB), cB = judgeSide(B, gb, ga, pt, caseOpts, gA);
+          if (!cA.accept || !cB.accept) { refused++; return; }
+          if (churn(A, ga, cA, B, gb, cB)) return;
           var score = tilt * gA + (1 - tilt) * Math.min(gA, gB) - 0.1 * Math.max(0, ga.length + gb.length - 2);
-          found.push({ a: A.i, b: B.i, giveA: ga, giveB: gb, gainA: gA, gainB: gB, hA: A.h, hB: B.h, score: score });
+          found.push({ a: A.i, b: B.i, giveA: ga, giveB: gb, gainA: gA, gainB: gB, hA: A.h, hB: B.h, score: score, caseA: cA, caseB: cB });
         });
       });
     });
@@ -590,11 +629,12 @@
       var partner = mine != null ? String(t.b === mine ? t.a : t.b) : t.a + '|' + t.b;
       if ((perCore[core] || 0) >= 2 || (perPartner[partner] || 0) >= 4) continue;
       perCore[core] = (perCore[core] || 0) + 1; perPartner[partner] = (perPartner[partner] || 0) + 1;
-      t.linesA = lines(T[t.a], t.giveA, t.giveB, pt);
-      t.linesB = lines(T[t.b], t.giveB, t.giveA, pt);
+      t.linesA = t.caseA.lines;
+      t.linesB = t.caseB.lines;
       out.push(t);
     }
-    return { trades: out, teams: T.map(function (t) { return { name: t.name, horizon: t.h, weeks: t.wk, base: t.base, perWeek: t.base / t.wk }; }), considered: found.length };
+    return { trades: out, teams: T.map(function (t) { return { name: t.name, horizon: t.h, weeks: t.wk, base: t.base, perWeek: t.base / t.wk }; }),
+             considered: found.length, refused: refused };
   }
   // What actually changes in a lineup: who starts now that did not before, and
   // who stops. This is the sentence a reader can take to the other manager.
@@ -617,19 +657,164 @@
       if (memo[k] === undefined) { var v = Number(points(p, h)); memo[k] = isFinite(v) ? v : 0; }
       return memo[k];
     }
+    var caseOpts = { minGain: minGain, season: o.season, weeks: weeks, label: o.label };
     function side(i, give, get) {
       var t = teams[i] || {}, h = horizonOf(i);
       var roster = (t.players || []).map(function (r) { return r.p || r; }).filter(function (p) { return SFLEX_ELIG[String(p.pos || '').toUpperCase()]; });
       var T = { name: t.name, h: h, wk: Math.max(1, Number(weeks(h)) || 1), roster: roster, slots: S };
       var ln = lines(T, give, get, pt);
       var gain = (ln.after - ln.before) / T.wk;
-      return { name: t.name, h: h, weeks: T.wk, perWeek: ln.before / T.wk, gain: gain, lines: ln,
+      return { name: t.name, h: h, weeks: T.wk, perWeek: ln.before / T.wk, gain: gain, lines: ln, T: T,
                call: gain >= minGain ? 'gain' : gain <= -minGain ? 'loss' : 'even' };
     }
     var giveA = (o.giveA || []).filter(Boolean), giveB = (o.giveB || []).filter(Boolean);
     var A = side(o.a, giveA, giveB), B = side(o.b, giveB, giveA);
+    // The case each manager would make, judged against the other's gain. A
+    // caller scoring one team of a bigger deal passes the other side's gain
+    // in as otherGain (a number, or one per side as { a, b }).
+    var og = o.otherGain, ogA = og == null ? B.gain : (typeof og === 'object' ? og.a : og), ogB = og == null ? A.gain : (typeof og === 'object' ? og.b : og);
+    A.case = judgeSide(A.T, giveA, giveB, pt, caseOpts, ogA);
+    B.case = judgeSide(B.T, giveB, giveA, pt, caseOpts, ogB);
+    delete A.T; delete B.T;
     return { a: o.a, b: o.b, giveA: giveA, giveB: giveB, A: A, B: B, minGain: minGain,
-             both: A.call === 'gain' && B.call === 'gain' };
+             both: A.call === 'gain' && B.call === 'gain', accept: A.case.accept && B.case.accept };
+  }
+
+  // ── the case ──────────────────────────────────────────────────────────────
+  // One side of a trade, argued from that manager's chair. Returns
+  //   { accept, gain, sent, got, best, spots, filler, depth, season, why, against, lines, starts }
+  // `why` is the list of reasons this manager would want the deal and
+  // `against` the objections, as sentences; `accept` is false when an
+  // objection is one a manager does not get past:
+  //   - the lineup does not gain minGain a week on their own horizon;
+  //   - they send the best player in the deal and the lineup gains less than
+  //     twice the floor for it (nobody gives up the best player for a bump);
+  //   - they send materially more projection than they get back (more than
+  //     the floor, and more than twice what the lineup gains): the manager
+  //     sees forty points leaving and half a point arriving;
+  //   - a throw-in they would have to open a roster spot for is worth no more
+  //     than the player they would cut to make room, so they are being asked
+  //     to cut a player to hold a player they would cut;
+  //   - the trade opens a hole at a position they cannot fill;
+  //   - their gain is under thirty percent of the other side's and under two
+  //     points a week: a manager who runs the numbers asks for more;
+  //   - they are scored on this week or the next three and the deal costs
+  //     them over the season (opts.season, default 'ros') more than twice
+  //     what it earns them now. A bubble team buys now; it does not give the
+  //     season away for a rental.
+  // A thin bench after the trade is noted, not disqualifying.
+  //   T          { name, h, wk, roster, slots } as findTrades builds it
+  //   give/get   the players leaving and arriving
+  //   pt         function(player, horizonKey) → points over that horizon
+  //   opts       { minGain, season, weeks, label }
+  //   otherGain  the other side's gain per week, if known
+  function judgeSide(T, give, get, pt, opts, otherGain) {
+    var o = opts || {};
+    var minGain = isFinite(Number(o.minGain)) ? Number(o.minGain) : 0.75;
+    var season = o.season === undefined ? 'ros' : o.season;
+    var label = typeof o.label === 'function' ? o.label : function (h) { return h; };
+    var wk = T.wk, h = T.h, S = normSlots(T.slots);
+    var per = function (p) { return pt(p, h) / wk; };
+    var n1 = function (v) { return (Math.round(v * 10) / 10).toFixed(1); };
+    var signed = function (v) { return (v < 0 ? '\u2212' : '+') + n1(Math.abs(v)); };
+    var names = function (list) { return list.map(function (p) { return p.name; }).join(' and '); };
+    var ln = lines(T, give, get, pt);
+    var gain = (ln.after - ln.before) / wk;
+    var why = [], against = [], accept = true;
+
+    // 1. The lineup, on this team's own clock.
+    var starts = ln.startsNow.map(function (r) { return r.p.name + ' at ' + r.slot; });
+    if (gain >= minGain) {
+      why.push('The lineup gains ' + signed(gain) + ' a week on ' + label(h) + (starts.length ? ': ' + starts.join(', ') + ' now start' + (starts.length === 1 ? 's' : '') + '.' : '.'));
+    } else {
+      accept = false;
+      against.push('The lineup ' + (gain <= -minGain ? 'loses ' + n1(-gain) : 'gains ' + signed(gain)) + ' a week on ' + label(h) + ', ' + (gain <= -minGain ? 'so this is a step back.' : 'which is not enough to bother.'));
+    }
+
+    // 2. Who gets the best player in the deal, as this manager sees it.
+    var all = give.concat(get).slice().sort(function (a, b) { return per(b) - per(a); });
+    var best = all[0] || null, bestSide = 'even';
+    if (best) {
+      var topGive = give.length ? Math.max.apply(null, give.map(per)) : -Infinity, topGet = get.length ? Math.max.apply(null, get.map(per)) : -Infinity;
+      bestSide = topGive > topGet + 1e-9 ? 'gives' : topGet > topGive + 1e-9 ? 'gets' : 'even';
+    }
+    if (bestSide === 'gets') why.push('Gets the best player in the deal, ' + best.name + ' (' + n1(per(best)) + ' a week).');
+    else if (bestSide === 'gives') {
+      if (gain >= 2 * minGain) why.push('Sends the best player in the deal, ' + best.name + ', but the lineup gains more than that at the slots it needed.');
+      else { accept = false; against.push('Sends the best player in the deal, ' + best.name + ' (' + n1(per(best)) + ' a week), for a lineup gain of ' + signed(gain) + '. No manager gives up the best player for a bump.'); }
+    }
+
+    // 3. Projection sent against projection received.
+    var sent = 0, got = 0;
+    give.forEach(function (p) { sent += per(p); }); get.forEach(function (p) { got += per(p); });
+    var deficit = sent - got;
+    if (deficit > minGain && deficit > 2 * gain) {
+      accept = false;
+      against.push('Sends ' + n1(sent) + ' a week of projection and gets ' + n1(got) + ' back; the lineup only gains ' + signed(gain) + ' for the ' + n1(deficit) + ' given up.');
+    } else if (got - sent > minGain) why.push('Takes in more projection than it sends: ' + n1(got) + ' a week against ' + n1(sent) + '.');
+    else if (deficit > minGain) why.push('Sends ' + n1(deficit) + ' a week more projection than it gets, which the lineup gain covers.');
+
+    // 4. What was sent that was not starting anyway.
+    var after = lineupValue(without(T.roster, give).concat(get), S, function (p) { return pt(p, h); });
+    var wasStarting = {};
+    lineupValue(T.roster, S, function (p) { return pt(p, h); }).starters.forEach(function (r) { wasStarting[idOf(r.p)] = r.slot; });
+    var idle = give.filter(function (p) { return !wasStarting[idOf(p)]; });
+    if (idle.length && idle.length === give.length) why.push(names(idle) + (idle.length === 1 ? ' was' : ' were') + ' not starting, so the lineup loses nothing by sending ' + (idle.length === 1 ? 'him' : 'them') + '.');
+    else if (idle.length) why.push(names(idle) + (idle.length === 1 ? ' was' : ' were') + ' on the bench.');
+
+    // 5. Throw-ins that would only be cut. A side taking more players than
+    // it sends has to cut as many; the cuts are the least valuable players on
+    // the roster after the trade, and a player arriving at or under that
+    // line is one the manager would cut to make room for himself.
+    var spots = Math.max(0, get.length - give.length);
+    var startsAfter = {};
+    after.starters.forEach(function (r) { startsAfter[idOf(r.p)] = r.slot; });
+    var filler = [];
+    if (spots) {
+      var rank = without(T.roster, give).concat(get).map(per).sort(function (a, b) { return a - b; });
+      var cutLine = rank[Math.min(spots, rank.length) - 1];
+      filler = get.filter(function (p) { return !startsAfter[idOf(p)] && per(p) <= cutLine + 1e-9; });
+    }
+    if (filler.length) {
+      accept = false;
+      against.push('Would have to open ' + (spots === 1 ? 'a roster spot' : spots + ' roster spots') + ' for ' + names(filler) + ', who would not start and would be the next cut.');
+    } else if (spots) why.push('Takes ' + (get.length) + ' for ' + give.length + ', and every player arriving has a place on the roster.');
+
+    // 6. Depth: holes are refused, a thin bench is noted.
+    var depth = {}, posList = ['QB', 'RB', 'WR', 'TE'];
+    posList.forEach(function (ps) { depth[ps] = { before: 0, after: 0, slots: S[ps] }; });
+    T.roster.forEach(function (p) { var ps = String(p.pos || '').toUpperCase(); if (depth[ps]) depth[ps].before++; });
+    without(T.roster, give).concat(get).forEach(function (p) { var ps = String(p.pos || '').toUpperCase(); if (depth[ps]) depth[ps].after++; });
+    posList.forEach(function (ps) {
+      var d = depth[ps];
+      if (d.after < d.slots && d.before >= d.slots) { accept = false; against.push('Opens a hole at ' + ps + ': ' + d.after + ' left for ' + d.slots + ' starting slot' + (d.slots === 1 ? '' : 's') + '.'); }
+      else if ((ps === 'RB' || ps === 'WR') && d.slots > 0 && d.after === d.slots && d.before > d.slots) against.push('Leaves no backup at ' + ps + '.');
+    });
+
+    // 7. A team on a short clock is also asked what the deal costs over the season.
+    var seasonNote = null;
+    if (season && h !== season && h !== 'playoffs' && typeof o.weeks === 'function') {
+      var swk = Math.max(1, Number(o.weeks(season)) || 1);
+      var sBefore = lineupValue(T.roster, S, function (p) { return pt(p, season); }).total;
+      var sAfter = lineupValue(without(T.roster, give).concat(get), S, function (p) { return pt(p, season); }).total;
+      if (sBefore > 0 || sAfter > 0) {
+        var sGain = (sAfter - sBefore) / swk;
+        seasonNote = { h: season, weeks: swk, gain: sGain };
+        if (sGain <= -minGain) {
+          if (gain < 0.5 * -sGain) { accept = false; against.push('Costs ' + n1(-sGain) + ' a week over ' + label(season) + ' for ' + signed(gain) + ' now: the season given away for a rental.'); }
+          else against.push('Costs ' + n1(-sGain) + ' a week over ' + label(season) + ', the price of winning now.');
+        } else if (sGain >= minGain) why.push('Also gains ' + signed(sGain) + ' a week over ' + label(season) + '.');
+      }
+    }
+
+    // 8. The other side's gain, when known: nobody signs the deal that pays the other manager ten times over.
+    if (isFinite(Number(otherGain)) && otherGain > 0 && gain < 2 && gain < 0.3 * otherGain) {
+      accept = false;
+      against.push('Gains ' + signed(gain) + ' a week while the other side gains ' + signed(otherGain) + '; a manager who runs the numbers asks for more.');
+    }
+
+    return { accept: accept, gain: gain, sent: sent, got: got, best: best ? { p: best, side: bestSide } : null, spots: spots, filler: filler,
+             depth: depth, season: seasonNote, why: why, against: against, lines: ln, starts: startsAfter };
   }
 
   function lines(T, give, get, pt) {
@@ -647,6 +832,6 @@
 
   return {
     fold: fold, makePool: makePool, resolve: resolve, suggest: suggest, parseRosters: parseRosters, isNoise: isNoise,
-    lineupValue: lineupValue, normSlots: normSlots, findTrades: findTrades, evaluateTrade: evaluateTrade, BENCH_W: BENCH_W
+    lineupValue: lineupValue, normSlots: normSlots, findTrades: findTrades, evaluateTrade: evaluateTrade, judgeSide: judgeSide, BENCH_W: BENCH_W
   };
 });

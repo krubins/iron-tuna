@@ -319,12 +319,17 @@ ok('the rosters typed under the Evaluator are still there', (await names()).leng
 await page.click('#tf-find');
 await page.waitForSelector('#tf-results:not([hidden]) .tf-trade', { timeout: 15000 });
 const read = () => page.$$eval('.tf-trade', els => els.map(e => {
-  const sides = [...e.querySelectorAll('.tf-side')].map(s => ({ who: s.querySelector('.who').textContent, gain: parseFloat(s.querySelector('.gain').textContent.replace('−', '-')), horizon: s.querySelector('.gain small').textContent, give: s.querySelector('.give').textContent }));
+  const sides = [...e.querySelectorAll('.tf-side')].map(s => ({ who: s.querySelector('.who').textContent, gain: parseFloat(s.querySelector('.gain').textContent.replace('−', '-')), horizon: s.querySelector('.gain small').textContent, give: s.querySelector('.give').textContent,
+    kase: s.querySelector('.tf-case') ? { accept: s.querySelector('.tf-case').dataset.accept, h: s.querySelector('.tf-case .h').textContent, why: [...s.querySelectorAll('.tf-case li')].map(li => li.textContent) } : null }));
   return { title: e.querySelector('h3').textContent, sides };
 }));
 let trades = await read();
 ok('with no players in the trade, the finder searches', trades.length > 0 && trades.length <= 12, String(trades.length));
 ok('every trade gains both sides', trades.every(t => t.sides.length === 2 && t.sides.every(s => s.gain > 0)), JSON.stringify(trades[0]));
+ok('every side carries the case that manager would make, accepted', trades.every(t => t.sides.every(s => s.kase && s.kase.accept === 'yes' && s.kase.why.length > 0)), JSON.stringify(trades[0].sides.map(s => s.kase)));
+ok('headed for the reader and for the other manager', trades[0].sides[0].kase.h === 'Why you would do it' && trades[0].sides[1].kase.h === 'Why they would do it', trades[0].sides.map(s => s.kase.h).join(' | '));
+ok('and the first reason is the lineup, on that team’s horizon', trades.every(t => t.sides.every(s => /^The lineup gains \+\d+\.\d a week on rest of season/.test(s.kase.why[0]))), trades[0].sides[0].kase.why[0]);
+ok('the note says the swaps set aside were ones a manager would refuse', /gave both managers a reason to say yes/.test(await page.textContent('#tf-results-note')));
 ok('the reader is always "You"', trades.every(t => t.sides[0].who.startsWith('You')), trades[0].sides[0].who);
 ok('the reader sends a running back and gets a receiver in the first trade', /Sends[^]*RB/.test(trades[0].sides[0].give) && /Gets[^]*WR/.test(trades[0].sides[0].give), trades[0].sides[0].give.slice(0, 160));
 ok('the bar names the reader’s team and lineup', /Iron Tuna \(Ken\)/.test(await page.textContent('#tf-bar')) && /pts\/wk/.test(await page.textContent('#tf-bar')));
@@ -338,6 +343,7 @@ await page.waitForFunction(() => /In your favor/.test(document.getElementById('t
 trades = await read();
 ok('tilted, the top trade gains the reader at least as much', trades[0].sides[0].gain >= evenTop.sides[0].gain - 0.05, `${trades[0].sides[0].gain} vs ${evenTop.sides[0].gain}`);
 ok('and every partner still gains', trades.every(t => t.sides[1].gain > 0));
+ok('and at full tilt no partner is paid a fraction of the reader’s gain', trades.every(t => t.sides[1].gain >= 2 || t.sides[1].gain >= 0.3 * t.sides[0].gain - 0.05), JSON.stringify(trades.map(t => [t.sides[0].gain, t.sides[1].gain])));
 
 await page.$eval('#tf-tilt', el => { el.value = '50'; el.dispatchEvent(new Event('input', { bubbles: true })); });
 await page.click('#tf-settings summary');

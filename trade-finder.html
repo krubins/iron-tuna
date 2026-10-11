@@ -311,6 +311,11 @@ button.tf-shot{font-family:inherit;line-height:inherit}
 .tf-side .give b{color:var(--text)}
 .tf-side .lines{font-size:var(--fs-14);color:var(--muted);margin-top:var(--space-2);line-height:1.5}
 .tf-side .lines.bare{color:var(--sec);font-style:normal}
+.tf-case{margin-top:var(--space-3);font-size:var(--fs-14);line-height:1.5;color:var(--sec)}
+.tf-case .h{font-weight:600;color:var(--text);margin-bottom:2px}
+.tf-case ul{margin:0;padding-left:1.1em}
+.tf-case li{margin:0 0 2px}
+.tf-case .but{margin:var(--space-2) 0 0;color:var(--muted)}
 .tf-alt{font-size:var(--fs-23);font-weight:600;letter-spacing:-.01em;margin:var(--space-6) 0 var(--space-3)}
 .tf-empty{color:var(--muted);font-size:var(--fs-16);border:0;border-top:1px solid var(--line);border-radius:0;padding:var(--space-5) 0 0;margin-top:0;line-height:1.5}
 .tf-note{font-size:var(--fs-14);color:var(--muted);margin:var(--space-4) 0 0;line-height:1.5;max-width:72ch}
@@ -556,6 +561,7 @@ button.tf-shot{font-family:inherit;line-height:inherit}
     </div>
   </div>
   <div class="method-more">
+    <p><b>Each side has to want it.</b> A lineup gain is necessary, not sufficient: a manager asked to send the best player in the deal, or forty points more of projection than comes back, for half a point a week says no, whatever the lineup math says. So before a trade is shown, each side is argued from that manager&rsquo;s chair: the lineup gain on their own horizon; who gets the best player in the deal; projected points sent against received; whether a throw-in they must open a roster spot for would only be the next cut; the depth left at each position; for a team scored on the next few weeks, what the deal costs over the season; and whether their gain is a fraction of yours. A side that sends the best player needs at least a point and a half a week for it. A side that sends more projection than it gets needs a lineup gain of at least half the difference. A side gaining under two points a week needs at least thirty percent of what the other side gains. A trade is offered only when both cases hold, and the case is printed under each side so you can make it to the other manager in their words. The Evaluator runs the same test on the trade you typed and says when the other side would refuse, and why.</p>
     <p><b>The gauge is your side of it.</b> Under the verdict, every team in the deal is scored twice more on the same clock: the next three weeks and the rest of the season (the fantasy playoffs when you have clinched). Each row shows every team&rsquo;s gain on that horizon and marks the team the trade helps most. Your situation decides which of the two counts more: a team that needs wins now is weighed 70/30 toward the next three weeks, a team playing the whole season 35/65 the other way, a team built for the playoffs 25/75. The needle is that weighted gain per week, from three points lost on the left to three gained on the right, and the call is Go at three quarters of a point or better, No go at as much lost, and the lineup fit settles the ground between: a trade that raises your weakest starter is a narrow Go, one that opens a hole is a narrow No go.</p>
     <p><b>Rosters are optional in the Evaluator.</b> List only the players and each side is scored on those players alone: what it gets against what it sends, at your scoring, on its horizon. That answers whether the names are fair. Add the rosters and the score becomes the change to the lineup each team actually starts, which is the better answer whenever a two-for-one opens or closes a starting slot, and the card says which of the two it is showing.</p>
     <p><b>Horizons are per team.</b> A gain is measured on the weeks that team is playing for: this week, the next three, the rest of the season, or the fantasy playoffs, and stated per week so a three-week horizon and a twelve-week one are on the same scale. Your notes set a team&rsquo;s horizon when they describe it: &ldquo;clinched&rdquo; or a record of .700 or better means the fantasy playoffs; &ldquo;needs wins,&rdquo; &ldquo;on the bubble&rdquo; or .400 or worse means the next three weeks; &ldquo;must win this week&rdquo; means this week; &ldquo;eliminated&rdquo; or &ldquo;rebuilding&rdquo; means the rest of the season.</p>
@@ -1454,7 +1460,7 @@ button.tf-shot{font-family:inherit;line-height:inherit}
     var list = active();
     if (list.filter(function (t, i) { return rosterEntered(i); }).length < 2) { status($('tf-find-status'), 'Fill in at least two rosters first.', true); return; }
     status($('tf-find-status'), 'Scoring the lineups…');
-    Promise.all(horizonsInPlay().map(loadHorizon)).then(function () {
+    Promise.all(uniq(horizonsInPlay().concat(['ros'])).map(loadHorizon)).then(function () {
       var mi = Number(mine);
       var res = search(list, mi, 12);
       status($('tf-find-status'), '');
@@ -1466,7 +1472,7 @@ button.tf-shot{font-family:inherit;line-height:inherit}
   function search(list, mi, limit) {
     return TR.findTrades(list, {
       slots: slots, points: points, weeks: weeksOf,
-      horizon: horizonFor,
+      horizon: horizonFor, season: 'ros', label: horizonLabel,
       mine: mi, tilt: tilt, maxSize: size, minGain: 0.75, limit: limit
     });
   }
@@ -1477,14 +1483,19 @@ button.tf-shot{font-family:inherit;line-height:inherit}
   // everyone else, and its lineup before and after on its own horizon. So
   // each team is scored as one side of evaluateTrade with an empty partner.
   // `h` forces a horizon; left out, the team is scored on its own.
-  function sideOf(i, give, get, h) {
+  // `otherGain` is the most any other team in the deal gains, so the case
+  // for this team can say whether it is being asked to pay the other side
+  // ten times over.
+  function sideOf(i, give, get, h, otherGain) {
     var hz = h || horizonFor(i);
     var ev = TR.evaluateTrade([teams[i], { name: '', players: [] }], {
       a: 0, b: 1, giveA: give, giveB: get, slots: slots, points: points, weeks: weeksOf,
-      horizon: function () { return hz; }, minGain: 0.75
+      horizon: function () { return hz; }, minGain: 0.75, season: 'ros', label: horizonLabel,
+      otherGain: { a: isFinite(otherGain) ? otherGain : 0, b: 0 }
     });
     var s = ev.A; s.i = i; s.give = give; s.get = get; s.entered = rosterEntered(i); return s;
   }
+  function horizonLabel(h) { return (HORIZONS[h] || h).toLowerCase(); }
   // The gauge's two clocks: the next three weeks for every team, and the rest
   // of the season, or the fantasy playoffs when the reader has clinched,
   // because a clinched team's long term is weeks 15-17 and nothing before.
@@ -1498,15 +1509,21 @@ button.tf-shot{font-family:inherit;line-height:inherit}
     if (senders + Object.keys(receivers).length < 2) { status($('tf-find-status'), 'A trade needs players going to another team.', true); return; }
     status($('tf-find-status'), 'Scoring the lineups…');
     var mi0 = Number(mine);
-    Promise.all(uniq(horizonsInPlay().concat(['next3', longHorizon(mi0)])).map(loadHorizon)).then(function () {
-      var sides = active().map(function (t, i) {
+    Promise.all(uniq(horizonsInPlay().concat(['next3', 'ros', longHorizon(mi0)])).map(loadHorizon)).then(function () {
+      var parts = active().map(function (t, i) {
         var give = deal[i].map(function (x) { return players[x.id]; }).filter(Boolean);
         var get = [];
         active().forEach(function (o, j) { if (j !== i) deal[j].forEach(function (x) { if (Number(x.to) === i && players[x.id]) get.push(players[x.id]); }); });
-        return sideOf(i, give, get);
+        return { i: i, give: give, get: get };
       }).filter(function (s) { return s.give.length || s.get.length; });
+      // Gains first, then each side judged against the most any other side gains.
+      var gains = parts.map(function (s) { return sideOf(s.i, s.give, s.get).gain; });
+      var sides = parts.map(function (s, k) {
+        var other = Math.max.apply(null, gains.filter(function (g, j) { return j !== k; }).concat([0]));
+        return sideOf(s.i, s.give, s.get, null, other);
+      });
       var mi = Number(mine);
-      var all = sides.every(function (s) { return s.call === 'gain'; });
+      var all = sides.every(function (s) { return s.call === 'gain' && (!s.entered || !s.case || s.case.accept); });
       // Not a yes for everyone? Then the useful answer is the nearest trades
       // among the same teams that are. That search needs the rosters: with
       // none entered, the only players to search are the ones in the deal.
@@ -1525,7 +1542,7 @@ button.tf-shot{font-family:inherit;line-height:inherit}
     return list.map(function (p) { return '<b>' + esc(p.name) + '</b> <span style="color:var(--muted)">' + esc(p.pos) + (h ? ' &middot; ' + n1(points(p, h) / weeksOf(h)) + '/wk' : '') + '</span>'; }).join(', ');
   }
   function signed(v) { return (v < 0 ? '−' : '+') + n1(Math.abs(v)); }
-  function sideCard(who, name, give, get, gain, h, lines, needsSpot, bare) {
+  function sideCard(who, name, give, get, gain, h, lines, needsSpot, bare, kase) {
     var starts = lines.startsNow.map(function (s) { return esc(s.p.name) + ' at ' + esc(s.slot); });
     var stops = lines.stopsStarting.map(function (s) { return esc(s.p.name); });
     // With no roster behind it, "starts" and "to the bench" are only the
@@ -1535,7 +1552,18 @@ button.tf-shot{font-family:inherit;line-height:inherit}
     return '<div class="tf-side"><div class="who">' + who + ' &middot; ' + esc(name) + '</div>'
       + '<div class="gain' + (gain < 0 ? ' neg' : '') + '">' + signed(gain) + ' <small>pts / week &middot; ' + esc(HORIZONS[h] || h) + '</small></div>'
       + '<div class="give">Sends ' + chips(give, h) + '<br>Gets ' + chips(get, h) + '</div>'
-      + '<div class="lines' + (bare ? ' bare' : '') + '">' + detail + '</div></div>';
+      + '<div class="lines' + (bare ? ' bare' : '') + '">' + detail + '</div>'
+      + (kase && !bare ? caseBlock(who, kase) : '') + '</div>';
+  }
+  // The case: why this manager would want the deal, in that manager's own
+  // terms, and what they would hold against it. A found trade only reaches
+  // the page with both cases accepted; a trade the reader typed can come back
+  // refused, and then the objections are the answer.
+  function caseBlock(who, c) {
+    var h = c.accept ? (who === 'You' ? 'Why you would do it' : 'Why they would do it') : (who === 'You' ? 'Why you would not' : 'Why they would say no');
+    var items = (c.accept ? c.why : c.against.concat(c.why)).map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('');
+    var notes = c.accept && c.against.length ? '<p class="but">' + c.against.map(esc).join(' ') + '</p>' : '';
+    return '<div class="tf-case' + (c.accept ? '' : ' no') + '" data-accept="' + (c.accept ? 'yes' : 'no') + '"><div class="h">' + h + '</div><ul>' + items + '</ul>' + notes + '</div>';
   }
   function scoringName() { return preset === 'custom' && L && L.label ? L.label() : preset === 'half' ? 'Half PPR' : preset === 'standard' ? 'Standard' : 'PPR'; }
   function paintBar(name, perWeek, h, judged, bare) {
@@ -1549,10 +1577,10 @@ button.tf-shot{font-family:inherit;line-height:inherit}
     var A = T[t.a], B = T[t.b];
     var youAreA = t.a === mi;
     var spot = function (give, get) { return Math.max(0, get.length - give.length); };
-    var first = youAreA ? sideCard('You', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, spot(t.giveA, t.giveB))
-                        : sideCard('You', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, spot(t.giveB, t.giveA));
-    var second = youAreA ? sideCard('Them', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, spot(t.giveB, t.giveA))
-                         : sideCard('Them', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, spot(t.giveA, t.giveB));
+    var first = youAreA ? sideCard('You', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, spot(t.giveA, t.giveB), false, t.caseA)
+                        : sideCard('You', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, spot(t.giveB, t.giveA), false, t.caseB);
+    var second = youAreA ? sideCard('Them', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, spot(t.giveB, t.giveA), false, t.caseB)
+                         : sideCard('Them', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, spot(t.giveA, t.giveB), false, t.caseA);
     var label = (youAreA ? t.giveA : t.giveB).map(function (p) { return p.name; }).join(' + ') + ' for ' + (youAreA ? t.giveB : t.giveA).map(function (p) { return p.name; }).join(' + ');
     return '<div class="tf-trade"><h3>' + (i + 1) + '. ' + esc(label) + '<span class="with">with ' + esc(youAreA ? B.name : A.name) + '</span></h3><div class="tf-sides">' + first + second + '</div></div>';
   }
@@ -1568,11 +1596,11 @@ button.tf-shot{font-family:inherit;line-height:inherit}
     $('tf-verdict').innerHTML = '';
     $('tf-gauge').hidden = true; $('tf-gauge').innerHTML = '';
     if (!res.trades.length) {
-      $('tf-trades').innerHTML = '<div class="tf-empty">No trade between your team and ' + (count === 2 ? esc(T[1 - mi].name) : 'these teams') + ' improves both lineups by at least three quarters of a point a week. That is a real answer: the rosters are already sorted, or the two horizons want the same players. Try a different horizon, or allow bigger packages in the settings.</div>';
+      $('tf-trades').innerHTML = '<div class="tf-empty">No trade between your team and ' + (count === 2 ? esc(T[1 - mi].name) : 'these teams') + ' improves both lineups by at least three quarters of a point a week and gives both managers a reason to say yes' + (res.refused ? ' (' + res.refused + ' improved both lineups on paper, and every one asked a manager to give up the best player, or far more projection than came back, for a bump)' : '') + '. That is a real answer: the rosters are already sorted, or the two horizons want the same players. Try a different horizon, or allow bigger packages in the settings.</div>';
     } else {
       $('tf-trades').innerHTML = res.trades.map(function (t, i) { return foundCard(t, i, T, mi); }).join('');
     }
-    $('tf-results-note').innerHTML = res.considered + ' swap' + (res.considered === 1 ? '' : 's') + ' improved both sides out of everything tried; the ' + res.trades.length + ' above are the strongest, no more than four with one partner. ' + scoredNote();
+    $('tf-results-note').innerHTML = res.considered + ' swap' + (res.considered === 1 ? '' : 's') + ' improved both lineups and gave both managers a reason to say yes' + (res.refused ? ' (another ' + res.refused + ' improved both lineups on paper and were set aside: one side was being asked to send the best player in the deal, or far more projection than came back, for a small bump)' : '') + '; the ' + res.trades.length + ' above are the strongest, no more than four with one partner. Under each side is the case that manager would make for it. ' + scoredNote();
     host.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   // ── the gauge: is it worth it for the reader ─────────────────────────────
@@ -1717,6 +1745,10 @@ button.tf-shot{font-family:inherit;line-height:inherit}
       if (sides.every(function (s) { return s.call === 'gain'; })) return { cls: 'win', h: 'Every team in it wins.', p: 'Your team is not part of this one, but every lineup involved gets better.' };
       return { cls: 'mixed', h: 'Your team is not part of this trade.', p: otherLoss.length ? otherLoss.map(function (s) { return s.name; }).join(' and ') + ' would lose lineup value.' : 'No team involved loses as much as three quarters of a point a week.' };
     }
+    // Every lineup gains, but a manager asked to send the best player, or far
+    // more projection than comes back, for a small bump still says no.
+    var refuse = others.filter(function (s) { return s.entered && s.case && !s.case.accept; });
+    if (you.call === 'gain' && otherGain.length === others.length && refuse.length) return { cls: 'mixed', h: 'Both lineups gain, but expect a no.', p: refuse.map(function (s) { return s.name + ': ' + s.case.against[0]; }).join(' ') + ' Ask what would make it work, or try the trades below.' };
     if (you.call === 'gain' && otherGain.length === others.length) return { cls: 'win', h: others.length === 1 ? 'Both sides win. Send it.' : 'Every team wins. Send it.', p: 'Your lineup gains ' + n(you.gain) + over(you) + (others.length === 1 ? ' and theirs gains ' + n(others[0].gain) : '; ' + others.map(function (s) { return s.name + ' +' + n1(s.gain); }).join(', ')) + ', so everyone has a reason to say yes.' };
     if (you.call === 'loss') return { cls: 'lose', h: 'Don’t do it.', p: 'It costs your lineup ' + n(you.gain) + over(you) + (otherGain.length ? ' and improves ' + otherGain.map(function (s) { return s.name + '’s'; }).join(' and ') + '.' : '.') };
     if (you.call === 'gain' && otherLoss.length) return { cls: 'mixed', h: 'Good for you, but expect a no.', p: 'You gain ' + n(you.gain) + over(you) + '; ' + otherLoss.map(function (s) { return s.name + ' loses ' + n(s.gain); }).join(', ') + '. A manager who checks the numbers will turn it down.' };
@@ -1738,13 +1770,13 @@ button.tf-shot{font-family:inherit;line-height:inherit}
     var ordered = sides.slice().sort(function (a, b) { return (b.i === mi) - (a.i === mi) || a.i - b.i; });
     var html = '<div class="tf-trade tf-proposed"><h3>' + esc(title) + '<span class="with">' + esc(sides.map(function (s) { return s.name; }).join(', ')) + '</span></h3><div class="tf-sides' + (sides.length > 2 ? ' multi' : '') + '">'
       + ordered.map(function (s) {
-          return sideCard(s.i === mi ? 'You' : 'Them', s.name, s.give, s.get, s.gain, s.h, s.lines, Math.max(0, s.get.length - s.give.length), !s.entered);
+          return sideCard(s.i === mi ? 'You' : 'Them', s.name, s.give, s.get, s.gain, s.h, s.lines, Math.max(0, s.get.length - s.give.length), !s.entered, s.case);
         }).join('')
       + '</div></div>';
     if (alt) {
       html += '<h3 class="tf-alt">Trades among these teams that work for both sides</h3>'
         + (alt.trades.length ? alt.trades.map(function (t, i) { return foundCard(t, i, alt.teams, mi); }).join('')
-          : '<div class="tf-empty">No two-team swap among these rosters improves both lineups right now. Try a different horizon in the settings.</div>');
+          : '<div class="tf-empty">No two-team swap among these rosters improves both lineups and gives both managers a reason to say yes right now. Try a different horizon in the settings.</div>');
     }
     $('tf-trades').innerHTML = html;
     $('tf-results-note').innerHTML = (entered ? '' : 'A side with no roster entered is scored on the players alone: what it gets against what it sends. Add the rosters in step 2 and each side is scored on the lineup it actually starts, and the evaluator also looks for trades among these teams that work for everyone. ')
@@ -1773,6 +1805,7 @@ button.tf-shot{font-family:inherit;line-height:inherit}
         out.push('- ' + s.name + ' sends ' + (s.give.map(function (p) { return p.name + ' (' + p.pos + ')'; }).join(', ') || 'nothing')
           + ', receives ' + (s.get.map(function (p) { return p.name + ' (' + p.pos + ')'; }).join(', ') || 'nothing')
           + ': lineup ' + signed(s.gain) + ' pts/week (' + s.call + (s.entered ? '' : '; no roster entered, scored on the players alone') + ').');
+        if (s.entered && s.case) out.push('  ' + s.name + (s.case.accept ? ' would take it: ' : ' would refuse: ') + (s.case.accept ? s.case.why : s.case.against).join(' '));
       });
       out.push('Engine verdict: ' + verdictOf(res, mi).h);
       if (gauge) {
@@ -1793,6 +1826,7 @@ button.tf-shot{font-family:inherit;line-height:inherit}
         var A = res.teams[t.a], B = res.teams[t.b];
         out.push((k + 1) + '. ' + A.name + ' sends ' + t.giveA.map(function (p) { return p.name; }).join(' + ') + ' (' + signed(t.gainA) + '/wk); '
           + B.name + ' sends ' + t.giveB.map(function (p) { return p.name; }).join(' + ') + ' (' + signed(t.gainB) + '/wk).');
+        if (t.caseA && t.caseB) out.push('   Why ' + A.name + ': ' + t.caseA.why.join(' ') + ' Why ' + B.name + ': ' + t.caseB.why.join(' '));
       });
     }
     return out.join('\n');
