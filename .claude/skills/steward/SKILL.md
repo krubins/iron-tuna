@@ -86,7 +86,7 @@ the output directly passes review and fails the gate:
 |---|---|
 | `front.html` data blocks | `node tools/build-front.mjs` |
 | Header and footer chrome, every page | `node tools/build-chrome.mjs` |
-| Rankings ribbon and the fourteen position pages | `node tools/build-ranks.mjs` |
+| Rankings ribbon (every page that carries it) | `node tools/build-ranks.mjs` |
 | Sitemap, JSON-LD, analytics tagging | `node tools/build-seo.mjs` |
 | Analyst bylines on story pages | `node tools/build-bylines.mjs` |
 | `LEAD_FACES` inside `_worker.js` | `node tools/build-worker-faces.mjs` |

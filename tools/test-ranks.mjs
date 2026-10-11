@@ -1,32 +1,32 @@
 #!/usr/bin/env node
-// The rankings section: the ribbon under the header, the per-position pages
-// behind it, and the board that fills them. Since 11 Oct 2026 the ribbon lists
-// ONE rankings destination (/rankings, every position in its menu) rather than
-// a weekly category and a season-long one; the sixteen position pages and their
-// two hubs still serve and are still held to their contract here.
+// The rankings section: the ribbon under the header, the one rankings page it
+// leads to, and the two lines under every name on it.
 //   node tools/test-ranks.mjs
 //
 // WHAT THIS EXISTS FOR. Three failures here are silent — the page renders, the
 // build gates pass, and only a reader finds out:
 //
-//   1. THE RIBBON DRIFTS. It is one link set on nineteen pages. build-ranks.mjs
-//      generates it, but a hand edit inside the sentinels survives until the
-//      next run of the tool, and nobody runs a tool they have not been told is
-//      stale. So the link set is compared BYTE FOR BYTE across every page that
-//      carries it, and the tool's --check is the gate that keeps it there.
+//   1. THE RIBBON DRIFTS. It is one link set on every page that carries it.
+//      build-ranks.mjs generates it, but a hand edit inside the sentinels
+//      survives until the next run of the tool, and nobody runs a tool they
+//      have not been told is stale. So the link set is compared BYTE FOR BYTE
+//      across every page that carries it, and the tool's --check is the gate
+//      that keeps it there.
 //   2. THE MENU IS CLIPPED. `overflow-x: auto` with `overflow-y: visible`
 //      computes to `overflow-y: auto` — so a dropdown inside a sideways-
 //      scrolling band is not "mostly fine", it is invisible below 46px. This
 //      exact bug is why front.html's own ribbon parents its search menu to
 //      <body>. The row must not be a scroll container at desktop width.
-//   3. A PAGE IS UNGATED. /rankings is behind POST_DRAFT_OPEN. A per-position
-//      page that is not in POST_DRAFT_PAGES serves the whole board while the
-//      section is shut, and tools/test-seo.mjs would then demand a sitemap entry
-//      for it. The two lists are read out of their own files and compared.
+//   3. AN OLD ADDRESS GOES DARK. Until 11 Oct 2026 the section was sixteen
+//      per-position pages and two hubs (/weekly-<pos>-rankings,
+//      /season-long-<pos>-rankings) beside the tool; they are indexed, linked
+//      from outside and printed in older copy. They are gone from the repo
+//      and _worker.js 301s each one onto /rankings with the horizon and the
+//      position in the hash. A page that came back, or a redirect that lost
+//      a position, would both pass every other gate.
 //
-// It also holds the pages to the promise their menus make: every position in
-// the ribbon has a page, every page asks the board for that position, and only
-// the season-long pages open into the weeks ahead.
+// It also holds /rankings to the one shared grammar for the two lines under
+// a name (it-reads.js), and the front page's tiles to the one rankings page.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -41,79 +41,44 @@ const ok = (name, cond, extra = '') => {
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
 const POSITIONS = ['qb', 'rb', 'wr', 'te', 'flex', 'k', 'dst'];
-// The pooled board. A page like the seven above, asked for as ALL; not a
-// position, so the front page does not tile it. The hub opens on the first
-// position rather than on this (10 Oct 2026: a reader landing on "this week's
-// rankings" met QB1, RB1, WR1, TE1 and D1 interleaved, and wanted quarterbacks).
-const OVERALL = 'overall';
-const HUB_POS = POSITIONS[0];
-const BOARDS = POSITIONS.concat(OVERALL);
-const CATS = [
-  { slug: 'weekly', horizon: 'week', weeks: '0' },
-  { slug: 'season-long', horizon: 'ros', weeks: '1' },
-];
 const LANES = ['stats.html', 'hidden-value.html', 'previews.html'];
-const pageFile = (c, p) => `${c.slug}-${p}-rankings.html`;
-const hubFile = (c) => `${c.slug}-rankings.html`;
-const allBoards = CATS.flatMap((c) => [hubFile(c), ...BOARDS.map((p) => pageFile(c, p))]);
+// The section's pages: the tool and the three lanes beside it in the ribbon.
+const SECTION = ['rankings.html'].concat(LANES);
+// The retired addresses, hub and per-position, both categories.
+const OLD = ['weekly', 'season-long'].flatMap((c) =>
+  [`/${c}-rankings`, ...POSITIONS.concat('overall').map((p) => `/${c}-${p}-rankings`)]);
 
-// ── the pages exist and ask for the right board ──────────────────────────────
-console.log('\nevery position in the menu has a page of its own');
+// ── the old pages are gone, and their addresses still answer ─────────────────
+console.log('\nthe old pages are gone, and their addresses 301 to the one page');
 {
-  const missing = allBoards.filter((f) => !fs.existsSync(path.join(ROOT, f)));
-  ok('all eighteen rankings pages exist', missing.length === 0, missing.join(', '));
+  const stale = OLD.map((u) => u.slice(1) + '.html').filter((f) => fs.existsSync(path.join(ROOT, f)));
+  ok('no weekly or season-long rankings page is in the repo', stale.length === 0, stale.join(', '));
+  ok('and the board script only they loaded is gone with them', !fs.existsSync(path.join(ROOT, 'it-ranks.js')));
+  ok('nothing served still loads it',
+    fs.readdirSync(ROOT).filter((f) => f.endsWith('.html')).every((f) => !read(f).includes('src="/it-ranks.js"')));
 
-  // The hub asks for the first position's board; the pooled page asks for ALL.
-  const wantPos = (p) => p === null ? HUB_POS.toUpperCase() : p === OVERALL ? 'ALL' : p.toUpperCase();
-  const wrong = [];
-  for (const c of CATS) {
-    for (const p of [null, ...BOARDS]) {
-      const f = p ? pageFile(c, p) : hubFile(c);
-      if (!fs.existsSync(path.join(ROOT, f))) continue;
-      const h = read(f);
-      const mount = (h.match(/<div class="rk-board"[\s\S]*?><\/div>/) || [''])[0];
-      const attr = (k) => (mount.match(new RegExp(`data-rk-${k}="([^"]*)"`)) || [, ''])[1];
-      if (attr('horizon') !== c.horizon) wrong.push(`${f}: horizon=${attr('horizon')} want ${c.horizon}`);
-      if (attr('pos') !== wantPos(p)) wrong.push(`${f}: pos=${attr('pos')} want ${wantPos(p)}`);
-      if (attr('weeks') !== c.weeks) wrong.push(`${f}: weeks=${attr('weeks')} want ${c.weeks}`);
-    }
-  }
-  ok('each one asks the board for its own horizon and position', wrong.length === 0, wrong.slice(0, 4).join('; '));
-  ok('and the hubs open on ' + HUB_POS.toUpperCase() + ', not on the pooled board',
-    CATS.every((c) => fs.existsSync(path.join(ROOT, hubFile(c))) && new RegExp(`data-rk-pos="${HUB_POS.toUpperCase()}"`).test(read(hubFile(c)))));
-
-  // The chip row is the touch path between the boards: every position, then
-  // the pooled board last, and the chip marked on a page is the board it shows
-  // — on the hub, that is the first position's chip.
-  const chipsWrong = [];
-  for (const c of CATS) {
-    for (const p of [null, ...BOARDS]) {
-      const f = p ? pageFile(c, p) : hubFile(c);
-      if (!fs.existsSync(path.join(ROOT, f))) continue;
-      const nav = (read(f).match(/<nav class="rk-chips"[\s\S]*?<\/nav>/) || [''])[0];
-      const hrefs = [...nav.matchAll(/href="([^"]*)"/g)].map((m) => m[1]);
-      const want = BOARDS.map((b) => `/${c.slug}-${b}-rankings`);
-      if (hrefs.join(',') !== want.join(',')) chipsWrong.push(`${f}: ${hrefs.join(',')}`);
-      const on = [...nav.matchAll(/<a class="rkc-chip on" href="([^"]*)"/g)].map((m) => m[1]);
-      const wantOn = `/${c.slug}-${p === null ? HUB_POS : p}-rankings`;
-      if (on.join(',') !== wantOn) chipsWrong.push(`${f}: on=${on.join(',')} want ${wantOn}`);
-    }
-  }
-  ok('every page carries the same chip row, with the board it shows marked on', chipsWrong.length === 0, chipsWrong.slice(0, 3).join('; '));
-
-  // Only the season-long boards can open a row: "this week" is one week, and a
-  // drawer holding a single row is a control that does nothing.
-  const weekOpens = CATS[0] && [hubFile(CATS[0]), ...BOARDS.map((p) => pageFile(CATS[0], p))]
-    .filter((f) => fs.existsSync(path.join(ROOT, f)) && /data-rk-weeks="1"/.test(read(f)));
-  ok('no weekly board offers a week-by-week drawer', weekOpens.length === 0, weekOpens.join(', '));
-
-  const noDrawer = [hubFile(CATS[1]), ...BOARDS.map((p) => pageFile(CATS[1], p))]
-    .filter((f) => fs.existsSync(path.join(ROOT, f)) && !/data-rk-weeks="1"/.test(read(f)));
-  ok('every season-long board does', noDrawer.length === 0, noDrawer.join(', '));
-
-  const noScript = allBoards.concat(LANES).filter((f) => fs.existsSync(path.join(ROOT, f)))
-    .filter((f) => f.includes('rankings') && !read(f).includes('src="/it-ranks.js"'));
-  ok('and loads the one board script', noScript.length === 0, noScript.join(', '));
+  const worker = read('_worker.js');
+  const m = worker.match(/const __rk = (\/\^[^\n]*?\/)\.exec\(url\.pathname\);/);
+  ok('the worker matches the old addresses with one expression', !!m);
+  const re = m ? new Function('return ' + m[1])() : /$^/;
+  const unmatched = OLD.filter((u) => !re.test(u));
+  ok('every one of the eighteen is matched', unmatched.length === 0, unmatched.join(', '));
+  const over = ['/rankings', '/weekly-wrap', '/weekly-intel', '/weekly-rankings-2', '/season-long-rankingsx']
+    .filter((u) => re.test(u));
+  ok('and nothing else is', over.length === 0, over.join(', '));
+  const block = (worker.match(/const __rk = [\s\S]{0,900}?\n    \}\n/) || [''])[0];
+  ok('it is a permanent redirect', /status: 301/.test(block));
+  ok('onto the one rankings page, with the horizon in the hash',
+    /'\/rankings#horizon=' \+ __hz/.test(block) && /'weekly' \? 'week' : 'ros'/.test(block));
+  ok('and the position, in the page\'s own upper-case keys',
+    /'&pos=' \+ __rk\[2\]\.toUpperCase\(\)/.test(block));
+  ok('the pooled board lands on the horizon alone', /__rk\[2\] !== 'overall'/.test(block));
+  ok('before the gate, so a closed section cannot swallow the redirect',
+    worker.indexOf('const __rk = ') < worker.indexOf('let __assetReq = request;'));
+  ok('the player card\'s board button opens the one page on his position',
+    /href="\/rankings#pos=' \+ board \+ '"/.test(worker) && !/\/weekly-' \+ board/.test(worker));
+  ok('and the worker no longer pre-renders a board for pages that do not exist',
+    !/ranksPrerender|rkPreHtml|RK_PRERENDER_ROWS/.test(worker));
 }
 
 // ── the ribbon is one link set, everywhere ───────────────────────────────────
@@ -126,7 +91,6 @@ const carriers = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && RIB.t
   // asked which game they play before they are offered a board.
   ok('the ribbon is off the front page', !carriers.includes('front.html'));
   ok('on the full rankings tool', carriers.includes('rankings.html'));
-  ok('on all eighteen rankings pages', allBoards.every((f) => carriers.includes(f)));
   ok('and on the three other destinations', LANES.every((f) => carriers.includes(f)));
 
   // Byte for byte, once the one legitimate per-page difference — which item is
@@ -219,7 +183,8 @@ console.log('\nthe section is gated like the rest of the in-season tools');
   const gated = new Set((m ? m[1] : '').split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean));
   ok('no entry is a computed expression', [...gated].every((g) => /^\/[a-z0-9-]+$/.test(g)),
     [...gated].filter((g) => !/^\/[a-z0-9-]+$/.test(g)).join(', '));
-  const want = allBoards.concat(LANES).map((f) => '/' + f.replace(/\.html$/, ''));
+  const want = SECTION.map((f) => '/' + f.replace(/\.html$/, ''));
+  ok('and the eighteen retired addresses are out of it', OLD.every((u) => !gated.has(u)));
   const ungated = want.filter((w) => !gated.has(w));
   ok('every page in the section is in the gate', ungated.length === 0, ungated.join(', '));
 
@@ -228,38 +193,9 @@ console.log('\nthe section is gated like the rest of the in-season tools');
   // the season. What it must be is the league setup — the platform connectors
   // were removed (docs/saved-league.md) — so a rankings page cannot quietly go
   // back to selling a draft sheet in September.
-  const missCta = allBoards.concat(LANES)
+  const missCta = SECTION
     .filter((f) => !/<a class="cta" href="\/my-league#settings">Customize My League<\/a>/.test(read(f)));
   ok('and its CTA is the league setup that actually works', missCta.length === 0, missCta.join(', '));
-}
-
-// ── the two columns the section is for ───────────────────────────────────────
-console.log('\nthe board prints the consensus against the odds');
-{
-  const js = read('it-ranks.js');
-  ok('the two column groups are named in full',
-    js.includes("'Fantasy Consensus'") && js.includes("'Betting Odds'"));
-  ok('and each group name sorts the board on its own rank column',
-    /grp\('crank', 'Fantasy Consensus'/.test(js) && /grp\('vrank', 'Betting Odds'/.test(js) &&
-    /function grp\(key, text, cls\)[\s\S]*?data-key="' \+ key/.test(js));
-  ok('the fantasy side reads the consensus block', /p\.consensus\s*\?\s*p\.consensus\.points/.test(js));
-  ok('the market side reads the vegas block', /p\.vegas\s*\?\s*p\.vegas\.points/.test(js));
-  ok('and prints what the odds are built from, every row', js.includes('rk-basis'));
-  ok('the gap comes from the worker\'s own classification, not a rule invented here',
-    js.includes('p.marketDelta') && js.includes('d.classification') && !/strongRank|leanRank/.test(js));
-  ok('a missing number is a dash, never a zero', js.includes("'—'"));
-  ok('rest of season ranks by total points or by the average per game',
-    js.includes("'Total points'") && js.includes("'Per game'") && /horizon === 'ros'/.test(js));
-  ok('and the averages are the worker\'s, ranked and graded there, not divided here',
-    js.includes('p.perGame') && !/points\s*\/\s*(p\.)?games/.test(js));
-  ok('the choice is in the shared URL', /put\('rank'/.test(js) && /qs\.get\('rank'\)/.test(js));
-  ok('the week drawer prints both columns per week',
-    js.includes('w.consensusPts') && js.includes('w.vegasPts'));
-  ok('a bye and an absence are printed, not skipped', js.includes('w.bye') && js.includes('w.out'));
-  ok('the board is scored on the server, so the drawer cannot disagree with its row',
-    js.includes('&scoring=') && !js.includes('ITLeague'));
-  ok('and a board that does not answer shows nothing rather than something stale',
-    /did not answer/.test(js));
 }
 
 // ── the two lines under every name ───────────────────────────────────────────
@@ -273,7 +209,6 @@ console.log('\nthe board prints the consensus against the odds');
 console.log('\nevery row says what the player is and what is in front of him');
 {
   const reads = read('it-reads.js');
-  const js = read('it-ranks.js');
   const tool = read('rankings.html');
   const cutFrom = (src, from, to) => src.slice(src.indexOf(from), src.indexOf(to));
   const H = new Function(cutFrom(reads, '  var TIERS = {', '  // THE PLAYER LINE.') +
@@ -283,17 +218,18 @@ console.log('\nevery row says what the player is and what is in front of him');
   H.vol = H2.vol;
   const worker = read('_worker.js');
 
-  // ONE COPY. Two surfaces print these lines; if either grew its own tiers the
-  // same player would be "a weekly WR1" on one page and "a WR2" on the other.
+  // ONE COPY. The grammar lives beside the page rather than in it, so a second
+  // surface (the published boards carried one until 11 Oct 2026) can never
+  // grow its own tiers and call the same player "a weekly WR1" on one page
+  // and "a WR2" on the other.
   ok('the tiers and the grammar live in one file', /var TIERS = \{/.test(reads));
-  ok('and neither board carries a second copy of them',
-    !/TIERS|function tierOf|function gradeOf/.test(js) && !/TIERS|function tierOf|function gradeOf/.test(tool));
-  ok('both boards call it', /ITReads\.cell\(/.test(js) && /ITReads\.cell\(/.test(tool));
-  ok('and both load it before the script that calls it',
-    allBoards.every((f) => read(f).indexOf('/it-reads.js') < read(f).indexOf('/it-ranks.js')) &&
+  ok('and the tool carries no second copy of them',
+    !/TIERS|function tierOf|function gradeOf/.test(tool));
+  ok('the tool calls it', /ITReads\.cell\(/.test(tool));
+  ok('and loads it before the script that calls it',
     tool.indexOf('/it-reads.js') < tool.indexOf('function reads(r)'));
   ok('a board without it renders the row rather than throwing',
-    /if \(!window\.ITReads\) return ''/.test(js) && /if \(!window\.ITReads\) return ''/.test(tool));
+    /if \(!window\.ITReads\) return ''/.test(tool));
   ok('both lines are labelled, from one place',
     /rk-read-pl[^]{0,80}>Player</.test(reads) && /rk-read-op[^]{0,90}>Opportunity</.test(reads));
   ok('and site.css styles them on both boards and on neither other one',
@@ -320,17 +256,10 @@ console.log('\nevery row says what the player is and what is in front of him');
   const playerLine = cutFrom(reads, '  function player(p, o) {', '  // THE OPPORTUNITY LINE');
   ok('the player line is ranked and scored by the CALLER, because only it knows the board',
     playerLine.includes('o.rank') && playerLine.includes('o.points') && !playerLine.includes('p.consensus'));
-  // Published on the ODDS column since 6 Oct 2026 (primaryRank in it-ranks.js
-  // carries the why): the consensus is a preseason line shared out by week and
-  // does not know what happened on Sunday; the market is re-read every hour.
-  ok('the published pages feed it the odds line, which is the column they rank on',
-    /ITReads\.cell\(p, \{[^]{0,240}p\.vegas\.rank/.test(js) && !/ITReads\.cell\(p, \{[^]{0,240}p\.consensus\.rank/.test(js));
-  ok('and "#" is the odds rank, not the consensus rank',
-    /function primaryRank\(p\) \{ return rankOf\(p, 'vegas'\); \}/.test(js));
   ok('and the tool feeds it whichever of four boards the reader picked',
     /f \+ 'Rank'/.test(tool) && /points: bp\(r\)/.test(tool));
-  ok('neither hands it a pooled flex slot: that is spelled out instead',
-    /spellOut: pos === 'FLEX'/.test(js) && /spellOut: pos === 'FLEX'/.test(tool) &&
+  ok('it is never handed a pooled flex slot: that is spelled out instead',
+    /spellOut: pos === 'FLEX'/.test(tool) &&
     /o\.spellOut && POS_LONG\[p\.position\]/.test(playerLine));
   ok('a usage swing is quoted only once three games have earned it',
     /rt && rt\.applied && rt\.pct != null/.test(reads));
@@ -402,9 +331,6 @@ console.log('\nevery row says what the player is and what is in front of him');
     /posted \? \(env\.impliedDelta != null/.test(reads));
   ok('a player with no game has an opportunity line that says exactly that',
     /On bye this week/.test(reads) && /Out of this week/.test(reads));
-  ok('an absence is no longer printed over a fixture as a bye',
-    !/filter\(function \(w\) \{ return !w\.bye && !w\.out; \}\)\[0\]/.test(js) &&
-    /w0\.out \?/.test(js));
 
   // THE BOARD AROUND HIM. A line that says the same thing about every
   // player says nothing, so each row leads on whatever is LEAST ordinary
@@ -472,14 +398,11 @@ console.log('\nevery row says what the player is and what is in front of him');
     ok('a player is never his own vacancy', !/Receiver 26 is out/.test(opp('w26')));
     ok('the games left close the line rather than open it', /13 games left|12 games left/.test(opp('w0')) && !/^1\d games left/.test(opp('w0')));
     ok('an ordinary slate says so with the worker\'s own grade', /with no stretch that stands out/.test(opp('w20')) || /^His offense/.test(opp('w20')), opp('w20'));
-    ok('the published boards and the tool both hand it the context',
-      /ITReads\.context\(payload\.players\)/.test(js) && /ctx: readCtx/.test(js) &&
+    ok('the tool hands it the context',
       /ITReads\.context\(payload\.players, \{ ppgOf: formPpg \}\)/.test(tool));
   }
 
-  const noRead = allBoards.filter((f) => !read(f).includes('How to read the two lines under a name'));
-  ok('and all eighteen pages tell the reader what the two lines are', noRead.length === 0, noRead.join(', '));
-  ok('so does the tool', /the two lines under a name/i.test(tool));
+  ok('and the tool tells the reader what the two lines are', /the two lines under a name/i.test(tool));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
