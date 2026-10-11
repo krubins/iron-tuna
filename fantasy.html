@@ -42,9 +42,6 @@ body{overflow-x:hidden}
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
-h2{font-size:clamp(23px,3vw,28px);margin:34px 0 10px;letter-spacing:.01em}
-p{color:var(--sec);margin:0 0 16px}
-section{margin:0 0 var(--space-6)}
 
 /* The UA sheet's [hidden] is specificity (0,1,0) — the same as any class — and
    loses to an author sheet at a tie, so `.is-btn{display:inline-flex}` was
@@ -52,205 +49,254 @@ section{margin:0 0 var(--space-6)}
    already saved one. front.html and /dfs carry the same one-line fix. */
 [hidden]{display:none !important}
 
-/* The three-column front this page wears — the nameplate, the shell, the
-   rails, the story cards, the AI Edge plate and the player rail — is
-   .sl-* IN site.css, because /dfs wears the same one. What stays here is
-   this page’s own: the standing argument and the tool shelf. */
-
-/* Market Desk vs. Rankings Desk. Not a table of gaps: two columns, five picks each, each desk
-   arguing the players he expects to beat the other man's ranking on. The ranks
-   ride above each pitch as a chip for scanning and inside the pitch as well,
-   so a paragraph read on its own still says what it is arguing. */
-.fn-riv{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-5) var(--space-6);padding:var(--space-4)}
-.fn-riv-col{min-width:0}
-.fn-riv-head{display:flex;align-items:center;gap:var(--space-2);padding-bottom:var(--space-2);border-bottom:2px solid var(--teal)}
-.fn-riv-av{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;font-size:var(--fs-3xs);flex:none}
-.fn-riv-head b{display:block;font-size:20px;line-height:1.2}
-.fn-riv-head a{color:inherit}
-.fn-riv-head small{display:block;font-size:var(--fs-2xs);font-weight:700;color:var(--teal)}
-.fn-riv-rec{margin-left:auto;text-align:right;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.04em;color:var(--muted);line-height:1.35}
-.fn-riv-rec b{display:block;font-size:var(--fs-md);letter-spacing:0;color:var(--text)}
-.fn-riv-stand{margin:var(--space-3) 0 0;font-size:var(--fs-md);line-height:1.55;font-style:italic;color:var(--muted)}
-.fn-riv-foot{grid-column:1/-1;border-top:1px solid var(--line);padding-top:var(--space-3);font-size:var(--fs-md);line-height:1.55;color:var(--sec)}
-.fn-riv-foot p{margin:0 0 var(--space-2)}.fn-riv-foot p:last-child{margin:0}.fn-riv-foot b{color:var(--text)}
-.fn-riv-pick{padding:var(--space-3) 0;border-top:1px solid var(--line)}
-.fn-riv-pick h3{margin:0;font-size:20px;line-height:1.3}
-.fn-riv-pick h3 small{font-weight:400;font-size:var(--fs-2xs);color:var(--muted);margin-left:6px}
-.fn-riv-ranks{margin:2px 0 4px;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.04em;color:var(--muted)}
-.fn-riv-ranks b{color:var(--text)}.fn-riv-ranks i{font-style:normal;font-weight:400;margin:0 5px}
-.fn-riv-pick p{margin:0;font-size:var(--fs-md);line-height:1.55;color:var(--sec)}
-/* Two columns of five picks do not fit a 640px reading column, so the rivalry
-   breaks to one earlier here than the 760px it breaks at on a full-width page. */
-@media(max-width:1180px){.fn-riv{grid-template-columns:1fr}}
-.sl-main .fn-riv{grid-template-columns:1fr}
-.fn-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(214px,1fr));gap:var(--space-3)}
-.fn-tool{display:block;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-md);
-  padding:var(--space-4) var(--space-5);color:var(--sec);transition:border-color .12s ease,box-shadow .12s ease}
-.fn-tool:hover{border-color:var(--teal);text-decoration:none;}
-.fn-tool b{display:block;color:var(--text);font-size:19px;margin-bottom:4px}
-.fn-tool span{display:block;font-size:var(--fs-sm);line-height:1.55}
-.fn-side .is-card{margin-bottom:0}
-
-/* ══ THE SCOREBOARD DRESS — THIS PAGE'S OWN HALF ══════════════════════════
-   The dress itself is `body.sl-dress` in site.css, because /dfs wears it
-   too. What stays here is what only this page has the markup for: its board
-   plates and their tabbed position switch, the four-decision deck, the AI
-   Edge card, the rivalry columns and the tool shelf. The header over the
-   shared block says what the four moves are; these rules carry them into
-   objects the other page does not own.
-
-   `body.fn-page` rather than `body.sl-dress` on purpose: a rule that would
-   also be right on /dfs belongs in site.css, and the class name is the
-   reminder. --sl-r and --sl-stripe below are declared on body.sl-dress in
-   site.css, which this page also wears. */
-/* ── 3 · the boards ─────────────────────────────────────────────────────── */
-body.fn-page .is-plate{border-radius:var(--sl-r);border-color:var(--line2);background:var(--bg);
-  margin:var(--space-3) 0 var(--space-5)}
-body.fn-page .is-plate-head{background:var(--elev);border-bottom-color:var(--line2);
-  font-family:var(--font-body);font-size:var(--fs-3xs);}
-/* Not a flex row. The label is a text run and a <b> — "This week's board —
-   RB" — and flex both drops the whitespace between them and refuses to let
-   the <b> wrap with the text, which on a phone left "RB" stranded at the
-   right of a two-line label. Padding gets it to the tabs' 40px. */
-body.fn-page .is-plate-head>span{padding:11px var(--space-4);line-height:1.35;
-  font-weight:800;color:var(--text)}
-body.fn-page .is-plate-head>span b{font-weight:800;color:var(--teal)}
-body.fn-page .is-plate-head>div{padding:0;border-left-color:var(--line2)}
-/* Tabs, not a button group. The same radios; the checked one carries a rule
-   under it instead of a tinted pill, which is how every scoreboard on the
-   internet switches a position filter. */
-body.fn-page .is-seg{border:0;border-radius:0;background:transparent;align-self:stretch}
-body.fn-page .is-seg label{border-left:0;border-bottom:3px solid transparent;padding:0 13px;
-  min-height:40px;font-size:var(--fs-3xs);font-weight:800;
-  color:var(--muted);background:transparent}
-body.fn-page .is-seg label:hover{background:transparent;color:var(--text)}
-body.fn-page .is-seg label:has(input:checked){background:transparent;color:var(--text);
-  border-bottom-color:var(--teal)}
-/* Eight nowrap columns have to add up to the column they are in. The plate's
-   own rule gives the outside edges 16px; at 8px they buy back a column's
-   worth of the market-delta chip, which is the one that was hanging off the
-   right edge into the scroller. */
-body.fn-page .is-plate .is-table th:first-child,
-body.fn-page .is-plate .is-table td:first-child{padding-left:12px}
-body.fn-page .is-plate .is-table th:last-child,
-body.fn-page .is-plate .is-table td:last-child{padding-right:12px}
-body.fn-page .is-plate-foot{padding:10px var(--space-4);border-top-color:var(--line2);
-  background:var(--panel);gap:var(--space-3) var(--space-4)}
-body.fn-page .is-plate-foot p{font-size:var(--fs-2xs);line-height:1.5}
-body.fn-page .is-plate-foot .is-btn{padding:7px 13px;border-radius:4px;font-size:var(--fs-3xs);
-  font-weight:800;}
-body.fn-page .is-plate-state{padding:var(--space-5) var(--space-4);font-size:var(--fs-sm)}
-
-/* ── 5 · the deck ───────────────────────────────────────────────────────── */
-/* Four tiles, each with the colored rule that says which of the four it is.
-   They were 24px headlines in 240px boxes, so every one of them wrapped to
-   three lines and the row was 300px tall. */
-/* Two by two, not auto-fit. Four decisions in a 760px column auto-fit to
-   three across and one orphan on a second row, which reads as three things
-   and an afterthought — and the orphan is the Trade Finder. */
-body.fn-page .is-deck{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3);
-  margin:var(--space-4) 0 0}
-@media(max-width:540px){body.fn-page .is-deck{grid-template-columns:minmax(0,1fr)}}
-body.fn-page .is-act{border-radius:var(--sl-r);border-color:var(--line2);border-top:3px solid var(--teal);
-  padding:var(--space-4);gap:6px}
-body.fn-page .is-act.gold{border-top-color:var(--gold)}
-body.fn-page .is-act.flat{border-top-color:var(--line2)}
-body.fn-page .is-act-k{font-size:10.5px;}
-body.fn-page .is-act-h{font-size:18px;line-height:1.24}
-body.fn-page .is-act p{font-size:var(--fs-sm);line-height:1.45}
-body.fn-page .is-act-go{font-size:10.5px;}
-body.fn-page .sl-main .is-band{padding:var(--space-4) var(--space-5) var(--space-5);
-  border-radius:var(--sl-r);border-color:var(--line2);margin:var(--space-5) 0}
-body.fn-page .sl-edge{border-radius:var(--sl-r);padding:var(--space-5)}
-body.fn-page .sl-edge-k{font-family:var(--font-body);font-size:11px;}
-body.fn-page .sl-edge h3{font-size:clamp(21px,2.1vw,25px);line-height:1.22;margin-bottom:var(--space-3)}
-body.fn-page .sl-edge p{font-size:var(--fs-sm);line-height:1.6;margin-bottom:var(--space-3)}
-body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-2xs);line-height:1.5}
-
-/* ── 7 · the standing argument, and the shelf ───────────────────────────── */
-body.fn-page .fn-riv{gap:var(--space-4) var(--space-5);padding:var(--space-4) var(--space-5)}
-body.fn-page .fn-riv-head b{font-size:17px}
-body.fn-page .fn-riv-head small{font-size:10.5px;}
-body.fn-page .fn-riv-av{width:26px;height:26px;font-size:11px}
-body.fn-page .fn-riv-stand{font-size:var(--fs-sm);line-height:1.5;margin-top:var(--space-2)}
-body.fn-page .fn-riv-pick{padding:var(--space-3) 0}
-body.fn-page .fn-riv-pick h3{font-size:17px}
-body.fn-page .fn-riv-pick p{font-size:var(--fs-sm);line-height:1.5}
-body.fn-page .fn-riv-ranks{font-size:11px}
-body.fn-page .fn-riv-foot{font-size:var(--fs-2xs);line-height:1.5}
-body.fn-page .fn-tools{grid-template-columns:repeat(auto-fit,minmax(188px,1fr));gap:var(--space-3)}
-body.fn-page .fn-tool{border-radius:var(--sl-r);border-color:var(--line2);padding:var(--space-3) var(--space-4)}
-body.fn-page .fn-tool b{font-size:16px;margin-bottom:2px}
-body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
-
-/* ── 8 · the rails, and the width they give back ────────────────────────── */
-/* 48px of rail gutter on each side is a reading page's measure. This is a
-   results page: the middle column gets the 32px version and the 24px the
-   rails give up, which is about sixty pixels of board.
-
-   INSIDE THE BREAKPOINT, AND IT HAS TO BE. site.css drops the shell to two
-   columns at 1180px and to one at 860px from rules that are (0,1,0). An
-   unconditional (0,2,0) here outranks both of them at every width, so the
-   first draft of this line held the phone at a 212px rail beside a 300px
-   player rail and squeezed the board into what was left. Anything that
-   restates grid-template-columns on this shell belongs in a min-width. */
-@media(min-width:1181px){
-  body.fn-page .sl-shell{grid-template-columns:212px minmax(0,1fr) 296px;column-gap:var(--space-6)}
+/* ══ THE HOMEPAGE'S MATERIALS (2026-10-11) ═════════════════════════════════
+   Ken: the lane page "looks very AI". It did: a tinted nameplate with an
+   eyebrow and two buttons, then nine labelled sections of outlined cards at
+   one weight, each with a kicker, a heading, a paragraph and an arrow, down
+   three columns. The homepage (front.html) does not read that way, and this
+   page now wears its composition: a white centred hero (one headline, one
+   sentence, the search field, three text links), the six illustrated position
+   tiles, outlined cards only where there is a sentence to carry, the lane's
+   own illustrated tool tiles, hairlines and whitespace doing the grouping.
+   The left rail stays; the right rail folded into it. Every rule below is a
+   value front.html declares, restated here because that page keeps its sheet
+   inline; when one moves, both move. They are declared on the body, not on
+   :root: a content page may not carry a palette of its own
+   (tools/test-reading-view.mjs), and these are spacing and type tokens
+   under front.html's names, not colours site.css does not already set. */
+body.fn-page{
+  --ink:#111418;--ink-2:#454c57;--ink-3:#5f6672;--card:#ffffff;--good:#0a6a4c;
+  --fs-hero:clamp(44px,5.2vw,68px);
+  --sp-4:4px;--sp-8:8px;--sp-12:12px;--sp-16:16px;--sp-24:24px;--sp-32:32px;--sp-48:48px;--sp-64:64px;
+  --sec-gap:72px;
 }
-@media(min-width:1400px){body.fn-page .sl-shell{column-gap:var(--space-7)}}
-/* ══ THE PAPER PASS — THIS PAGE'S OWN HALF (2026-10-10) ═══════════════════
-   The shared half sits at the foot of the scoreboard dress in site.css and
-   says why: the homepage moved onto paper on 2026-10-08 and this page still
-   wore the September dress. An inline sheet outranks site.css at equal
-   specificity, so the objects only this page has the markup for — the
-   plates, the deck, the AI Edge card, the rivalry columns and the tool
-   shelf — are restated here in the homepage's materials: 10px corners,
-   hairlines, 600 where the dress said 800, no coloured rule on a card, no
-   italic, 19px headings over 16px text. Nothing here moves markup or a
-   control. */
-/* the plates: white, a hairline, the head and foot on the same white */
-body.fn-page .is-plate{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--bg)}
-body.fn-page .is-plate-head{background:var(--bg);border-bottom-color:var(--line)}
-body.fn-page .is-plate-head>span{font-weight:600;font-size:var(--fs-16)}
-body.fn-page .is-plate-head>span b{font-weight:600;color:var(--text)}
-body.fn-page .is-plate-head>div{border-left-color:var(--line)}
-body.fn-page .is-seg label{font-weight:600;font-size:var(--fs-14)}
-body.fn-page .is-plate-foot{background:var(--bg);border-top-color:var(--line)}
-body.fn-page .is-plate-foot p{font-size:var(--fs-14)}
-body.fn-page .is-plate-foot .is-btn{font-weight:600;font-size:var(--fs-14)}
-/* the deck: four outlined cards, no top rule in any colour */
-body.fn-page .is-deck{gap:var(--space-5);margin:var(--space-5) 0 0}
-body.fn-page .is-act{border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-5);gap:var(--space-2)}
-body.fn-page .is-act.gold,body.fn-page .is-act.flat{border-top-color:var(--line)}
-body.fn-page .is-act-k{font-size:var(--fs-13)}
-body.fn-page .is-act-h{font-size:var(--fs-19);line-height:1.3}
-body.fn-page .is-act p{font-size:var(--fs-16);line-height:1.5}
-body.fn-page .is-act-go{font-size:var(--fs-14)}
-/* the bands this page wraps the deck and the argument in: gone */
-body.fn-page .sl-main .is-band{margin:0;padding:0;border:0;border-radius:0;background:none}
-/* AI Edge */
-body.fn-page .sl-edge{border-radius:var(--radius-md);border-color:var(--line);padding:var(--space-5)}
-body.fn-page .sl-edge-k{font-size:var(--fs-13)}
+@media(max-width:860px){body.fn-page{--sec-gap:48px}}
+.hm-sec{margin:var(--sec-gap) 0 0}
+.sl-main>.hm-sec:first-child{margin-top:0}
+.hm-sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-16);flex-wrap:wrap;margin:0 0 var(--sp-16)}
+.hm-sec-head h2{margin:0;font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.15}
+.hm-sec-head a{font-size:var(--fs-14);font-weight:600;white-space:nowrap}
+.hm-sub{margin:0 0 var(--sp-24);font-size:var(--fs-16);color:var(--ink-2);max-width:60ch;line-height:1.5}
+.hm-sub a{font-weight:600}
+
+/* ── 1 · the hero ─────────────────────────────────────────────────────────
+   White, centred: the headline, one sentence, the search field (the one pill
+   on the page, and it is a field), the entry points as text links, the
+   scoring note, a hairline. The ids fnSaveBtn and fnScoring are the ones the
+   league script writes to; they moved from a button row into the links. */
+.hm-hero{padding:var(--sp-64) 0 0;text-align:center}
+.hm-hero h1{margin:0 auto var(--sp-16);font-size:var(--fs-hero);font-weight:700;letter-spacing:-.03em;line-height:1.02;max-width:20ch;text-wrap:balance}
+@media(max-width:480px){.hm-hero h1{font-size:var(--fs-34)}}
+.hm-lede{margin:0 auto var(--sp-32);font-size:var(--fs-19);color:var(--ink-2);max-width:56ch;line-height:1.5}
+.hm-find{max-width:640px;margin:0 auto}
+.hm-entry{display:flex;justify-content:center;flex-wrap:wrap;gap:var(--sp-8) var(--sp-32);margin:var(--sp-24) 0 0;padding:0;list-style:none}
+.hm-entry a{font-size:var(--fs-16);font-weight:600}
+.hm-entry li[hidden]{display:none}
+.hm-fine{margin:var(--sp-12) 0 0;font-size:var(--fs-14);color:var(--ink-3)}
+.hm-fine b{color:var(--ink);font-weight:600}
+.hm-rule{border:0;height:1px;background:var(--line);margin:var(--sp-48) 0 0}
+@media(max-width:860px){.hm-hero{padding-top:var(--sp-48)}.hm-rule{margin-top:var(--sp-32)}}
+/* The league strip rides between the rule and the shell, at the shell's width. */
+.fn-state{padding-top:var(--sp-16)}
+.fn-state:empty,.fn-state:has(> [hidden]:only-child){display:none}
+
+/* ── 2 · the shell: the rail, and one wide column ─────────────────────────
+   site.css draws three columns for this page. The player rail now sits in
+   the left rail under the navigation, so the shell is the rail and the
+   front. The restatement is inside min-width, because the shell's own
+   two-step collapse is written (0,1,0) and an unconditional (0,2,0) here
+   would hold the phone at two columns. */
+@media(min-width:861px){
+  body.fn-page .sl-shell{grid-template-columns:232px minmax(0,1fr);grid-template-areas:"nav main";column-gap:var(--sp-48)}
+}
+@media(min-width:1181px){body.fn-page .sl-shell{grid-template-columns:248px minmax(0,1fr);column-gap:var(--sp-64)}}
+body.fn-page .sl-shell{padding-top:var(--sp-32)}
+/* The rail on paper: no shade, no box. Whitespace and hairlines group it,
+   the same way the homepage groups everything. */
+body.fn-page .sl-left{background:none;border:0;border-radius:0;padding:0}
+body.fn-page .sl-nav{border-top:0;padding-top:0}
+body.fn-page .sl-nav-h{font-size:var(--fs-14);color:var(--ink-3);margin-bottom:var(--sp-8)}
+body.fn-page .sl-nav li{border-bottom-color:var(--line)}
+body.fn-page .sl-nav li:first-child{border-top:1px solid var(--line)}
+body.fn-page .sl-nav a{padding:10px 0}
+body.fn-page .sl-nav b{font-size:var(--fs-16)}
+body.fn-page .sl-nav span{font-size:var(--fs-13);color:var(--ink-3)}
+body.fn-page .sl-nav-more{border-top-color:var(--line)}
+body.fn-page .sl-nav-more p{color:var(--ink-3)}
+/* The player rail, under the navigation. */
+.fn-rail-upd{margin-top:var(--sp-32)}
+body.fn-page .sl-upd{border-color:var(--line);border-radius:10px}
+body.fn-page .sl-upd-h{background:var(--card);border-bottom-color:var(--line)}
+body.fn-page .sl-upd-note{font-size:var(--fs-13);color:var(--ink-3);line-height:1.5;margin:var(--sp-12) 0 0}
+@media(max-width:860px){
+  body.fn-page .sl-nav li:first-child{border-top:0}
+  /* The updates module is a column object; between a chip row and the front
+     on a phone it would be the first thing on the screen. It goes to the
+     foot of the page there, with the rest of the rail's "also here". */
+  .fn-rail-upd{display:none}
+}
+
+/* ── 3 · the position tiles ───────────────────────────────────────────────
+   front.html's, as they are: six portrait tiles, each a link to that
+   position's weekly board, the name over a dark fade at the foot. */
+.hm-tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:var(--sp-24);margin:0;padding:0;list-style:none}
+.hm-tile{position:relative;display:block;aspect-ratio:3/4;border-radius:10px;overflow:hidden;color:#fff;background:var(--t1)}
+.hm-tile:hover{color:#fff;text-decoration:none}
+.hm-tile:hover .hm-tile-name{text-decoration:underline}
+.hm-tile svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hm-tile-cap{position:absolute;left:0;right:0;bottom:0;padding:var(--sp-48) var(--sp-16) var(--sp-16);background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.72))}
+.hm-tile-name{display:block;font-size:var(--fs-19);font-weight:600;line-height:1.2}
+.hm-tile-live{display:block;font-size:var(--fs-13);color:rgba(255,255,255,.86);margin-top:2px;font-variant-numeric:tabular-nums}
+@media(max-width:1180px){.hm-tiles{gap:var(--sp-12)}.hm-tile-name{font-size:var(--fs-14);overflow-wrap:anywhere}.hm-tile-cap{padding:var(--sp-32) var(--sp-12) var(--sp-12)}}
+@media(max-width:860px){
+  .hm-tiles{display:flex;overflow-x:auto;margin:0 calc(-1 * var(--space-4));padding:0 var(--space-4);gap:var(--sp-12);scrollbar-width:none;scroll-snap-type:x proximity;scroll-padding-inline:var(--space-4)}
+  .hm-tiles::-webkit-scrollbar{display:none}
+  .hm-tiles li{flex:0 0 44%;scroll-snap-align:start}
+  .hm-tile{width:100%}
+}
+/* The board under the tiles is the ledger the tiles open onto. */
+.hm-tiles+.is-plate{margin-top:var(--sp-24)}
+
+/* ── 4 · the cards ────────────────────────────────────────────────────────
+   front.html's How-it-works cards: outlined, 10px, a heading over a
+   sentence. The only enclosed surface on the page that is not a ledger, and
+   used only where a live sentence has to sit somewhere: the two calls open
+   this week, and the start/sit column. A card that is a link is the whole
+   card; nothing inside it says "→". */
+.hm-how-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-24)}
+.hm-how-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.hm-input{display:block;border:1px solid var(--line);border-radius:10px;padding:var(--sp-24);background:var(--card);color:var(--ink);min-width:0}
+a.hm-input:hover{text-decoration:none;border-color:var(--line2);color:var(--ink)}
+a.hm-input:hover h3{text-decoration:underline}
+.hm-input .k{display:block;margin:0 0 var(--sp-8);font-size:var(--fs-14);color:var(--ink-3)}
+.hm-input h3{margin:0 0 var(--sp-8);font-size:var(--fs-19);font-weight:600;line-height:1.3;letter-spacing:-.005em}
+.hm-input h3 em{font-style:normal;color:var(--teal)}
+.hm-input p{margin:0;font-size:var(--fs-16);color:var(--ink-2);line-height:1.5}
+.hm-input p+p{margin-top:var(--sp-8)}
+.hm-input .is-note{font-size:var(--fs-14);color:var(--ink-3)}
+.hm-input .is-btns{margin-top:var(--sp-16)}
+.hm-input .is-btn{border-radius:4px}
+@media(max-width:1100px){.hm-how-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.hm-how-grid,.hm-how-grid.two{grid-template-columns:1fr;gap:var(--sp-16)}}
+/* Four across: the two live calls, the waiver price, and the rest of the
+   lane as a list in the last card. */
+.hm-how-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.fn-now .hm-input h3 em{font-weight:400}
+.fn-now .hm-input p{font-size:var(--fs-14)}
+.fn-more ul{list-style:none;margin:0;padding:0}
+.fn-more li{padding:7px 0;border-top:1px solid var(--line);line-height:1.3}
+.fn-more li:first-child{border-top:0;padding-top:0}
+.fn-more li a{font-size:var(--fs-16);font-weight:600;color:var(--ink)}
+.fn-more li a:hover{color:var(--teal)}
+.fn-more li span{display:block;margin-top:1px;font-size:var(--fs-13);color:var(--ink-3)}
+@media(max-width:1100px){.hm-how-grid.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.hm-how-grid.four{grid-template-columns:1fr}}
+/* The three FAAB figures, as the homepage sets a figure: a label over a number. */
+.is-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-16);margin:var(--sp-4) 0 var(--sp-16);padding:0}
+.is-stat{min-width:0;border-left:1px solid var(--line);padding-left:var(--sp-12)}
+.is-stat:first-child{border-left:0;padding-left:0}
+.is-stat b{display:block;font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--ink)}
+.is-stat span{display:block;margin-top:2px;font-size:var(--fs-13);color:var(--ink-3)}
+
+/* ── 5 · the ledgers ──────────────────────────────────────────────────────
+   The two boards are the page's ledgers: white, one hairline, the head and
+   foot on the same white, the position switch as tabs. The dress in site.css
+   keeps its 42px rows. */
+body.fn-page .is-plate{border:1px solid var(--line);border-radius:10px;background:var(--card);margin:0;overflow:hidden}
+body.fn-page .is-plate-head{background:var(--card);border-bottom:1px solid var(--line);font-family:var(--font-body)}
+body.fn-page .is-plate-head>span{padding:11px var(--sp-16);line-height:1.35;font-weight:600;font-size:var(--fs-16);color:var(--ink)}
+body.fn-page .is-plate-head>span b{font-weight:600;color:var(--ink)}
+body.fn-page .is-plate-head>div{padding:0;border-left:1px solid var(--line)}
+body.fn-page .is-seg{border:0;border-radius:0;background:transparent;align-self:stretch}
+body.fn-page .is-seg label{border-left:0;border-bottom:3px solid transparent;padding:0 13px;min-height:40px;font-size:var(--fs-14);font-weight:600;color:var(--ink-3);background:transparent}
+body.fn-page .is-seg label:hover{background:transparent;color:var(--ink)}
+body.fn-page .is-seg label:has(input:checked){background:transparent;color:var(--ink);border-bottom-color:var(--teal)}
+body.fn-page .is-plate .is-table th:first-child,body.fn-page .is-plate .is-table td:first-child{padding-left:12px}
+body.fn-page .is-plate .is-table th:last-child,body.fn-page .is-plate .is-table td:last-child{padding-right:12px}
+body.fn-page .is-plate-foot{padding:10px var(--sp-16);border-top:1px solid var(--line);background:var(--card);gap:var(--sp-12) var(--sp-16)}
+body.fn-page .is-plate-foot p{font-size:var(--fs-14);color:var(--ink-3);line-height:1.5}
+body.fn-page .is-plate-foot .is-btn{padding:7px 10px;border-radius:4px;font-size:var(--fs-14);font-weight:600}
+body.fn-page .is-plate-state{padding:var(--sp-24) var(--sp-16);font-size:var(--fs-16);color:var(--ink-3)}
+
+/* ── 6 · what is empty says so, in a sentence ─────────────────────────────
+   Not a box with an icon: a line of text where the thing would be, and the
+   link to where it is. */
+body.fn-page .is-vacant{border:0;border-radius:0;background:none;padding:var(--sp-8) 0;gap:var(--sp-16)}
+body.fn-page .is-vacant b{font-size:var(--fs-16);font-weight:600;color:var(--ink)}
+body.fn-page .is-vacant span{font-size:var(--fs-14);color:var(--ink-3)}
+body.fn-page .is-vacant .is-btn{border-radius:4px}
+
+/* ── 7 · the desk ─────────────────────────────────────────────────────────
+   front.html's story cards: white, 10px, a soft lift off the paper, the
+   newest as the wide lead and the two under it in a row. */
+body.fn-page .sl-stories{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-24);margin:0}
+body.fn-page .sl-story{border:0;border-radius:10px;padding:var(--sp-24);gap:var(--sp-12);
+  box-shadow:0 1px 2px rgba(17,20,24,.06),0 4px 14px rgba(17,20,24,.10);transition:box-shadow .15s ease}
+body.fn-page .sl-story:hover{border:0;box-shadow:0 2px 4px rgba(17,20,24,.08),0 8px 24px rgba(17,20,24,.14)}
+body.fn-page .sl-story.lead{grid-column:1/-1;padding:var(--sp-32)}
+body.fn-page .sl-story.lead h3{font-size:var(--fs-28);font-weight:700;line-height:1.25;letter-spacing:-.01em}
+body.fn-page .sl-story.lead p{font-size:var(--fs-16);line-height:1.5}
+body.fn-page .sl-story h3{font-size:var(--fs-19);line-height:1.3}
+body.fn-page .sl-story p{font-size:var(--fs-14);line-height:1.5}
+body.fn-page .sl-story .nr-kicker{font-size:var(--fs-13);color:var(--ink-3);font-weight:400;letter-spacing:0;text-transform:none}
+body.fn-page .sl-story .nr-flag{display:none}
+body.fn-page .sl-story .nr-by{border-top-color:var(--line)}
+body.fn-page .sl-story.is-boast{background:var(--card)}
+@media(max-width:700px){body.fn-page .sl-stories{grid-template-columns:1fr;gap:var(--sp-16)}
+  body.fn-page .sl-story.lead{padding:var(--sp-24)}body.fn-page .sl-story.lead h3{font-size:var(--fs-23)}}
+
+/* ── 8 · AI Edge: a column of prose on a hairline, not a card ─────────── */
+body.fn-page .sl-edge{border:0;border-radius:0;padding:0;max-width:72ch}
+body.fn-page .sl-edge-k{font-size:var(--fs-14);color:var(--ink-3)}
 body.fn-page .sl-edge h3{font-size:var(--fs-23)}
-body.fn-page .sl-edge p{font-size:var(--fs-16);line-height:1.5}
-body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14)}
-/* Market Desk vs. Rankings Desk: the heads on a hairline, the initials on the grey the
-   homepage uses for a face with no photograph, the standing line in roman */
-body.fn-page .fn-riv-head{border-bottom:1px solid var(--line)}
-body.fn-page .fn-riv-head b{font-size:var(--fs-19)}
-body.fn-page .fn-riv-av{background:var(--elev);color:var(--text);font-weight:600;font-size:var(--fs-13)}
-body.fn-page .fn-riv-head small{color:var(--muted);font-weight:400;font-size:var(--fs-13)}
-body.fn-page .fn-riv-rec{letter-spacing:0;font-weight:400;font-size:var(--fs-13)}
-body.fn-page .fn-riv-stand{font-style:normal;font-size:var(--fs-16);line-height:1.5}
-body.fn-page .fn-riv-ranks{letter-spacing:0;font-weight:400;font-size:var(--fs-13)}
-body.fn-page .fn-riv-pick h3{font-size:var(--fs-19)}
-body.fn-page .fn-riv-pick p,body.fn-page .fn-riv-foot{font-size:var(--fs-16);line-height:1.5}
-/* the shelf: outlined cards at the deck's own weight */
-body.fn-page .fn-tools{gap:var(--space-5)}
-body.fn-page .fn-tool{border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-5);transition:none}
-body.fn-page .fn-tool:hover{border-color:var(--line2)}
-body.fn-page .fn-tool b{font-size:var(--fs-19);margin-bottom:var(--space-2)}
-body.fn-page .fn-tool span{font-size:var(--fs-16);line-height:1.5}
+body.fn-page .sl-edge p{font-size:var(--fs-16);line-height:1.55;color:var(--ink-2)}
+body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14);color:var(--ink-3)}
+
+/* ── 9 · Market Desk vs. Rankings Desk ────────────────────────────────────
+   Two columns, five picks each, on hairlines. The heads carry the initials
+   on the grey the homepage uses for a face with no photograph. */
+.fn-riv{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-32) var(--sp-48);padding:0}
+.fn-riv-col{min-width:0}
+.fn-riv-head{display:flex;align-items:center;gap:var(--sp-12);padding-bottom:var(--sp-12);border-bottom:1px solid var(--line)}
+.fn-riv-av{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:var(--line);color:var(--ink);font-weight:600;font-size:var(--fs-13);flex:none}
+.fn-riv-head b{display:block;font-size:var(--fs-19);line-height:1.2}
+.fn-riv-head a{color:inherit}
+.fn-riv-head small{display:block;font-size:var(--fs-13);color:var(--ink-3)}
+.fn-riv-rec{margin-left:auto;text-align:right;font-size:var(--fs-13);color:var(--ink-3);line-height:1.35}
+.fn-riv-rec b{display:block;font-size:var(--fs-19);color:var(--ink);font-variant-numeric:tabular-nums}
+.fn-riv-stand{margin:var(--sp-12) 0 0;font-size:var(--fs-16);line-height:1.5;color:var(--ink-2)}
+.fn-riv-foot{grid-column:1/-1;border-top:1px solid var(--line);padding-top:var(--sp-16);font-size:var(--fs-14);line-height:1.5;color:var(--ink-3)}
+.fn-riv-foot p{margin:0 0 var(--sp-8)}.fn-riv-foot p:last-child{margin:0}.fn-riv-foot b{color:var(--ink)}
+.fn-riv-pick{padding:var(--sp-12) 0;border-top:1px solid var(--line)}
+.fn-riv-pick:first-of-type{border-top:0}
+.fn-riv-pick h3{margin:0;font-size:var(--fs-19);line-height:1.3;font-weight:600}
+.fn-riv-pick h3 small{font-weight:400;font-size:var(--fs-13);color:var(--ink-3);margin-left:6px}
+.fn-riv-ranks{margin:2px 0 4px;font-size:var(--fs-13);color:var(--ink-3)}
+.fn-riv-ranks b{color:var(--ink)}.fn-riv-ranks i{font-style:normal;margin:0 5px}
+.fn-riv-pick p{margin:0;font-size:var(--fs-16);line-height:1.5;color:var(--ink-2)}
+@media(max-width:760px){.fn-riv{grid-template-columns:1fr;gap:var(--sp-32)}}
+
+/* ── 10 · the tools ───────────────────────────────────────────────────────
+   The lane's four tools as front.html draws them under the Season long lane
+   tile (the same illustrations, in the lane's own brown), four across; then
+   the rest of the lane as an index, two columns of links on hairlines. */
+.hm-lane-kit{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-24);margin:0;padding:0;list-style:none}
+.hm-lane-fn{position:relative;display:block;aspect-ratio:4/3;border-radius:10px;overflow:hidden;color:#fff;background:var(--t1)}
+.hm-lane-fn:hover{color:#fff;text-decoration:none}
+.hm-lane-fn:hover .hm-lane-fn-name{text-decoration:underline}
+.hm-lane-fn svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hm-lane-fn-cap{position:absolute;left:0;right:0;bottom:0;padding:var(--sp-48) var(--sp-16) var(--sp-16);background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.72))}
+.hm-lane-fn-name{display:block;font-size:var(--fs-19);font-weight:600;line-height:1.2}
+.hm-lane-fn-sub{display:block;font-size:var(--fs-14);color:rgba(255,255,255,.86);margin-top:2px}
+@media(max-width:1100px){.hm-lane-kit{gap:var(--sp-12)}.hm-lane-fn-name{font-size:var(--fs-16)}.hm-lane-fn-sub{font-size:var(--fs-13)}}
+@media(max-width:600px){.hm-lane-kit{grid-template-columns:repeat(2,minmax(0,1fr))}.hm-lane-fn-cap{padding:var(--sp-24) var(--sp-12) var(--sp-12)}}
+.fn-index{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--sp-48);margin:var(--sp-32) 0 0;padding:0;list-style:none;border-top:1px solid var(--line)}
+.fn-index a{display:block;padding:12px 0;border-bottom:1px solid var(--line);color:var(--ink)}
+.fn-index a:hover{text-decoration:none}
+.fn-index a:hover b{text-decoration:underline}
+.fn-index b{display:block;font-size:var(--fs-16);font-weight:600;line-height:1.3}
+.fn-index span{display:block;margin-top:2px;font-size:var(--fs-14);color:var(--ink-3);line-height:1.45}
+@media(max-width:700px){.fn-index{grid-template-columns:1fr}}
 </style>
 
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://irontuna.com/fantasy","name":"Season Long Fantasy Football: The Odds Makers’ Edge","description":"Season long fantasy football read off the betting market first: weekly rankings, a rest-of-season board, the next five weeks, the week’s start/sit call and the signal engine’s own read — all restated at your league’s scoring.","url":"https://irontuna.com/fantasy","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/fantasy"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Season Long Fantasy Football: The Odds Makers’ Edge"}]}]}</script>
@@ -283,28 +329,28 @@ body.fn-page .fn-tool span{font-size:var(--fs-16);line-height:1.5}
 </header>
 <main id="main">
 
-<!-- ── the nameplate ──────────────────────────────────────────────────────
-     What used to be here was .is-hero: a dark box carrying "Your league,
-     re-scored every week", a 52px headline, a lede at full measure, two
-     buttons and a how-it-works link. Ken, 2026-09-21: remove the whole box.
-
-     The lane's name and what the lane is FOR. The NFL clock that used to ride
-     the dateline came off on 2026-10-10 (Ken: remove the NFL clock).
-     The one action the page improves with rides under it, and the scoring
-     note that has to sit beside it (the script hides the button for a reader
-     who has already saved a league) rides with it. -->
-<section class="sl-mast">
-  <div class="sl-in">
-    <p class="sl-date">
-      <span class="is-eyebrow">In-Season &middot; Season Long</span>
-    </p>
-    <h1>Season Long: <em>the odds makers&rsquo; edge</em> to pickups, trades and lineup decisions</h1>
-    <p class="sl-deck">Every player priced off the betting market first and the consensus projections second, then restated at your league&rsquo;s scoring &mdash; so the claim, the deal and the flex call all come off one number.</p>
-    <div class="is-actions">
-      <a class="is-btn primary" id="fnSaveBtn" href="/my-league">Save my league</a>
-      <a class="is-btn ghost" href="/faq#faq-start">How the number is made</a>
-      <span class="is-hint" id="fnScoring">Scored at PPR until you save your league.</span>
-    </div>
+<!-- ── the hero ───────────────────────────────────────────────────────────
+     front.html's, for this lane: one headline, one sentence, the search
+     field, the entry points as text links, and the scoring note. The two
+     buttons the nameplate carried are the first two links; the script that
+     hides "Save my league" for a reader who has saved one, and renames it
+     for one who has, writes to the same ids it always did. -->
+<section class="hm-hero" aria-labelledby="heroHead">
+  <div class="wrap">
+    <h1 id="heroHead">Season long, priced off the betting market.</h1>
+    <p class="hm-lede">Weekly rankings, the next five weeks, rest of season, the start/sit call and the price of a waiver claim, each read off sportsbook lines first and restated at your league&rsquo;s scoring.</p>
+    <form class="search-field hm-find" role="search" autocomplete="off" action="/player" method="get">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+      <input id="fnFind" name="q" type="search" placeholder="Rankings, trades, waivers or a player" aria-label="Find rankings, trade advice, waiver prices or a player"
+             role="combobox" aria-expanded="false" aria-autocomplete="list" data-player-search="fantasy" data-search-tools>
+    </form>
+    <ul class="hm-entry">
+      <li><a id="fnSaveBtn" href="/my-league">Save my league &rarr;</a></li>
+      <li><a href="/weekly-rankings">This week&rsquo;s rankings &rarr;</a></li>
+      <li><a href="/faq#faq-start">How the number is made &rarr;</a></li>
+    </ul>
+    <p class="hm-fine" id="fnScoring">Scored at PPR until you save your league.</p>
+    <hr class="hm-rule">
   </div>
 </section>
 
@@ -315,20 +361,22 @@ body.fn-page .fn-tool span{font-size:var(--fs-16);line-height:1.5}
 <div class="sl-shell">
 
 <!-- ── the left rail ──────────────────────────────────────────────────────
-     The page's whole-page control, and the ribbon's replacement. Seven
-     destinations, in the order a manager works: what is happening this week,
-     what the season looks like, the window a pickup has to pay back inside,
-     the lineup call, the machine's own read, and then the two tools the
-     rosters unlock. Ken, 2026-10-10: the Trade Tools and the Waiver Advisor
-     were only reachable from the "Do this now" deck and the tool grid at the
-     foot; they belong on the rail too. Four of the seven leave the page and
-     say so with an arrow. -->
+     The page's whole-page control. Seven destinations, in the order a
+     manager works: what is happening this week, what the season looks like,
+     the window a pickup has to pay back inside, the lineup call, the
+     machine's own read, and then the two tools the rosters unlock. Four of
+     the seven leave the page and say so with an arrow. Under them, the
+     player rail that used to be a third column: one player at a time, the
+     Wednesday board's own movers first, then the signal engine's detections.
+     Nothing in it is written that /api/ros-update or /api/signals did not
+     return, and it is painted hidden until they do. -->
 <aside class="sl-left">
   <nav class="sl-nav" aria-label="Season Long">
-    <p class="sl-nav-h">Season Long</p>
+    <p class="sl-nav-h">Season long</p>
     <ul>
+      <li><a href="#now"><b>Do this now</b><span>The calls open in your league this week</span></a></li>
       <li><a href="#board"><b>Weekly Rankings</b><span>Every position, this week, three numbers each</span></a></li>
-      <li><a class="sl-out" href="/season-long-rankings"><b>Season Long Rankings</b><span>Rest of season &mdash; the horizon that decides trades</span></a></li>
+      <li><a class="sl-out" href="/season-long-rankings"><b>Season Long Rankings</b><span>Rest of season, the horizon that decides trades</span></a></li>
       <li><a href="#next5"><b>Next 5 Weeks</b><span>The window a claim or a deal has to pay back in</span></a></li>
       <li><a href="#startsit"><b>Start / Sit</b><span>The week&rsquo;s two calls, and the clock they run against</span></a></li>
       <li><a href="#aiedge"><b>AI Edge</b><span>The week written out of the signal engine</span></a></li>
@@ -337,104 +385,111 @@ body.fn-page .fn-tool span{font-size:var(--fs-16);line-height:1.5}
     </ul>
     <div class="sl-nav-more">
       <p>Also here</p>
-      <a href="#desk">The Newsroom</a>
-      <a href="#now">Do this now</a>
+      <a href="#desk">From the Desk</a>
       <a href="#disagree">Market vs. Rankings</a>
       <a href="#tools">Every tool</a>
     </div>
   </nav>
-</aside>
-
-<!-- ── the right rail ─────────────────────────────────────────────────────
-     One player at a time. The Wednesday board's own movers come first, each
-     with the reason the snapshot diff found for the move; the signal engine's
-     detections follow. Nothing here is written that /api/ros-update or
-     /api/signals did not return, and both are painted hidden until they do. -->
-<aside class="sl-right">
-  <div class="sl-upd" id="slUpd" hidden>
-    <div class="sl-upd-h"><b>Player updates</b><span class="sl-upd-n" id="slUpdN"></span></div>
-    <div class="sl-upd-body" id="slUpdBody" aria-live="polite"></div>
-    <div class="sl-upd-foot">
-      <button type="button" id="slUpdPrev" aria-label="Previous player update">Prev</button>
-      <button type="button" id="slUpdNext" aria-label="Next player update">Next</button>
-      <span class="sl-upd-dots" id="slUpdDots" aria-hidden="true"></span>
+  <div class="fn-rail-upd">
+    <div class="sl-upd" id="slUpd" hidden>
+      <div class="sl-upd-h"><b>Player updates</b><span class="sl-upd-n" id="slUpdN"></span></div>
+      <div class="sl-upd-body" id="slUpdBody" aria-live="polite"></div>
+      <div class="sl-upd-foot">
+        <button type="button" id="slUpdPrev" aria-label="Previous player update">Prev</button>
+        <button type="button" id="slUpdNext" aria-label="Next player update">Next</button>
+        <span class="sl-upd-dots" id="slUpdDots" aria-hidden="true"></span>
+      </div>
     </div>
+    <div class="is-vacant" id="slUpdEmpty">
+      <div class="is-vacant-msg"><b id="slUpdEmptyH">Reading the board&hellip;</b><span id="slUpdEmptyP"></span></div>
+    </div>
+    <p class="sl-upd-note">Every update is a field that changed between two boards, or a rule the signal engine fired on. Nothing is summarised from a source the page cannot show you.</p>
   </div>
-  <div class="is-vacant" id="slUpdEmpty">
-    <span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span>
-    <div class="is-vacant-msg"><b id="slUpdEmptyH">Reading the board&hellip;</b><span id="slUpdEmptyP"></span></div>
-  </div>
-  <p class="sl-upd-note">Every update is a field that changed between two boards, or a rule the signal engine fired on. Nothing is summarised from a source the page cannot show you.</p>
 </aside>
 
-<div class="sl-main sl-narrow">
+<div class="sl-main">
 
-<!-- ── the stories ────────────────────────────────────────────────────────
-     Ken, 2026-09-21: "two or three at a time." The desk publishes eleven
-     pieces a week against the games this page is about, and the front runs the
-     newest three: the first at lead weight, the other two under it. The rest
-     of the week is one link away rather than five headlines deep. -->
-<div class="is-sec" id="desk"><div class="is-sec-top"><span class="is-sec-n">Lead</span><h2>The Newsroom</h2><a class="is-sec-more" href="/in-season/desk">The whole desk &rarr;</a></div>
-  <p id="fnDeskNote">Eight AI analyst personas, one set of facts. <a href="/analysts">Who they are, and the AI disclosure &rarr;</a></p></div>
-<section>
-  <div class="sl-stories" id="fnDesk" hidden></div>
-  <!-- One of the two is always in the DOM. A section that quietly renders
-       nothing reads as a section with nothing in it, which is a different
-       claim and a wrong one; this one says why it is empty. -->
-  <div class="is-vacant" id="fnDeskEmpty">
-    <span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span>
-    <div class="is-vacant-msg"><b id="fnDeskEmptyH">Reading the desk&hellip;</b><span id="fnDeskEmptyP"></span></div>
-    <a class="is-btn ghost" href="/in-season/desk">Read the desk</a>
+<!-- ── do this now ────────────────────────────────────────────────────────
+     The two decisions open in a managed league this week that the board
+     already loaded can answer, each card carrying the answer rather than a
+     link to a place where an answer might be found. Both say so when the
+     board cannot support a call. The waiver and trade decisions need the
+     reader's rosters; they live on the rail and in the tool row. -->
+<section class="hm-sec fn-now" id="now" aria-labelledby="nowHead">
+  <div class="hm-sec-head">
+    <h2 id="nowHead">Do this now</h2>
+    <a href="/weekly-intel">Every tool &rarr;</a>
+  </div>
+  <div class="hm-how-grid four">
+    <a class="hm-input" href="/weekly-intel#startsit">
+      <span class="k">Start / Sit</span>
+      <h3 id="actFlexH">Reading the board&hellip;</h3>
+      <p id="actFlexP">The closest flex pair on this week&rsquo;s board that the betting market splits most widely.</p>
+    </a>
+    <a class="hm-input" href="/vegas-edge">
+      <span class="k">The market&rsquo;s biggest buy</span>
+      <h3 id="actBuyH">Reading the odds&hellip;</h3>
+      <p id="actBuyP">Where a sportsbook with money on the line prices a startable player above the consensus ranking.</p>
+    </a>
+    <a class="hm-input" href="/faab">
+      <span class="k">Waivers</span>
+      <h3>What a claim is worth <em>in your dollars</em></h3>
+      <p>Priced one rival at a time off each team&rsquo;s remaining budget and its actual hole at the position, never a national average.</p>
+    </a>
+    <!-- The row holds four. The rest of the lane's decisions ride in the
+         last card as a list rather than being left off: Ken, 2026-10-11,
+         "if you don't have enough room for enough cards, make the last one
+         more options." -->
+    <div class="hm-input fn-more">
+      <span class="k">More options</span>
+      <ul>
+        <li><a href="/trade-finder">Trade Tools</a><span>Judge the deal on the table, or find one</span></li>
+        <li><a href="/depth-charts">Depth Charts</a><span>Every club&rsquo;s order, with injury designations</span></li>
+        <li><a href="/game-intel">Game Intel</a><span>Lines, totals and implied points</span></li>
+        <li><a href="/player-intel">Player Intel</a><span>Every horizon for any player</span></li>
+        <li><a href="/my-league">Roster Audit</a><span>What each player cost against what he returned</span></li>
+        <li><a href="/weekly-intel">Weekly Intel</a><span>The week, the byes and every tool</span></li>
+      </ul>
+    </div>
   </div>
 </section>
 
-<!-- ── the deck ───────────────────────────────────────────────────────────
-     The decisions a managed league has open right now, each one already
-     carrying the answer rather than a link to a place where an answer might
-     be found. Two of the four fill from the board that is already loaded, so
-     they cost no extra request. Both say so when the board cannot support a
-     call. -->
-<div class="is-band">
-<div class="wrap">
-<div class="is-sec" id="now"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>Do this now</h2><a class="is-sec-more" href="/weekly-intel">Every tool &rarr;</a></div>
-  <p>The four decisions open in a managed league this week. The first two are answered off this week&rsquo;s board; the other two need your rosters, which is one save away.</p></div>
-
-<div class="is-deck">
-  <a class="is-act" href="/weekly-intel#startsit">
-    <span class="is-act-k">Start / Sit</span>
-    <span class="is-act-h" id="actFlexH">Reading the board&hellip;</span>
-    <p id="actFlexP">The closest flex pair on this week&rsquo;s board that the betting market splits most widely.</p>
-    <span class="is-act-go">Set the lineup &rarr;</span>
-  </a>
-  <a class="is-act gold" href="/vegas-edge">
-    <span class="is-act-k">The market&rsquo;s biggest buy</span>
-    <span class="is-act-h" id="actBuyH">Reading the odds&hellip;</span>
-    <p id="actBuyP">Where a sportsbook with money on the line prices a startable player above the consensus ranking.</p>
-    <span class="is-act-go">The whole Vegas board &rarr;</span>
-  </a>
-  <a class="is-act" href="/faab">
-    <span class="is-act-k">Waivers</span>
-    <span class="is-act-h">What a claim is worth <em>in your dollars</em></span>
-    <p>Priced one rival at a time off each team&rsquo;s remaining budget and its actual hole at the position, never a national average.</p>
-    <span class="is-act-go">Open the FAAB Advisor &rarr;</span>
-  </a>
-  <a class="is-act flat" href="/trade-finder">
-    <span class="is-act-k">Trade Tools</span>
-    <span class="is-act-h">Judge the trade on the table, <em>or find one</em></span>
-    <p>The Trade Evaluator scores a deal for every team in it, rosters optional. The Trade Finder takes the rosters and returns the trades the other manager can also say yes to.</p>
-    <span class="is-act-go">Open the Trade Tools &rarr;</span>
-  </a>
-</div>
-</div>
-</div><!-- /.is-band -->
-
-<!-- ── this week's board ──────────────────────────────────────────────────
-     The rail's "Weekly Rankings" lands here. It is the evidence the deck
-     above is drawn from, and it reads better once a reader knows what it is
-     for. -->
-<div class="is-sec" id="board"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>Weekly rankings</h2><a class="is-sec-more" href="/weekly-rankings">The whole week &rarr;</a></div>
-  <p>Iron Tuna is the consensus projection blended toward the betting market. Where the two disagree by more than half a point, the row says which way and by how much.</p></div>
-<section>
+<!-- ── this week, by position ─────────────────────────────────────────────
+     front.html's six tiles, each a link to that position's weekly board, and
+     under them the board itself: twelve rows at a position, Iron Tuna beside
+     the consensus and the market, filtered client-side off one payload. -->
+<section class="hm-sec" id="board" aria-labelledby="posHead">
+  <div class="hm-sec-head">
+    <h2 id="posHead">This week, by position</h2>
+    <a href="/weekly-rankings">Every position &rarr;</a>
+  </div>
+  <p class="hm-sub">Iron Tuna is the consensus projection blended toward the betting market. Where the two disagree by more than half a point, the row says which way and by how much.</p>
+  <ul class="hm-tiles">
+    <li><a class="hm-tile" href="/weekly-qb-rankings" style="--t1:#0f4c5c" data-pos="QB">
+      <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#0f4c5c"/><path d="M-10 170 C 30 60, 90 40, 170 20" fill="none" stroke="#f2c14e" stroke-width="5" stroke-linecap="round"/><path d="M-10 190 C 30 90, 90 70, 170 50" fill="none" stroke="#f2c14e" stroke-width="2" opacity=".45"/><ellipse cx="112" cy="58" rx="22" ry="13" transform="rotate(-28 112 58)" fill="#8c4a2b" stroke="#f6e7d2" stroke-width="2"/><path d="M104 52l14 8M106 48l14 8M108 44l14 8" stroke="#f6e7d2" stroke-width="1.5"/></svg>
+      <span class="hm-tile-cap"><span class="hm-tile-name">Quarterbacks</span><span class="hm-tile-live" hidden></span></span>
+    </a></li>
+    <li><a class="hm-tile" href="/weekly-rb-rankings" style="--t1:#1f5a3c" data-pos="RB">
+      <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#1f5a3c"/><g stroke="#e8e3d0" stroke-width="1.5" opacity=".7"><path d="M0 40h150M0 70h150M0 100h150M0 130h150M0 160h150"/></g><path d="M20 190 L55 150 L45 115 L85 80 L75 45 L120 10" fill="none" stroke="#e8e3d0" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="120" cy="10" r="9" fill="#f2c14e"/></svg>
+      <span class="hm-tile-cap"><span class="hm-tile-name">Running backs</span><span class="hm-tile-live" hidden></span></span>
+    </a></li>
+    <li><a class="hm-tile" href="/weekly-wr-rankings" style="--t1:#2f2a68" data-pos="WR">
+      <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#2f2a68"/><g fill="none" stroke="#ffb4a2" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M75 195V120"/><path d="M75 120L30 80"/><path d="M75 120L120 80"/><path d="M75 120V60"/><path d="M75 60L45 25"/><path d="M75 60L105 25"/><path d="M75 60V15"/></g><g fill="#ffb4a2"><circle cx="30" cy="80" r="5"/><circle cx="120" cy="80" r="5"/><circle cx="45" cy="25" r="5"/><circle cx="105" cy="25" r="5"/><circle cx="75" cy="15" r="5"/></g></svg>
+      <span class="hm-tile-cap"><span class="hm-tile-name">Wide receivers</span><span class="hm-tile-live" hidden></span></span>
+    </a></li>
+    <li><a class="hm-tile" href="/weekly-te-rankings" style="--t1:#7a3e2b" data-pos="TE">
+      <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#7a3e2b"/><rect x="22" y="40" width="106" height="26" rx="3" fill="#f5d7c4"/><rect x="62" y="66" width="26" height="110" rx="3" fill="#f5d7c4"/><path d="M22 140h30M98 140h30" stroke="#f5d7c4" stroke-width="4" stroke-linecap="round" opacity=".6"/></svg>
+      <span class="hm-tile-cap"><span class="hm-tile-name">Tight ends</span><span class="hm-tile-live" hidden></span></span>
+    </a></li>
+    <li><a class="hm-tile" href="/weekly-k-rankings" style="--t1:#324b6e" data-pos="K">
+      <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#324b6e"/><g fill="none" stroke="#dbe4f2" stroke-width="6" stroke-linecap="round"><path d="M40 20v70M110 20v70M40 90h70M75 90v100"/></g><ellipse cx="62" cy="150" rx="12" ry="8" transform="rotate(-60 62 150)" fill="#ffd166"/><path d="M62 150 C 68 120, 72 108, 76 96" fill="none" stroke="#ffd166" stroke-width="2" stroke-dasharray="3 4"/></svg>
+      <span class="hm-tile-cap"><span class="hm-tile-name">Kickers</span><span class="hm-tile-live" hidden></span></span>
+    </a></li>
+    <li><a class="hm-tile" href="/weekly-dst-rankings" style="--t1:#3b3f46" data-pos="DEF">
+      <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#3b3f46"/><path d="M75 22 L122 40 V98 C122 134 100 158 75 172 C50 158 28 134 28 98 V40 Z" fill="none" stroke="#9fe0c4" stroke-width="5" stroke-linejoin="round"/><path d="M48 70h54M48 92h54M48 114h40" stroke="#9fe0c4" stroke-width="5" stroke-linecap="round"/></svg>
+      <span class="hm-tile-cap"><span class="hm-tile-name">Defenses</span><span class="hm-tile-live" hidden></span></span>
+    </a></li>
+  </ul>
   <div class="is-plate">
     <div class="is-plate-head">
       <span>This week&rsquo;s board &mdash; <b id="fnPosLabel">RB</b></span>
@@ -457,22 +512,23 @@ body.fn-page .fn-tool span{font-size:var(--fs-16);line-height:1.5}
     <p class="is-plate-state" id="fnState">Reading the board&hellip;</p>
     <div class="is-plate-foot">
       <p>Iron Tuna is the consensus projection blended toward the market. Vegas is derived from props where a book prices them and from the game line where none does.</p>
-      <a class="is-btn ghost" href="/rankings">All four horizons</a>
+      <a class="is-btn ghost" href="/rankings">All four horizons &rarr;</a>
     </div>
   </div>
 </section>
 
 <!-- ── the next five weeks ────────────────────────────────────────────────
-     Ken, 2026-09-21: a five-week window on the rail. The worker has no
-     five-week horizon and is not being given one for a page: the rest-of-
-     season board already ships every remaining week on every row, so the
-     window is summed HERE, out of `weeks[]`, and the plate prints the week
-     numbers it actually added up. A bye inside the window is a week with no
-     points in it and is counted as such, which is the whole reason a
-     five-week total is worth printing next to a per-game one. -->
-<div class="is-sec" id="next5"><div class="is-sec-top"><span class="is-sec-n">03</span><h2>Next 5 weeks</h2><a class="is-sec-more" href="/rankings#horizon=untilPlayoffs">All five horizons &rarr;</a></div>
-  <p>The window a waiver claim or a trade actually has to pay back inside. Byes and an expected absence are already out of the total, so a man with four games in the window is ranked on four.</p></div>
-<section>
+     The worker has no five-week horizon and is not being given one for a
+     page: the rest-of-season board already ships every remaining week on
+     every row, so the window is summed HERE, out of `weeks[]`, and the plate
+     prints the week numbers it actually added up. A bye inside the window is
+     a week with no points in it and is counted as such. -->
+<section class="hm-sec" id="next5" aria-labelledby="n5SecHead">
+  <div class="hm-sec-head">
+    <h2 id="n5SecHead">Next 5 weeks</h2>
+    <a href="/rankings#horizon=untilPlayoffs">All five horizons &rarr;</a>
+  </div>
+  <p class="hm-sub">The window a waiver claim or a trade actually has to pay back inside. Byes and an expected absence are already out of the total, so a man with four games in the window is ranked on four.</p>
   <div class="is-plate">
     <div class="is-plate-head">
       <span id="n5Head">Next five weeks &mdash; <b id="n5PosLabel">RB</b></span>
@@ -495,112 +551,138 @@ body.fn-page .fn-tool span{font-size:var(--fs-16);line-height:1.5}
     <p class="is-plate-state" id="n5State">Reading the rest-of-season board&hellip;</p>
     <div class="is-plate-foot">
       <p id="n5Foot">Window is the Iron Tuna projection added up over the five weeks named above. Rest of season is the same number over every week that is left, which is what a keeper or a dynasty decision is made on.</p>
-      <a class="is-btn ghost" href="/season-long-rankings">Season long rankings</a>
+      <a class="is-btn ghost" href="/season-long-rankings">Season long rankings &rarr;</a>
     </div>
   </div>
 </section>
 
-<!-- ── the week's two calls, and the clock they run against ───────────────
-     Two calls are the column; the clock and the league summary are the rail
-     beside them on a wide page and under them here: context, dated, not
-     decisions. -->
-<div class="is-sec" id="startsit"><div class="is-sec-top"><span class="is-sec-n">04</span><h2>Start / Sit</h2><a class="is-sec-more" href="/waivers">Why the price is the decision &rarr;</a></div>
-  <p>One lineup call the market disagrees with the rankings about, and one price. Both are stated as a choice, because that is the form the decision actually takes.</p></div>
-<section>
-  <div class="is-split">
-    <div>
-      <div class="is-card feat">
-        <span class="is-tag">Start / Sit</span>
-        <h3>Flex call of the week</h3>
-        <p id="fnFlex">Reading the board&hellip;</p>
-        <p class="is-note" id="fnFlexNote"></p>
-      </div>
-
-      <div class="is-card feat" style="margin-top:var(--space-4)">
-        <span class="is-tag">FAAB Advisor</span>
-        <h3>What a claim is worth, in your dollars</h3>
-        <div class="is-stats" id="fbStats">
-          <div class="is-stat"><b id="fbGoing">&mdash;</b><span>Going rate</span></div>
-          <div class="is-stat"><b id="fbWorth">&mdash;</b><span>Worth to you</span></div>
-          <div class="is-stat key"><b id="fbBid">&mdash;</b><span>What to bid</span></div>
-        </div>
-        <p class="is-note" id="fbNote">These three numbers are computed one rival at a time, from each team&rsquo;s remaining budget and its actual hole at the position &mdash; so they need your league&rsquo;s rosters and its transaction log. Connect it once and they fill in here.</p>
-        <div class="is-btns"><a class="is-btn sec" href="/faab">Open the FAAB Advisor</a></div>
-      </div>
+<!-- ── start / sit ────────────────────────────────────────────────────────
+     The week's lineup call, the price of a claim, and the clock both run
+     against, as three of the homepage's cards in a row. The Your Week card
+     opens beside them once a league is saved. -->
+<section class="hm-sec" id="startsit" aria-labelledby="ssHead">
+  <div class="hm-sec-head">
+    <h2 id="ssHead">Start / Sit</h2>
+    <a href="/waivers">Why the price is the decision &rarr;</a>
+  </div>
+  <p class="hm-sub">One lineup call the market disagrees with the rankings about, and one price. Both are stated as a choice, because that is the form the decision actually takes.</p>
+  <div class="hm-how-grid">
+    <div class="hm-input">
+      <h3>Flex call of the week</h3>
+      <p id="fnFlex">Reading the board&hellip;</p>
+      <p class="is-note" id="fnFlexNote"></p>
     </div>
+    <div class="hm-input">
+      <h3>What a claim is worth, in your dollars</h3>
+      <div class="is-stats" id="fbStats">
+        <div class="is-stat"><b id="fbGoing">&mdash;</b><span>Going rate</span></div>
+        <div class="is-stat"><b id="fbWorth">&mdash;</b><span>Worth to you</span></div>
+        <div class="is-stat key"><b id="fbBid">&mdash;</b><span>What to bid</span></div>
+      </div>
+      <p class="is-note" id="fbNote">Computed one rival at a time, from each team&rsquo;s remaining budget and its actual hole at the position, so they need your league&rsquo;s rosters and its transaction log. Save it once and they fill in here.</p>
+      <div class="is-btns"><a class="is-btn sec" href="/faab">Open the FAAB Advisor</a></div>
+    </div>
+    <div class="hm-input">
+      <h3 id="fnClockH">Waivers process Wednesday 3:00 AM ET</h3>
+      <p id="fnClockP">Claims lock after Monday night on most platforms. The going rate reads your league&rsquo;s own settled bids where it can see them, never a national average.</p>
+    </div>
+    <div class="hm-input" id="fnWeekCard" hidden>
+      <h3 id="fnWeekH">Your week</h3>
+      <p id="fnWeekP">Reading your league&hellip;</p>
+      <div class="is-btns"><a class="is-btn sec" href="/my-week">Open My Week</a></div>
+    </div>
+  </div>
+</section>
 
-    <aside class="is-rail fn-side">
-      <div class="is-card">
-        <span class="is-tag is-live">The clock</span>
-        <h3 id="fnClockH">Waivers process Wednesday 3:00 AM ET</h3>
-        <p id="fnClockP">Claims lock after Monday night on most platforms. The going rate reads your league&rsquo;s own settled bids where it can see them, never a national average.</p>
-      </div>
-      <div class="is-card" id="fnWeekCard" hidden>
-        <span class="is-tag is-live">Your week</span>
-        <h3 id="fnWeekH">Best lineup, matchup and alerts</h3>
-        <p id="fnWeekP">Reading your league&hellip;</p>
-        <div class="is-btns"><a class="is-btn sec" href="/my-week">Open My Week</a></div>
-      </div>
-    </aside>
+<!-- ── from the desk ──────────────────────────────────────────────────────
+     Ken, 2026-09-21: "two or three at a time." The desk publishes eleven
+     pieces a week against the games this page is about, and the front runs
+     the newest three: the first at lead weight, the other two under it. -->
+<section class="hm-sec" id="desk" aria-labelledby="deskHead">
+  <div class="hm-sec-head">
+    <h2 id="deskHead">From the Desk</h2>
+    <a href="/in-season/desk">The whole desk &rarr;</a>
+  </div>
+  <p class="hm-sub" id="fnDeskNote">Eight AI analyst personas, one set of facts. <a href="/analysts">Who they are, and the AI disclosure &rarr;</a></p>
+  <div class="sl-stories" id="fnDesk" hidden></div>
+  <!-- One of the two is always in the DOM. A section that quietly renders
+       nothing reads as a section with nothing in it, which is a different
+       claim and a wrong one; this one says why it is empty. -->
+  <div class="is-vacant" id="fnDeskEmpty">
+    <div class="is-vacant-msg"><b id="fnDeskEmptyH">Reading the desk&hellip;</b><span id="fnDeskEmptyP"></span></div>
+    <a class="is-btn ghost" href="/in-season/desk">Read the desk &rarr;</a>
   </div>
 </section>
 
 <!-- ── AI Edge ───────────────────────────────────────────────────────────
-     The signal engine's week, written out as a story. Every sentence is
-     assembled from one detected insight and the numbers that insight carries,
-     which is the contract buildTake works under in the worker: it can point at
-     numbers, it cannot invent a reason. When the engine finds nothing the
-     section says so and prints nothing, because "a quiet week" is a real
-     reading and an invented paragraph is not. -->
-<div class="is-sec" id="aiedge"><div class="is-sec-top"><span class="is-sec-n">05</span><h2>AI Edge</h2><a class="is-sec-more" href="/vegas-edge">The whole market board &rarr;</a></div>
-  <p>Twelve rules run over the boards, the line history and the usage overlay every time this page loads. What they found this week, in order of how much they found it by.</p></div>
-<section>
+     The signal engine's week, written out. Every sentence is assembled from
+     one detected insight and the numbers that insight carries, which is the
+     contract buildTake works under in the worker: it can point at numbers,
+     it cannot invent a reason. When the engine finds nothing the section
+     says so and prints nothing. -->
+<section class="hm-sec" id="aiedge" aria-labelledby="edgeHead">
+  <div class="hm-sec-head">
+    <h2 id="edgeHead">AI Edge</h2>
+    <a href="/vegas-edge">The whole market board &rarr;</a>
+  </div>
+  <p class="hm-sub">Twelve rules run over the boards, the line history and the usage overlay every time this page loads. What they found this week, in order of how much they found it by.</p>
   <div class="sl-edge" id="slEdge" hidden></div>
   <div class="is-vacant" id="slEdgeEmpty">
-    <span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span>
     <div class="is-vacant-msg"><b id="slEdgeEmptyH">Running the rules&hellip;</b><span id="slEdgeEmptyP"></span></div>
-    <a class="is-btn ghost" href="/vegas-edge">The market board</a>
+    <a class="is-btn ghost" href="/vegas-edge">The market board &rarr;</a>
   </div>
 </section>
 
 <!-- ── the standing argument ─────────────────────────────────────────────
      The desk's one recurring disagreement. It reads a route and hides itself
      when the route has nothing, like every module on this page. -->
-<div class="is-band">
-<div class="wrap">
-  <div class="is-sec" id="disagree"><div class="is-sec-top"><span class="is-sec-n">06</span><h2>Market Desk vs. Rankings Desk</h2><a class="is-sec-more" href="/rankings#blend=50">Slide between them &rarr;</a></div>
-    <p>The desk&rsquo;s one standing argument. <a href="/analysts/market">Market Intelligence</a> and <a href="/analysts/rankings">Fantasy Analysis</a> take five players each every week, the ones each of them expects to beat the other one&rsquo;s ranking, and make the case from the same board.</p></div>
-  <section>
-    <div class="is-plate">
-      <div class="fn-riv" id="fnDisWrap" hidden></div>
-      <div class="is-vacant in-plate" id="fnDisEmpty">
-        <span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span>
-        <div class="is-vacant-msg"><b id="fnDisEmptyH">Reading the boards&hellip;</b><span id="fnDisEmptyP"></span></div>
-        <a class="is-btn ghost" href="/rankings#blend=50">Slide between them</a>
-      </div>
-    </div>
-  </section>
-</div>
-</div>
+<section class="hm-sec" id="disagree" aria-labelledby="disHead">
+  <div class="hm-sec-head">
+    <h2 id="disHead">Market Desk vs. Rankings Desk</h2>
+    <a href="/rankings#blend=50">Slide between them &rarr;</a>
+  </div>
+  <p class="hm-sub">The desk&rsquo;s one standing argument. <a href="/analysts/market">Market Intelligence</a> and <a href="/analysts/rankings">Fantasy Analysis</a> take five players each every week, the ones each of them expects to beat the other one&rsquo;s ranking, and make the case from the same board.</p>
+  <div class="fn-riv" id="fnDisWrap" hidden></div>
+  <div class="is-vacant" id="fnDisEmpty">
+    <div class="is-vacant-msg"><b id="fnDisEmptyH">Reading the boards&hellip;</b><span id="fnDisEmptyP"></span></div>
+    <a class="is-btn ghost" href="/rankings#blend=50">Slide between them &rarr;</a>
+  </div>
+</section>
 
 <!-- ── the tools ─────────────────────────────────────────────────────────
-     A shelf, at shelf weight: four of these are already the deck at the top
-     of the page, and nine cards at card weight read as nine things of equal
-     importance. -->
-<div class="is-sec" id="tools"><div class="is-sec-top"><span class="is-sec-n">07</span><h2>Everything else in the lane</h2><a class="is-sec-more" href="/in-season">In-season overview &rarr;</a></div></div>
-<section>
-  <div class="fn-tools">
-    <a class="fn-tool" href="/rankings"><b>Rankings</b><span>This week, the next three, rest of season and the playoffs &mdash; Iron Tuna, consensus and Vegas side by side.</span></a>
-    <a class="fn-tool" href="/weekly-intel#startsit"><b>Start / Sit</b><span>Your lineup at your settings, with the week&rsquo;s scoring environment priced off the market.</span></a>
-    <a class="fn-tool" href="/depth-charts"><b>Depth Charts</b><span>Every club&rsquo;s published order, refreshed daily, with each man&rsquo;s injury designation on his name.</span></a>
-    <a class="fn-tool" href="/waivers"><b>Waivers</b><span>Why the price is the whole decision in a FAAB league.</span></a>
-    <a class="fn-tool" href="/trade-finder"><b>Trade Tools</b><span>The Trade Evaluator judges a deal you have in hand; the Trade Finder finds one both lineups gain from.</span></a>
-    <a class="fn-tool" href="/my-league"><b>Roster Audit</b><span>What each player cost you against what he has returned.</span></a>
-    <a class="fn-tool" href="/weekly-intel"><b>Weekly Intel</b><span>The week, the byes, the slate, and every tool in one place.</span></a>
-    <a class="fn-tool" href="/game-intel"><b>Game Intel</b><span>Every game with its line, total and the points each offense is implied to score.</span></a>
-    <a class="fn-tool" href="/in-season/desk"><b>The Desk</b><span>Eleven pieces a week, each published when its games are final.</span></a>
-    <a class="fn-tool" href="/player-intel"><b>Player Intel</b><span>Every horizon, prop movement, TD probability and usage for any player.</span></a>
+     The lane's four tools as front.html draws them under the Season long
+     lane tile, then the rest of the lane as an index. -->
+<section class="hm-sec" id="tools" aria-labelledby="toolsHead">
+  <div class="hm-sec-head">
+    <h2 id="toolsHead">Play the week</h2>
+    <a href="/in-season">In-season overview &rarr;</a>
   </div>
+  <ul class="hm-lane-kit" aria-label="Season long tools">
+    <li><a class="hm-lane-fn" href="/rankings" style="--t1:#4a3a1c" data-fn="rankings">
+      <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="200" height="200" fill="#4a3a1c"/><g transform="translate(20 6) scale(.8)"><g fill="#f2c14e"><text x="26" y="48" font-family="Geist,system-ui,sans-serif" font-size="22" font-weight="700">1</text><text x="26" y="84" font-family="Geist,system-ui,sans-serif" font-size="22" font-weight="700" opacity=".8">2</text><text x="26" y="120" font-family="Geist,system-ui,sans-serif" font-size="22" font-weight="700" opacity=".6">3</text></g><g fill="#f3e2bf"><rect x="52" y="34" width="124" height="16" rx="4" opacity=".95"/><rect x="52" y="70" width="98" height="16" rx="4" opacity=".75"/><rect x="52" y="106" width="76" height="16" rx="4" opacity=".55"/></g></g></svg>
+      <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">Rankings</span><span class="hm-lane-fn-sub">Every horizon</span></span>
+    </a></li>
+    <li><a class="hm-lane-fn" href="#startsit" style="--t1:#4a3a1c" data-fn="startsit">
+      <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="200" height="200" fill="#4a3a1c"/><g transform="translate(20 6) scale(.8)"><rect x="30" y="32" width="60" height="86" rx="6" fill="#f3e2bf"/><path d="M46 76l10 10 20-24" fill="none" stroke="#4a3a1c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><rect x="110" y="32" width="60" height="86" rx="6" fill="#f3e2bf" opacity=".4"/><path d="M128 64l24 24M152 64l-24 24" fill="none" stroke="#4a3a1c" stroke-width="6" stroke-linecap="round" opacity=".7"/></g></svg>
+      <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">Start / Sit</span><span class="hm-lane-fn-sub">The lineup call</span></span>
+    </a></li>
+    <li><a class="hm-lane-fn" href="/waivers" style="--t1:#4a3a1c" data-fn="waivers">
+      <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="200" height="200" fill="#4a3a1c"/><g transform="translate(20 6) scale(.8)"><path d="M56 38h64l40 37-40 37H56z" fill="#f3e2bf"/><circle cx="72" cy="75" r="8" fill="#4a3a1c"/><text x="98" y="88" fill="#4a3a1c" font-family="Geist,system-ui,sans-serif" font-size="34" font-weight="700">$</text></g></svg>
+      <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">Waivers</span><span class="hm-lane-fn-sub">Price every claim</span></span>
+    </a></li>
+    <li><a class="hm-lane-fn" href="/trade-finder" style="--t1:#4a3a1c" data-fn="trades">
+      <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="200" height="200" fill="#4a3a1c"/><g transform="translate(20 6) scale(.8)"><rect x="28" y="32" width="44" height="60" rx="6" fill="#f3e2bf" opacity=".9"/><rect x="128" y="58" width="44" height="60" rx="6" fill="#f3e2bf" opacity=".9"/><path d="M80 50h40l-12-12M120 50l-12 12" fill="none" stroke="#f2c14e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M120 100H80l12-12M80 100l12 12" fill="none" stroke="#f2c14e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g></svg>
+      <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">Trade Tools</span><span class="hm-lane-fn-sub">Judge or find one</span></span>
+    </a></li>
+  </ul>
+  <ul class="fn-index" aria-label="Everything else in the lane">
+    <li><a href="/depth-charts"><b>Depth Charts</b><span>Every club&rsquo;s published order, refreshed daily, with each man&rsquo;s injury designation on his name.</span></a></li>
+    <li><a href="/game-intel"><b>Game Intel</b><span>Every game with its line, total and the points each offense is implied to score.</span></a></li>
+    <li><a href="/weekly-intel"><b>Weekly Intel</b><span>The week, the byes, the slate, and every tool in one place.</span></a></li>
+    <li><a href="/player-intel"><b>Player Intel</b><span>Every horizon, prop movement, TD probability and usage for any player.</span></a></li>
+    <li><a href="/my-league"><b>Roster Audit</b><span>What each player cost you against what he has returned.</span></a></li>
+    <li><a href="/in-season/desk"><b>The Desk</b><span>Eleven pieces a week, each published when its games are final.</span></a></li>
+  </ul>
 </section>
 
 </div><!-- /.sl-main -->
@@ -833,7 +915,7 @@ body.fn-page .fn-tool span{font-size:var(--fs-16);line-height:1.5}
   function scoringNote() {
     var L = window.ITInSeason;
     if (L) $('fnScoring').textContent = L.scoringNote();
-    if (L && L.get() && $('fnSaveBtn')) $('fnSaveBtn').textContent = 'Your league settings';
+    if (L && L.get() && $('fnSaveBtn')) $('fnSaveBtn').textContent = 'Your league settings \u2192';
     return L && L.get() ? (PRESET[L.scoring()] || 'ppr') : 'ppr';
   }
 

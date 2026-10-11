@@ -98,5 +98,13 @@ figure. It is gone, and the band is three figures that change.
   4px corners) came off in favour of the homepage's materials. The pass is
   the block at the foot of the dress in site.css plus one block per page;
   the three-column shell and the table density stay.
+  /fantasy was read again on 2026-10-11 (Ken: it still "looks very AI").
+  The nameplate, the eyebrow, the two buttons, the numbered section labels,
+  the four-card deck, the boxed empty states and the ten-card tool shelf
+  came off. It now wears the homepage's composition: the centred hero with
+  the search field and text-link entry points, the six position tiles over
+  the weekly ledger, outlined cards only where a live sentence has to sit,
+  the lane's four illustrated tool tiles over a link index. The left rail
+  stays and the player rail folded into it, so the shell is two columns.
 - The player card's search box keeps the page's own 42px field. It should
   become the shared 52px field when that page is next touched.
