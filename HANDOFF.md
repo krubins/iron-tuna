@@ -13304,6 +13304,23 @@ and left this standing. Not polling: nothing on the site polls a D1-backed
 route, and the admin traffic page, which makes nine passes over `page_views`
 per load, only loads on demand.
 
+**Measured, 00:16 UTC October 11, once the allowance came back** (D1's
+`meta.rows_read` on each query, run from the session): the week-5 history
+read scans 18,432 rows; the prior-weeks (3 and 4) subject read scans 40,442;
+the slate's game lines about 130 (30 games, through `ix_snap_subject`); one
+player card (`marketHistoryAll`) 624; the whole store is only ~85,000 rows
+(ids 1 to 85,220); Tuna Market's 24-hour window 196; `page_views` holds 922
+rows for the last seven days, so the admin page's nine passes over 90 days
+are on the order of 100,000 per load. Both week reads use `ix_snap_week`
+(EXPLAIN QUERY PLAN), so the cost is the repetition, not a missing index: one
+warm isolate pays 18,432 every five minutes and 40,442 every ten, 464,000 an
+hour, 11M a day; the quarter-hour cron, whose memo has always expired by the
+next tick, pays about 59,000 a tick, 5.6M a day on its own, visitors or not.
+The job log agrees: the last successful run before the refusal was 07:01 UTC
+on October 10, seven hours into the allowance day, and no job logged a row
+again until 22:00 UTC. With the digest the pull pays 18,432 per run (ten to
+fifteen a day) and the prior set 40,442 once a week: about 250,000 a day.
+
 **The change: the pull builds a digest, everything else reads it.**
 `odds_snapshots` changes only when `runMarketSnapshot` writes it (eight to
 fifteen times a day), so that is the one place that reads it. After every
