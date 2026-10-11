@@ -136,13 +136,6 @@ jobs:
         if: ${{ !cancelled() }}
         run: node --check dfs-coach.js
 
-      # /it-ranks.js is the board behind all sixteen per-position rankings pages.
-      # A syntax error there leaves every one of them saying "Reading the
-      # board..." forever, with no console anyone is watching.
-      - name: Parse it-ranks.js
-        if: ${{ !cancelled() }}
-        run: node --check it-ranks.js
-
       # /it-trade.js is the Trade Finder's engine and the FAAB Advisor's roster
       # parser. A syntax error there leaves both pages with a button that does
       # nothing.
@@ -184,7 +177,7 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "it-ranks.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js", "it-league.js", "it-season.js", "it-sync.js", "it-inseason.js", "it-inseason-import.js", "it-inseason-ui.js", "my-league.html", "in-season.html", "site.css"];
+            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js", "it-league.js", "it-season.js", "it-sync.js", "it-inseason.js", "it-inseason-import.js", "it-inseason-ui.js", "my-league.html", "in-season.html", "site.css"];
             let bad = 0;
             for (const f of files) {
               const buf = fs.readFileSync(f);
@@ -286,11 +279,11 @@ jobs:
             exit 1
           fi
 
-      # The rankings section — the ribbon under the hero and the fourteen
-      # per-position pages under its two menus — is generated from one link set
-      # and one position list, for the same reason the chrome is. Same contract:
-      # rebuilding here must produce no diff.
-      - name: The rankings ribbon and its per-position pages are rebuilt from their source
+      # The rankings section's ribbon — the band under the hero on every page
+      # that carries it — is generated from one link set and one position list,
+      # for the same reason the chrome is. Same contract: rebuilding here must
+      # produce no diff.
+      - name: The rankings ribbon is rebuilt from its source
         if: ${{ !cancelled() }}
         run: |
           if ! node tools/build-ranks.mjs --check; then
@@ -302,11 +295,13 @@ jobs:
         if: ${{ !cancelled() }}
         run: node tools/test-chrome.mjs
 
-      # The ribbon's link set, the gate over the pages it reaches, and the board
-      # that fills them. Three failures in here are silent — a hand-edited
-      # ribbon, a dropdown clipped inside a scroll container, and a page left out
-      # of POST_DRAFT_PAGES — so all three are asserted rather than reviewed.
-      - name: The rankings ribbon, its pages and the consensus-vs-odds board
+      # The ribbon's link set, the gate over the page it reaches, the redirects
+      # off the eighteen retired rankings addresses, and the two lines under
+      # every name. The failures in here are silent — a hand-edited ribbon, a
+      # dropdown clipped inside a scroll container, a page left out of
+      # POST_DRAFT_PAGES, a redirect that lost a position — so they are
+      # asserted rather than reviewed.
+      - name: The rankings ribbon, the one rankings page and the lines under every name
         if: ${{ !cancelled() }}
         run: node tools/test-ranks.mjs
 
@@ -872,14 +867,12 @@ jobs:
         run: node tools/test-homepage.mjs
 
       # tools/test-boards-render.mjs is the same idea aimed at the in-season
-      # boards. It arrived with the September 2026 pass that gave the rankings
-      # pages a pre-render served from the edge and gave /weekly-*-rankings,
-      # /fantasy, /previews and /weekly-wrap a URL that says what is on screen.
-      # None of that is visible to a file-reading gate: a board that throws on
-      # load, a pre-render that is never removed, or a copy button wired to
-      # nothing passes every other suite in tools/. It runs the worker's own
-      # rkPreHtml rather than a stand-in, so a change to the pre-render shows up
-      # here rather than on irontuna.com.
+      # boards. It arrived with the September 2026 pass that gave /fantasy,
+      # /previews and /weekly-wrap a URL that says what is on screen (and the
+      # per-position rankings pages a pre-render, until those pages retired
+      # onto /rankings on 2026-10-11). None of that is visible to a
+      # file-reading gate: a board that throws on load or a copy button wired
+      # to nothing passes every other suite in tools/.
       - name: The in-season boards, rendered
         if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
         env:

@@ -411,8 +411,8 @@ console.log('\nsix sections, in order, and nothing else');
      r.lanes.every(l => l.kit.length === 4 && l.kit.every(f => f.svg && Math.abs(f.w - f.h) <= 1 && f.w < l.w / 3 && f.top > l.top + l.h))
        && new Set(r.lanes.flatMap(l => l.kit.map(f => f.top))).size === 1, JSON.stringify(r.lanes.map(l => l.kit)));
   ok('the market figures live inside the hero, not as a sixth section', !r.allSections.includes('different') && !!(await page.$('#heroBand #different')));
-  ok('six tiles, one per position, each linking its weekly board',
-     r.tiles.map(t => t.href).join(' ') === '/weekly-qb-rankings /weekly-rb-rankings /weekly-wr-rankings /weekly-te-rankings /weekly-k-rankings /weekly-dst-rankings', r.tiles.map(t => t.href).join(' '));
+  ok('six tiles, one per position, each opening the one rankings page on that position',
+     r.tiles.map(t => t.href).join(' ') === '/rankings#pos=QB /rankings#pos=RB /rankings#pos=WR /rankings#pos=TE /rankings#pos=K /rankings#pos=DST', r.tiles.map(t => t.href).join(' '));
   ok('each tile is portrait, with its own illustration', r.tiles.every(t => t.svg && t.h > t.w), JSON.stringify(r.tiles.map(t => [t.w, t.h])));
   ok('on one row', r.tileTops === 1, String(r.tileTops));
   ok('three How-it-works cards, outlined and rounded', r.howCards.length === 3 && r.howCards.every(c => c.radius === 10 && c.border === '1px'), JSON.stringify(r.howCards));

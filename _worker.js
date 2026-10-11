@@ -81,13 +81,7 @@ async function rl(env, request, bucket, max, ttlSec) {
 // sitemap while the gate is shut. Spell them out.
 const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
   '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk',
-  '/fantasy', '/stats', '/hidden-value', '/previews', '/the-line', '/weekly-wrap', '/value-coach',
-  '/weekly-rankings', '/weekly-qb-rankings', '/weekly-rb-rankings', '/weekly-wr-rankings',
-  '/weekly-te-rankings', '/weekly-flex-rankings', '/weekly-k-rankings', '/weekly-dst-rankings',
-  '/weekly-overall-rankings',
-  '/season-long-rankings', '/season-long-qb-rankings', '/season-long-rb-rankings',
-  '/season-long-wr-rankings', '/season-long-te-rankings', '/season-long-flex-rankings',
-  '/season-long-k-rankings', '/season-long-dst-rankings', '/season-long-overall-rankings']);
+  '/fantasy', '/stats', '/hidden-value', '/previews', '/the-line', '/weekly-wrap', '/value-coach']);
 // The HUB is never in that set: it is the page a closed route serves in place of
 // itself, so gating it would be a loop. /post-draft is the name the hub used to
 // carry and 301s here — see the redirect at the top of fetch().
@@ -150,7 +144,7 @@ const WA_MARKET_BLOCKED_HTML = `<!doctype html>
 <p class="is-eyebrow">Iron Tuna &middot; Betting Market Intel</p>
 <h1>Betting Market Intel is not available in Washington</h1>
 <p class="is-lede">Iron Tuna does not serve its betting-market section, current odds, props, spreads, totals or line-movement data to requests located in Washington State.</p>
-<p>The fantasy tools remain available. <a href="/weekly-rankings">This week&rsquo;s rankings</a>, <a href="/season-long-rankings">season-long rankings</a>, waiver tools and league-specific analysis continue to work without transmitting the current betting-market board.</p>
+<p>The fantasy tools remain available. <a href="/rankings">Rankings</a>, waiver tools and league-specific analysis continue to work without transmitting the current betting-market board.</p>
 <p class="is-note">If you believe you are seeing this in error, it is because the network you are on places you in Washington. Iron Tuna takes no wagers, holds no funds and is not a sportsbook. If gambling has stopped being entertainment, the National Problem Gambling Helpline is 1-800-MY-RESET, free and confidential.</p>
 <p><a href="/">Back to Iron Tuna</a></p>
 </main>
@@ -10360,14 +10354,16 @@ function playerLd(p, row, url) {
 // intel page rather than to the waiting-list gate.
 //
 // Out of season nothing is rewritten and the shell's own pair stands.
-const PC_BOARD = { QB: 'qb', RB: 'rb', WR: 'wr', TE: 'te', K: 'k', DEF: 'dst' };
+// The one rankings page's own position keys (11 Oct 2026; the per-position
+// pages the button used to open are gone, and 301 here).
+const PC_BOARD = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', K: 'K', DEF: 'DST' };
 function playerCta(p) {
   const e = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   const board = PC_BOARD[p.p];
   return '<div class="pc-cta">'
     + '<a class="pc-btn" href="/in-season/player/' + e(p.slug) + '">This week\u2019s intel</a>'
     + (board
-        ? '<a class="pc-btn alt" href="/weekly-' + board + '-rankings">Every '
+        ? '<a class="pc-btn alt" href="/rankings#pos=' + board + '">Every '
           + e((PC_POS_WORD[p.p] || p.p).toLowerCase()) + ' this week</a>'
         : '')
     + '</div>';
@@ -10399,128 +10395,6 @@ function playersIndexHtml(idx) {
   }
   return out;
 }
-// ── the rankings board, PRE-RENDERED ───────────────────────────────────────
-// Sixteen pages (/weekly-*-rankings and /season-long-*-rankings) ship as an
-// empty <div class="rk-board"> that /it-ranks.js fills from /api/boards. That
-// is the right architecture for a reader and the wrong one for everybody else:
-// the crawlers robots.txt invites by name do not run JavaScript, so the board
-// this site is actually FOR — two priced columns on the same player and the
-// argument between them — reached them as a masthead, a disclaimer and a
-// footer, with not one player's name in between.
-//
-// So the top of the board is rendered here, into the host, from the same
-// boardsPayload the API answers with. It is not a second board: same function,
-// same memo, same five-minute window.
-//
-// NO ROUTE TABLE. The horizon and the position are read off the page's own
-// data-rk-* attributes — the ones /it-ranks.js reads — so a seventeenth
-// rankings page is pre-rendered the day it is added and a page whose horizon
-// is edited cannot leave a stale copy of that horizon here.
-//
-// PPR, because that is what /it-ranks.js falls back to when the reader has
-// chosen nothing (remembered()). A reader who HAS chosen re-renders at their
-// own preset on hydration, which is the point of the buttons.
-const RK_PRERENDER_ROWS = 60;
-async function ranksPrerender(env, html) {
-  const m = /<div class="rk-board"[\s\S]{0,600}?>/.exec(html);
-  if (!m) return null;
-  const attr = (k) => { const a = new RegExp('data-rk-' + k + '="([^"]*)"').exec(m[0]); return a ? a[1] : ''; };
-  const horizon = attr('horizon') === 'ros' ? 'ros' : 'week';
-  const pos = (attr('pos') || 'ALL').toUpperCase();
-  let payload = null;
-  try {
-    payload = boardStillToPlay(await boardsPayload(env, {
-      horizon, position: pos, preset: 'ppr', through: null }));
-  } catch (e) { return null; }
-  if (!payload || !payload.ok || !payload.players || !payload.players.length) return null;
-  return { host: m[0], horizon, pos, label: attr('label'), payload };
-}
-
-function rkPreHtml(pre) {
-  const e = (x) => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const n1 = (v) => (v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1));
-  const signed = (v) => (v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : '') + (Math.round(v * 10) / 10).toFixed(1));
-  const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  const week = pre.horizon === 'week';
-  // FLEX pools RB/WR/TE into one order, so its rank field is the pooled one —
-  // the same choice /it-ranks.js makes in rankOf().
-  const rankOf = (p, side) => (p[side] ? (pre.pos === 'FLEX' ? p[side].flexRank : p[side].rank) : null);
-  const rows = pre.payload.players.slice(0, RK_PRERENDER_ROWS).map((p) => {
-    const w0 = p.weeks && p.weeks[0];
-    const opp = week
-      ? '<td class="rk-opp">' + (!w0 || w0.bye ? '<span class="is-status">BYE</span>'
-          : e((w0.home ? 'vs ' : 'at ') + w0.opponent) + (w0.out ? ' <span class="is-status">OUT</span>' : '')) + '</td>'
-      : '<td class="num rk-opp">' + (p.games == null ? '—' : p.games) + '</td>';
-    const d = p.marketDelta || {};
-    const cls = d.points == null ? 'flat' : d.points > 0.05 ? 'up' : d.points < -0.05 ? 'down' : 'flat';
-    const slots = d.rank == null ? '' : (d.rank > 0 ? '+' : '') + d.rank + ' slots';
-    const cr = rankOf(p, 'consensus'), vr = rankOf(p, 'vegas');
-    return '<tr id="p-' + e(slug(p.name)) + '">' +
-      '<td class="num rk-rank">' + (cr == null ? '—' : e(p.position) + cr) + '</td>' +
-      '<td class="rk-who"><a href="/player/' + e(slug(p.name)) + '"><b>' + e(p.name) + '</b></a>' +
-        (pre.pos === 'ALL' || pre.pos === 'FLEX' ? '<small>' + e(p.position) + '</small>' : '') + '</td>' +
-      '<td class="rk-team">' + e(p.team) + '</td>' + opp +
-      '<td class="rk-fan rk-pts">' + n1(p.consensus ? p.consensus.points : null) + '</td>' +
-      '<td class="rk-fan rk-rnk">' + (cr == null ? '—' : e(p.position) + cr) + '</td>' +
-      '<td class="rk-mkt rk-pts">' + n1(p.vegas ? p.vegas.points : null) +
-        '<div class="rk-basis">' + e(p.vegas ? p.vegas.basis : '') + '</div></td>' +
-      '<td class="rk-mkt rk-rnk">' + (vr == null ? '—' : e(p.position) + vr) + '</td>' +
-      '<td class="rk-gap ' + cls + '"><b>' + signed(d.points) + '</b><span>' +
-        e(d.classification || '') + '</span>' + (slots ? '<span class="rk-slots">' + e(slots) + '</span>' : '') + '</td>' +
-      '</tr>';
-  }).join('');
-  const hz = pre.payload.horizon || {};
-  const weeks = hz.weeks || [];
-  const when = weeks.length
-    ? ' (week' + (weeks.length > 1 ? 's ' + weeks[0] + '–' + weeks[weeks.length - 1] : ' ' + weeks[0]) + ')'
-    : '';
-  // The caption says what this table is and what it is NOT: the top of the
-  // board at one scoring, served with the page. Saying "the first 60" where a
-  // reader can see 60 rows is the same promise the stamp line makes after
-  // hydration, and it keeps the pre-render from reading as the whole board.
-  return '<div data-rk-prerender>' +
-    '<p class="is-note">Scored at <b>PPR</b> &middot; ' + e(pre.label || hz.label || '') + when +
-    ' &middot; the top ' + Math.min(RK_PRERENDER_ROWS, pre.payload.players.length) +
-    ' of ' + pre.payload.players.length + ', served with the page. ' +
-    'The rest of the board, the scoring buttons and the filter come with its script.</p>' +
-    '<div class="is-scroll"><table class="is-table rk-vs">' +
-    '<thead><tr><th colspan="4"></th>' +
-    '<th class="rk-grp fan" colspan="2" scope="colgroup">Fantasy Consensus</th>' +
-    '<th class="rk-grp mkt" colspan="2" scope="colgroup">Betting Odds</th>' +
-    '<th></th></tr>' +
-    '<tr><th scope="col">#</th><th scope="col">Player</th><th scope="col">Team</th>' +
-    '<th scope="col">' + (week ? 'Opponent' : 'Games') + '</th>' +
-    '<th scope="col" class="rk-fan num">Proj</th><th scope="col" class="rk-fan num">Rank</th>' +
-    '<th scope="col" class="rk-mkt num">Proj</th><th scope="col" class="rk-mkt num">Rank</th>' +
-    '<th scope="col" class="num">Gap</th></tr></thead>' +
-    '<tbody>' + rows + '</tbody></table></div></div>';
-}
-
-// The same rows as structured data. The page already carries a WebPage and a
-// BreadcrumbList from tools/build-seo.mjs; this adds the one thing that file
-// cannot know, because it is computed per request: what is actually ON the
-// board right now.
-function rkPreLd(pre, url) {
-  const items = pre.payload.players.slice(0, RK_PRERENDER_ROWS).map((p, i) => ({
-    '@type': 'ListItem',
-    position: i + 1,
-    name: p.name + ' (' + p.position + ', ' + p.team + ')',
-  }));
-  return '<script type="application/ld+json">' + JSON.stringify({
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    '@id': url + '#board',
-    name: (pre.label || '') + ' fantasy football rankings'
-      + (pre.pos === 'ALL' ? '' : ', ' + pre.pos),
-    description: 'The fantasy consensus and the betting market on the same player, '
-      + 'and the gap between them. Scored at PPR.',
-    itemListOrder: 'https://schema.org/ItemListOrderDescending',
-    numberOfItems: items.length,
-    itemListElement: items,
-    isPartOf: { '@id': 'https://irontuna.com/#website' },
-  }).replace(/</g, '\\u003c') + '</' + 'script>';
-}
-
 // ── data freshness ─────────────────────────────────────────────────────────
 // Every packet carries where each input came from and how old it is, graded
 // against the KIND's own requirement: a Sunday 12:15 piece needs an injury
@@ -18546,6 +18420,25 @@ export default {
           },
         });
     }
+    // ── the retired rankings pages → the one rankings page ──────────────────
+    // /weekly-<pos>-rankings and /season-long-<pos>-rankings, with their two
+    // hubs, were eighteen pages for one board at two horizons. Since 11 Oct
+    // 2026 there is one rankings page sorted by horizon (Ken), so the old
+    // addresses 301 to it with the horizon and the position in the hash,
+    // which /rankings reads on load. Permanent, because the pages are gone
+    // from the repo; cacheable, because the mapping never changes. The pooled
+    // "overall" board has no position on the one page, so it lands on the
+    // horizon alone. Matched before the gate below: the gate sees /rankings.
+    {
+      const __rk = /^\/(weekly|season-long)-(?:(qb|rb|wr|te|flex|k|dst|overall)-)?rankings\/?$/.exec(url.pathname);
+      if (__rk) {
+        const __hz = __rk[1] === 'weekly' ? 'week' : 'ros';
+        const __pos = __rk[2] && __rk[2] !== 'overall' ? '&pos=' + __rk[2].toUpperCase() : '';
+        return secure(new Response(null, { status: 301, headers: {
+          location: url.origin + '/rankings#horizon=' + __hz + __pos,
+          'cache-control': 'public, max-age=86400' } }));
+      }
+    }
     let __assetReq = request;
     // "/" serves the news-style front page (front.html); the classic SPA hub moved to /hub.
     // The SPA format routes (and /hub) all rewrite to "/" so the asset layer serves index.html.
@@ -18758,25 +18651,6 @@ export default {
           __r.headers.delete('content-length');
           return secure(__r);
         }
-      }
-
-      // The rankings board, pre-rendered into its own host. See ranksPrerender:
-      // the body is only read for the eighteen pages that carry a board, and the
-      // board it builds is read off the page's own data-rk-* attributes. The
-      // position segment is any word, not four letters: /weekly-overall-rankings
-      // (10 Oct 2026, the pooled board on its own page) is seven.
-      if (/^\/(weekly|season-long)-([a-z]+-)?rankings$/.test(__seoKey)) {
-        let __h = await resp.text();
-        const __pre = await ranksPrerender(env, __h);
-        if (__pre) {
-          const __body = rkPreHtml(__pre), __ld = rkPreLd(__pre, 'https://irontuna.com' + __seoKey);
-          __h = __h.replace(__pre.host, () => __pre.host + __body)
-                   .replace('</head>', () => __ld + '\n</head>');
-        }
-        const __r = new Response(__h, resp);
-        __r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-        __r.headers.delete('content-length');
-        return secure(__r);
       }
 
       const r = new Response(resp.body, resp);
