@@ -20,7 +20,15 @@
  *      league's own slots (QB/RB/WR/TE, flex, superflex) greedily by points —
  *      optimal for this slot shape, because every flex accepts what a named
  *      slot accepts — and adds a small weight for the bench, which is injury
- *      insurance and worth something but not what a starter is worth.
+ *      insurance and worth something but not what a starter is worth. Every
+ *      slot is measured against the WIRE: a slot nobody on the roster fills
+ *      is started by the best free agent at the position (replacementLevel),
+ *      not by nothing, and a roster is a fixed number of spots, so a player a
+ *      trade adds has to displace someone and a spot a trade opens is filled
+ *      off the wire. Without that, a 2-for-1 that sent the reader's best
+ *      player for two lesser ones came back as a gain for BOTH sides: the
+ *      throw-in "filled" a slot at his full projection that waivers would
+ *      have filled for free.
  *
  *   3. TRADES. findTrades() enumerates one- and two-player packages between
  *      two rosters and keeps only the ones where BOTH lineups get better at
@@ -472,8 +480,26 @@
   }
   // players: [{ pos, ... }], pts(player) → number. Returns the lineup and its
   // value. Greedy by points into named slots, then flex, then superflex.
-  function lineupValue(players, slots, pts) {
-    var S = normSlots(slots);
+  //
+  // opts, both optional:
+  //   repl  function(pos) → what the best free agent at that position scores
+  //         over the same span as pts. With it, a starting slot nobody on the
+  //         roster fills is started by a free agent at that value, and the
+  //         bench is padded to BENCH_W.length with free agents the same way.
+  //         Those rows carry free:true and a player named "a free agent".
+  //         A player scoring less than the wire at his position (hurt, or
+  //         just bad) never starts over one and is first to be cut: a
+  //         manager would drop him for the free agent, so a zero on the
+  //         roster is not a zero in the lineup. Without repl a hole scores
+  //         zero, which is wrong whenever a trade opens or fills one (see
+  //         replacementLevel).
+  //   size  the roster's number of spots. Holding more players than that, the
+  //         weakest bench players are cut down to it before the lineup is
+  //         scored (returned as `cut`); a starter is never cut.
+  function lineupValue(players, slots, pts, opts) {
+    var S = normSlots(slots), o = opts || {};
+    var repl = typeof o.repl === 'function' ? function (pos) { var v = Number(o.repl(pos)); return isFinite(v) && v > 0 ? v : 0; } : null;
+    var size = isFinite(Number(o.size)) && Number(o.size) > 0 ? Math.floor(Number(o.size)) : null;
     var rows = [];
     (players || []).forEach(function (p) {
       var pos = String(p.pos || '').toUpperCase();
@@ -483,30 +509,91 @@
     });
     rows.sort(function (a, b) { return b.v - a.v; });
     var left = { QB: S.QB, RB: S.RB, WR: S.WR, TE: S.TE }, flex = S.FLEX, sflex = S.SFLEX;
-    var starters = [], bench = [];
+    var starters = [], bench = [], rest = [];
     rows.forEach(function (r) {
-      if (left[r.pos] > 0) { left[r.pos]--; r.slot = r.pos; starters.push(r); }
+      if (repl && r.v < repl(r.pos)) { r.sub = true; rest.push(r); }
+      else if (left[r.pos] > 0) { left[r.pos]--; r.slot = r.pos; starters.push(r); }
       else bench.push(r);
     });
-    var rest = [];
     bench.forEach(function (r) {
       if (flex > 0 && FLEX_ELIG[r.pos]) { flex--; r.slot = 'FLEX'; starters.push(r); }
       else if (sflex > 0 && SFLEX_ELIG[r.pos]) { sflex--; r.slot = 'SFLEX'; starters.push(r); }
       else rest.push(r);
     });
+    var qbW = S.SFLEX === 0 ? 0.3 : 1;
+    var agent = function (pos, v, slot) { return { p: { name: 'a free agent', pos: pos, free: true }, pos: pos, v: v, slot: slot, free: true }; };
+    var best = function (elig, w) { var top = null; Object.keys(elig).forEach(function (pos) { var v = repl(pos) * (w && pos === 'QB' ? qbW : 1); if (!top || v > top.v) top = { pos: pos, v: v }; }); return top; };
+    // A slot nobody fills is started off the wire.
+    if (repl) {
+      ['QB', 'RB', 'WR', 'TE'].forEach(function (pos) { while (left[pos] > 0) { left[pos]--; starters.push(agent(pos, repl(pos), pos)); } });
+      var f = best(FLEX_ELIG); while (flex > 0) { flex--; starters.push(agent(f.pos, f.v, 'FLEX')); }
+      var sf = best(SFLEX_ELIG); while (sflex > 0) { sflex--; starters.push(agent(sf.pos, sf.v, 'SFLEX')); }
+    }
     var total = 0;
     starters.forEach(function (r) { total += r.v; });
     // The bench: what the roster can absorb when a starter goes down. A backup
     // quarterback in a one-QB league is almost never the answer to anything.
-    var b = 0;
-    var qbW = S.SFLEX === 0 ? 0.3 : 1;
     rest.forEach(function (r) { r.bv = r.v * (r.pos === 'QB' ? qbW : 1); });
-    rest.slice().sort(function (x, y) { return y.bv - x.bv; }).forEach(function (r, k) {
+    rest.sort(function (x, y) { return y.bv - x.bv; });
+    // More players than spots: the weakest bench players are cut.
+    var cut = [];
+    if (size != null) while (rows.length - cut.length > size && rest.length) cut.push(rest.pop());
+    // Fewer bench players above the wire than the bench weights reach: the
+    // spots hold free agents, so losing a bench player in a 2-for-1 costs
+    // what he scores over the wire, and gaining one is worth the same. A
+    // player below the wire is not a bench player for this count: the spot
+    // he holds is a free agent's the moment the manager wants it to be.
+    if (repl) {
+      var fa = best(SFLEX_ELIG, true), above = rest.filter(function (r) { return !r.sub; }).length;
+      while (above < BENCH_W.length) { above++; rest.push(agent(fa.pos, fa.v / (fa.pos === 'QB' ? qbW : 1), null)); }
+      rest.forEach(function (r) { r.bv = r.v * (r.pos === 'QB' ? qbW : 1); });
+      rest.sort(function (x, y) { return y.bv - x.bv; });
+    }
+    var b = 0;
+    rest.forEach(function (r, k) {
       if (k >= BENCH_W.length) return;
       r.benchW = BENCH_W[k];
       total += r.bv * BENCH_W[k]; b += r.bv * BENCH_W[k];
     });
-    return { total: total, starters: starters, bench: rest, benchValue: b };
+    return { total: total, starters: starters, bench: rest, benchValue: b, cut: cut,
+             free: starters.filter(function (r) { return r.free; }).length };
+  }
+
+  // ── the wire ──────────────────────────────────────────────────────────────
+  // The best free agent at each position, by rank on the board. In a league
+  // of N teams, about N × (the starters at the position, with a share of the
+  // flex) players are started every week and a share of a bench round is
+  // held behind them; the next player down is roughly the best one nobody
+  // holds, and every lineup is measured against him. At the site's default
+  // shape in a 12-team league that is QB15, RB36, WR36 and TE15.
+  //   pool        every player the board carries (the rows findTrades scores)
+  //   slots       the league's starting slots
+  //   leagueSize  teams in the league (default 12)
+  //   pt          function(player, horizonKey) → points over that horizon
+  // Returns function(pos, horizonKey) → points over that horizon.
+  function replacementLevel(pool, slots, leagueSize, pt) {
+    var S = normSlots(slots), N = Math.max(2, Math.floor(Number(leagueSize) || 12));
+    var rank = {
+      QB: N * (S.QB + 0.75 * S.SFLEX + 0.25),
+      RB: N * (S.RB + 0.5 * S.FLEX + 0.125 * S.SFLEX + 0.5),
+      WR: N * (S.WR + 0.5 * S.FLEX + 0.125 * S.SFLEX + 0.5),
+      TE: N * (S.TE + 0.25)
+    };
+    var list = (pool || []).map(function (r) { return r.p || r; }), memo = {};
+    return function (pos, h) {
+      pos = String(pos || '').toUpperCase();
+      var k = pos + '|' + h;
+      if (memo[k] !== undefined) return memo[k];
+      var at = [];
+      list.forEach(function (p) {
+        if (String(p.pos || '').toUpperCase() !== pos) return;
+        var v = Number(pt(p, h)); at.push(isFinite(v) ? v : 0);
+      });
+      at.sort(function (a, b) { return b - a; });
+      var i = Math.min(at.length, Math.max(1, Math.round(rank[pos] || 0))) - 1;
+      memo[k] = i >= 0 ? at[i] : 0;
+      return memo[k];
+    };
   }
 
   // ── trades ────────────────────────────────────────────────────────────────
@@ -535,6 +622,10 @@
   //   minGain    points per week each side must gain (default 0.75)
   //   candidates players per roster considered (default 14), by points
   //   limit      trades returned (default 12)
+  //   pool       every player the board carries, for the wire (replacementLevel);
+  //              or `replacement`, function(pos, horizonKey) → points, directly.
+  //              With neither, a hole in a lineup scores zero.
+  //   leagueSize teams in the league, for the wire (default 12)
   //   season     the horizon key a short-clock team is also checked on
   //              (default 'ros'); see judgeSide
   //   label      function(horizonKey) → the words for it in a reason
@@ -557,14 +648,15 @@
       if (memo[k] === undefined) { var v = Number(points(p, h)); memo[k] = isFinite(v) ? v : 0; }
       return memo[k];
     }
-    function value(roster, h) { return lineupValue(roster, S, function (p) { return pt(p, h); }).total; }
+    var repl = wireOf(o, S, pt);
+    function value(roster, h, size) { return lineupValue(roster, S, function (p) { return pt(p, h); }, lineupOpts(repl, h, size)).total; }
     var T = teams.map(function (t, i) {
       var h = horizonOf(i);
       var roster = (t.players || []).map(function (r) { return r.p || r; }).filter(function (p) { return SFLEX_ELIG[String(p.pos || '').toUpperCase()]; });
       var wk = Math.max(1, Number(weeks(h)) || 1);
       var starts = {};
-      lineupValue(roster, S, function (p) { return pt(p, h); }).starters.forEach(function (r) { starts[idOf(r.p)] = r.slot; });
-      return { i: i, name: t.name, h: h, wk: wk, roster: roster, base: value(roster, h), slots: S, starts: starts,
+      lineupValue(roster, S, function (p) { return pt(p, h); }, lineupOpts(repl, h, roster.length)).starters.forEach(function (r) { if (!r.free) starts[idOf(r.p)] = r.slot; });
+      return { i: i, name: t.name, h: h, wk: wk, roster: roster, size: roster.length, base: value(roster, h, roster.length), slots: S, repl: repl, starts: starts,
                cands: roster.slice().sort(function (a, b) { return pt(b, h) - pt(a, h); }).slice(0, CAND) };
     });
     // Padding. A package can carry a pair that changes nothing: a player
@@ -603,9 +695,9 @@
         PB.forEach(function (gb) {
           if (Math.abs(ga.length - gb.length) > 1) return;
           var ra = without(A.roster, ga).concat(gb), rb = without(B.roster, gb).concat(ga);
-          var gA = (value(ra, A.h) - A.base) / A.wk;
+          var gA = (value(ra, A.h, A.size) - A.base) / A.wk;
           if (gA < minGain) return;
-          var gB = (value(rb, B.h) - B.base) / B.wk;
+          var gB = (value(rb, B.h, B.size) - B.base) / B.wk;
           if (gB < minGain) return;
           // Both lineups gain. Now: would each manager actually say yes?
           var cA = judgeSide(A, ga, gb, pt, caseOpts, gB), cB = judgeSide(B, gb, ga, pt, caseOpts, gA);
@@ -645,7 +737,7 @@
   // between. Same lineup fill, same per-week scale, same horizons per team.
   //   a, b        indexes of the two teams in `teams`
   //   giveA/giveB the players each side sends (objects from that team's roster)
-  //   slots, points, weeks, horizon, minGain as in findTrades
+  //   slots, points, weeks, horizon, minGain, pool/replacement, leagueSize as in findTrades
   function evaluateTrade(teams, opts) {
     var o = opts || {};
     var S = normSlots(o.slots);
@@ -657,11 +749,12 @@
       if (memo[k] === undefined) { var v = Number(points(p, h)); memo[k] = isFinite(v) ? v : 0; }
       return memo[k];
     }
+    var repl = wireOf(o, S, pt);
     var caseOpts = { minGain: minGain, season: o.season, weeks: weeks, label: o.label };
     function side(i, give, get) {
       var t = teams[i] || {}, h = horizonOf(i);
       var roster = (t.players || []).map(function (r) { return r.p || r; }).filter(function (p) { return SFLEX_ELIG[String(p.pos || '').toUpperCase()]; });
-      var T = { name: t.name, h: h, wk: Math.max(1, Number(weeks(h)) || 1), roster: roster, slots: S };
+      var T = { name: t.name, h: h, wk: Math.max(1, Number(weeks(h)) || 1), roster: roster, size: roster.length, slots: S, repl: repl };
       var ln = lines(T, give, get, pt);
       var gain = (ln.after - ln.before) / T.wk;
       return { name: t.name, h: h, weeks: T.wk, perWeek: ln.before / T.wk, gain: gain, lines: ln, T: T,
@@ -755,9 +848,10 @@
     else if (deficit > minGain) why.push('Sends ' + n1(deficit) + ' a week more projection than it gets, which the lineup gain covers.');
 
     // 4. What was sent that was not starting anyway.
-    var after = lineupValue(without(T.roster, give).concat(get), S, function (p) { return pt(p, h); });
+    var lo = lineupOpts(T.repl, h, T.size);
+    var after = lineupValue(without(T.roster, give).concat(get), S, function (p) { return pt(p, h); }, lo);
     var wasStarting = {};
-    lineupValue(T.roster, S, function (p) { return pt(p, h); }).starters.forEach(function (r) { wasStarting[idOf(r.p)] = r.slot; });
+    lineupValue(T.roster, S, function (p) { return pt(p, h); }, lo).starters.forEach(function (r) { if (!r.free) wasStarting[idOf(r.p)] = r.slot; });
     var idle = give.filter(function (p) { return !wasStarting[idOf(p)]; });
     if (idle.length && idle.length === give.length) why.push(names(idle) + (idle.length === 1 ? ' was' : ' were') + ' not starting, so the lineup loses nothing by sending ' + (idle.length === 1 ? 'him' : 'them') + '.');
     else if (idle.length) why.push(names(idle) + (idle.length === 1 ? ' was' : ' were') + ' on the bench.');
@@ -768,12 +862,14 @@
     // line is one the manager would cut to make room for himself.
     var spots = Math.max(0, get.length - give.length);
     var startsAfter = {};
-    after.starters.forEach(function (r) { startsAfter[idOf(r.p)] = r.slot; });
+    after.starters.forEach(function (r) { if (!r.free) startsAfter[idOf(r.p)] = r.slot; });
     var filler = [];
     if (spots) {
       var rank = without(T.roster, give).concat(get).map(per).sort(function (a, b) { return a - b; });
       var cutLine = rank[Math.min(spots, rank.length) - 1];
-      filler = get.filter(function (p) { return !startsAfter[idOf(p)] && per(p) <= cutLine + 1e-9; });
+      // A player the lineup fill itself cut to make room (lines.cut) is a
+      // throw-in by definition; so is one worth no more than the cut line.
+      filler = get.filter(function (p) { return !startsAfter[idOf(p)] && (per(p) <= cutLine + 1e-9 || ln.cut.some(function (c) { return c.p === p; })); });
     }
     if (filler.length) {
       accept = false;
@@ -795,8 +891,9 @@
     var seasonNote = null;
     if (season && h !== season && h !== 'playoffs' && typeof o.weeks === 'function') {
       var swk = Math.max(1, Number(o.weeks(season)) || 1);
-      var sBefore = lineupValue(T.roster, S, function (p) { return pt(p, season); }).total;
-      var sAfter = lineupValue(without(T.roster, give).concat(get), S, function (p) { return pt(p, season); }).total;
+      var so = lineupOpts(T.repl, season, T.size);
+      var sBefore = lineupValue(T.roster, S, function (p) { return pt(p, season); }, so).total;
+      var sAfter = lineupValue(without(T.roster, give).concat(get), S, function (p) { return pt(p, season); }, so).total;
       if (sBefore > 0 || sAfter > 0) {
         var sGain = (sAfter - sBefore) / swk;
         seasonNote = { h: season, weeks: swk, gain: sGain };
@@ -817,21 +914,39 @@
              depth: depth, season: seasonNote, why: why, against: against, lines: ln, starts: startsAfter };
   }
 
+  // The wire for a search or a judgment: the board's pool through
+  // replacementLevel, a replacement function handed in directly, or nothing.
+  function wireOf(o, S, pt) {
+    if (o.pool && o.pool.length) return replacementLevel(o.pool, S, o.leagueSize, pt);
+    return typeof o.replacement === 'function' ? o.replacement : null;
+  }
+  function lineupOpts(repl, h, size) {
+    return { repl: repl ? function (pos) { return repl(pos, h); } : null, size: size };
+  }
+  // A side's lineup before and after, scored at the same number of roster
+  // spots (the roster's own count, so a 2-for-1 cuts a bench player on the
+  // side taking two and refills the spot off the wire on the side sending
+  // two) and against the same wire. Free agents are never named in the lines:
+  // "starts now" is a player who arrived or came off the bench, "to the
+  // bench" a player who was starting and is still on the roster.
   function lines(T, give, get, pt) {
-    var before = lineupValue(T.roster, T.slots, function (p) { return pt(p, T.h); });
-    var after = lineupValue(without(T.roster, give).concat(get), T.slots, function (p) { return pt(p, T.h); });
+    var pts = function (p) { return pt(p, T.h); }, o = lineupOpts(T.repl, T.h, T.size);
+    var before = lineupValue(T.roster, T.slots, pts, o);
+    var after = lineupValue(without(T.roster, give).concat(get), T.slots, pts, o);
     var was = {}, now = {};
-    before.starters.forEach(function (r) { was[idOf(r.p)] = r.slot; });
-    after.starters.forEach(function (r) { now[idOf(r.p)] = r.slot; });
+    before.starters.forEach(function (r) { if (!r.free) was[idOf(r.p)] = r.slot; });
+    after.starters.forEach(function (r) { if (!r.free) now[idOf(r.p)] = r.slot; });
+    var row = function (r) { return { p: r.p, slot: r.slot, v: r.v }; };
     return {
       before: before.total, after: after.total,
-      startsNow: after.starters.filter(function (r) { return !was[idOf(r.p)]; }).map(function (r) { return { p: r.p, slot: r.slot, v: r.v }; }),
-      stopsStarting: before.starters.filter(function (r) { return !now[idOf(r.p)] && give.indexOf(r.p) < 0; }).map(function (r) { return { p: r.p, slot: r.slot, v: r.v }; })
+      startsNow: after.starters.filter(function (r) { return !r.free && !was[idOf(r.p)]; }).map(row),
+      stopsStarting: before.starters.filter(function (r) { return !r.free && !now[idOf(r.p)] && give.indexOf(r.p) < 0; }).map(row),
+      cut: after.cut.map(row)
     };
   }
 
   return {
     fold: fold, makePool: makePool, resolve: resolve, suggest: suggest, parseRosters: parseRosters, isNoise: isNoise,
-    lineupValue: lineupValue, normSlots: normSlots, findTrades: findTrades, evaluateTrade: evaluateTrade, judgeSide: judgeSide, BENCH_W: BENCH_W
+    lineupValue: lineupValue, replacementLevel: replacementLevel, normSlots: normSlots, findTrades: findTrades, evaluateTrade: evaluateTrade, judgeSide: judgeSide, BENCH_W: BENCH_W
   };
 });
