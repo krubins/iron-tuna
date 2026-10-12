@@ -2189,7 +2189,8 @@ function _availWeekAt(ms, kickoff) {
 }
 // Games missed: whole weeks between kickoff and ESPN's return date, never below
 // the list's own minimum, 17 when the return date is past the season or the
-// comment says season-ending. Bye weeks are ignored on purpose — the file's
+// comment says season-ending, and never less than the timetable the comment
+// itself gives (_availTimetable, below). Bye weeks are ignored on purpose — the file's
 // own convention is "first eligible Week 5" = 4. Returns 0 to say "not a
 // season line change" (a return inside AVAIL_MIN_GAMES, or a plain "Out" with
 // no date to go on).
@@ -2199,15 +2200,76 @@ function _availWeekAt(ms, kickoff) {
 // kickoff: a Week 5 IR placement is out through Week 8 at least, and until
 // 7 Oct 2026 it was read as "out Weeks 1-4", which put a man placed on IR
 // that morning back on the week board at his full line the same afternoon.
+//
+// THE TIMETABLE IN THE COMMENT. ESPN's return date on a plain "Out" is the
+// next game, whatever the club has said: on 11 Oct 2026 a quarterback the
+// feed itself described as "given a recovery timetable of 3-to-6 weeks" had a
+// return date of the coming Sunday, so the season list held him out for one
+// game and the board paid him the other six weeks in full. The comment is
+// read for a duration ("3-to-6 weeks", "at least four weeks", "about eight
+// weeks", "a month", "multiple weeks"), the SHORT end of a range is taken, and
+// it is counted from the week after the comment was written (a Monday "will
+// miss multiple weeks" starts with the coming game, a Wednesday one with this
+// week's). The longer of the date's answer and the comment's stands, as two
+// feed entries for one man already do. Never a "Week N" reference: "his next
+// chance to play is Week 6" is the feed's own placeholder in words, and the
+// corpus is full of "heading into a Week 5 matchup".
+//
+// What it will not read, on purpose: a past span ("over the last two weeks",
+// "through the first four weeks", "a week ago"), a span with no absence word
+// in front of it ("a couple weeks to learn the playbook"), "week-to-week" and
+// "indefinitely" (no number), and anything under AVAIL_MIN_GAMES. The long
+// comment is read only in sentences that name the player, because it talks
+// about teammates too ("with Winfield set to miss 2-to-4 weeks, Melifonwu
+// starts" sits under Melifonwu).
+const AVAIL_TT_NUM = '(\\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)';
+const AVAIL_TT_WORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12 };
+const AVAIL_TT_SPAN = new RegExp(
+  '(?:' + AVAIL_TT_NUM + '(?:\\s*(?:-to-|–to–|-|–|to|or)\\s*' + AVAIL_TT_NUM + ')?|a few|several|multiple|a couple of|couple of|a)\\s*(?:more\\s+|additional\\s+)?(weeks?|months?)\\b', 'gi');
+const AVAIL_TT_CUE = /\b(miss|missing|sidelin\w*|out|timetable|absen\w*|recover\w*|re-?evaluat\w*|shut down|return|back|without|idle|cost|keep|kept|window)\b/i;
+const AVAIL_TT_PAST = /\b(last|past|previous|first|ago|after|through|over|since|during|straight|in the books|earlier)\b/i;
+function _availTimetable(entry) {
+  if (!entry) return null;
+  const a = entry.athlete || {};
+  const last = String(a.displayName || '').trim().split(/\s+/).filter(w => !/^(jr|sr|ii|iii|iv|v)\.?$/i.test(w)).pop() || '';
+  const sentences = String(entry.shortComment || '').split(/(?<=\.)\s+/)
+    .concat(String(entry.longComment || '').split(/(?<=\.)\s+/).filter(x => last && x.indexOf(last) >= 0));
+  let best = null;
+  for (const sent of sentences) {
+    AVAIL_TT_SPAN.lastIndex = 0;
+    let m;
+    while ((m = AVAIL_TT_SPAN.exec(sent))) {
+      const before = sent.slice(Math.max(0, m.index - 48), m.index);
+      if (!AVAIL_TT_CUE.test(before) || AVAIL_TT_PAST.test(before)) continue;
+      const head = m[0].toLowerCase();
+      let n;
+      if (m[1] != null) n = AVAIL_TT_WORDS[m[1].toLowerCase()] || parseInt(m[1], 10);
+      else if (/^(a few|several|multiple|a couple of|couple of)/.test(head)) n = AVAIL_MIN_GAMES;
+      else if (/^a\s/.test(head)) n = 1;                       // "a week", "a month"
+      else continue;
+      if (/month/.test(m[3])) n *= 4;
+      if (!(n >= AVAIL_MIN_GAMES)) continue;
+      if (!best || n > best.weeks) best = { weeks: Math.min(AVAILABILITY_GAMES, n), text: m[0] };
+    }
+  }
+  return best;
+}
 function _availGamesOut(entry, kickoff, m, nowMs) {
   const text = String((entry && entry.shortComment) || '') + ' ' + String((entry && entry.longComment) || '');
   if (AVAIL_SEASON_ENDING.test(text)) return AVAILABILITY_GAMES;
+  // The comment's timetable, counted from the week after it was written.
+  const tt = _availTimetable(entry);
+  const said = Date.parse(String((entry && entry.date) || ''));
+  const anchor = _availWeekAt((Number.isFinite(said) ? said : nowMs) + 86400000, kickoff);
+  const fromText = tt ? Math.min(AVAILABILITY_GAMES, anchor - 1 + tt.weeks) : 0;
   const ret = Date.parse(String(((entry && entry.details) || {}).returnDate || ''));
   const weeks = Number.isFinite(ret) ? Math.floor((ret - kickoff) / (7 * 86400000)) : null;
-  if (weeks === null) return m.needsDate ? 0 : Math.min(AVAILABILITY_GAMES, _availWeekAt(nowMs, kickoff) - 1 + m.min);
-  if (weeks >= AVAILABILITY_GAMES) return AVAILABILITY_GAMES;
-  if (m.reserve) return Math.max(m.min, weeks);
-  return weeks >= m.min ? weeks : 0;
+  let fromDate;
+  if (weeks === null) fromDate = m.needsDate ? 0 : Math.min(AVAILABILITY_GAMES, _availWeekAt(nowMs, kickoff) - 1 + m.min);
+  else if (weeks >= AVAILABILITY_GAMES) fromDate = AVAILABILITY_GAMES;
+  else if (m.reserve) fromDate = Math.max(m.min, weeks);
+  else fromDate = weeks >= m.min ? weeks : 0;
+  return Math.max(fromDate, fromText);
 }
 // name + position, the way tools/availability.json and the block above are
 // keyed. A name at two positions is dropped rather than guessed, as the odds
@@ -2271,8 +2333,10 @@ function buildAvailabilityOverlay(feed, prior) {
     const gamesOut = _availGamesOut(e, kickoff, m, nowMs);
     if (!gamesOut) { skipped.short++; continue; }
     if (players[key] && players[key].gamesOut >= gamesOut) continue;   // two entries for one man: the longer absence
+    const tt = _availTimetable(e);
     players[key] = { name: p.name, position: p.position, team: p.team, status: m.status, gamesOut, note,
-                     source: 'ESPN injury feed ' + asOf.slice(0, 10), asOf: asOf.slice(0, 10) };
+                     source: 'ESPN injury feed ' + asOf.slice(0, 10), asOf: asOf.slice(0, 10),
+                     ...(tt ? { timetable: tt.weeks } : {}) };   // the comment's own duration, for the report
   }
   const matched = Object.keys(players).length;   // the feed's own count: a carry never makes a thin pull look whole
   const carried = [];

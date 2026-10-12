@@ -37,7 +37,7 @@ const harness = new Function('PROJECTIONS', '_xb64encode', 'PROJ_KEY', 'fetch', 
   ${section}
   return { AVAILABILITY, AVAILABILITY_GAMES, AVAIL_MIN_MATCHED, AVAIL_MIN_TEAMS, AVAIL_MIN_GAMES, AVAIL_RESERVE_MIN,
            AVAIL_FEED_URL, AVAIL_SEASON_ENDING, AVAIL_MAX_AGE_MS, _oddsNorm, _oddsRound, _availF, _availStatusOf, _availKickoff, _availWeekAt, _availGamesOut,
-           _availBoardIndex, buildAvailabilityOverlay, availabilityMerge, _availLastWeek, availabilityTable, _availTable,
+           _availBoardIndex, buildAvailabilityOverlay, availabilityMerge, _availLastWeek, _availTimetable, availabilityTable, _availTable,
            _availFactor, _availRowFactor, applyAvailability, blendProjections, _withAvailability, _availPool,
            availabilityCacheRead, availabilityCacheWrite, runAvailabilityRefresh, availabilityReport,
            fetchInjuriesEspn, oddsCacheRead, projectionsPayload, boardPayload, buildTeamEnvOverlay,
@@ -306,6 +306,51 @@ console.log('\nmatching');
     entry('Healthy Back', 'RB', 'Injured Reserve', 'IR-R', iso(kickoff + 60 * day))
   ]));
   ok('duplicate entries keep the longer absence', built.players['healthyback|RB'].gamesOut === 8, String(built.players['healthyback|RB'].gamesOut));
+}
+
+console.log('\nthe timetable in the comment');
+{
+  // ESPN's return date on a plain Out is the next game. The comment's own
+  // duration is read, the short end of a range, counted from the week after
+  // it was written, and the longer of the two answers stands.
+  const nextSunday = iso(kickoff + 38 * day);                       // the Week 6 game
+  const said = (e, date) => ({ ...e, date });
+  const built = W.buildAvailabilityOverlay(feedOf([
+    said(entry('Healthy Back', 'RB', 'Out', 'OUT', nextSunday, { type: 'Thumb',
+      short: 'Back (thumb) now is in a smaller splint.',
+      long: 'Back has missed two games and initially was given a recovery timetable of 3-to-6 weeks, so he appears to be progressing normally.' }), '2026-10-09T15:18Z'),
+    said(entry('Fresh Injury', 'WR', 'Out', 'OUT', nextSunday, { type: 'Knee',
+      short: 'Head coach said Monday that Injury will miss multiple weeks after hyperextending his right knee.' }), '2026-10-05T20:00Z'),
+    said(entry('Kicker Man', 'PK', 'Injured Reserve', 'IR', iso(kickoff + 73 * day), { type: 'Groin',
+      short: 'Man (groin) underwent core-muscle surgery and will be sidelined about eight weeks.' }), '2026-10-07T18:00Z'),
+    said(entry('Other Position', 'RB', 'Out', 'OUT', nextSunday, { type: 'Ankle',
+      short: 'Position has been working through an ankle injury over the last two weeks and is out Sunday.' }), '2026-10-09T15:00Z'),
+    said(entry("D'Andre Suffix Jr.", 'TE', 'Out', 'OUT', nextSunday, { type: 'Hamstring',
+      short: 'Suffix is out Sunday.', long: 'With Teammate (ribs) set to miss 2-to-4 weeks, the tight end room is thin.' }), '2026-10-09T15:00Z')
+  ]));
+  const P = built.players;
+  ok('a 3-to-6 week timetable written in Week 5 is out through Week 7, not the next game',
+    P['healthyback|RB'] && P['healthyback|RB'].gamesOut === 7 && P['healthyback|RB'].timetable === 3, JSON.stringify(P['healthyback|RB']));
+  ok('"multiple weeks" said on a Monday starts with the coming game: Weeks 5 and 6',
+    P['freshinjury|WR'] && P['freshinjury|WR'].gamesOut === 6 && P['freshinjury|WR'].timetable === 2, JSON.stringify(P['freshinjury|WR']));
+  ok('"about eight weeks" on IR outruns the return date: through Week 12',
+    P['kickerman|K'] && P['kickerman|K'].gamesOut === 12 && P['kickerman|K'].timetable === 8, JSON.stringify(P['kickerman|K']));
+  ok('a past span is not a timetable, so the date alone answers (out this week)',
+    P['otherposition|RB'] && P['otherposition|RB'].gamesOut === 5 && !P['otherposition|RB'].timetable, JSON.stringify(P['otherposition|RB']));
+  ok("a teammate's timetable in the long comment is not his",
+    P['dandresuffix|TE'] && P['dandresuffix|TE'].gamesOut === 5 && !P['dandresuffix|TE'].timetable, JSON.stringify(P['dandresuffix|TE']));
+  const tt = t => W._availTimetable({ athlete: { displayName: 'Some Player' }, shortComment: t });
+  ok('ranges take the short end, words count, months are four weeks',
+    tt('Player will miss 2-to-4 weeks.').weeks === 2 && tt('Player is expected to miss four to six weeks.').weeks === 4 &&
+    tt('Player will be sidelined about a month.').weeks === 4 && tt('Player is out 3-to-4 months.').weeks === 12, JSON.stringify([tt('Player will miss 2-to-4 weeks.'), tt('Player is out 3-to-4 months.')]));
+  ok('"at least" and "more" read as the floor they are', tt('Player will miss at least three weeks.').weeks === 3 && tt('Player is out two more weeks.').weeks === 2);
+  ok('no number, no absence word, or under the minimum is nothing',
+    tt('Player is week-to-week.') === null && tt('Player had a couple weeks to learn the playbook.') === null &&
+    tt('Player will miss a week.') === null && tt('Player logged zero tackles a week ago.') === null &&
+    tt('Player has been limited over the past two weeks.') === null && tt('With four weeks in the books, Player is eligible.') === null);
+  ok('a "Week N" reference is never a timetable', tt("Player's next chance to play is Week 6 against the Bears.") === null);
+  ok('the long comment is read in sentences that name him',
+    W._availTimetable({ athlete: { displayName: 'Some Player' }, shortComment: 'Player is out.', longComment: 'The club said Player will miss three weeks. Teammate will miss 2-to-4 weeks.' }).weeks === 3);
 }
 
 console.log('\nunion: committed block + live row');
