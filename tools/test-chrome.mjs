@@ -188,7 +188,7 @@ console.log('\nthe one header button says what it actually does');
   // The anchor has to exist, or the button lands at the top of a page whose
   // first section is the sync flow it was relabeled away from.
   ok('/my-league carries the #settings anchor the button targets',
-    /<div class="is-sec" id="settings">/.test(read('my-league.html')));
+    / id="settings"/.test(read('my-league.html')));
 }
 
 console.log('\nthe mobile nav is a real disclosure, not an unmarked scroll');

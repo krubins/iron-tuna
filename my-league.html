@@ -14,20 +14,20 @@
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>My League: Save Your League and Every Number Reads It | Iron Tuna</title>
-<meta name="description" content="Set your teams, budget and scoring once and every price, rank and projection Iron Tuna publishes is restated in them — on the cheat sheet, in the stories, and across the in-season section.">
+<title>League Settings: Your Teams and Scoring, on Every Number | Iron Tuna</title>
+<meta name="description" content="Pick how many teams are in your league and how it scores, once. Every ranking, waiver price, trade value and DFS number Iron Tuna prints is restated at your scoring.">
 <link rel="canonical" href="https://irontuna.com/my-league">
 <!--seo:meta-->
 <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
 <meta property="og:site_name" content="Iron Tuna">
 <meta property="og:locale" content="en_US">
 <meta name="twitter:site" content="@irontunafantasy">
-<meta name="twitter:title" content="My League">
-<meta name="twitter:description" content="Your teams, budget and scoring, applied to every number the site prints.">
+<meta name="twitter:title" content="League Settings">
+<meta name="twitter:description" content="Your team count and your scoring, applied to every number the site prints.">
 <meta name="twitter:image" content="https://irontuna.com/og.png">
 <!--/seo:meta-->
-<meta property="og:title" content="My League">
-<meta property="og:description" content="Your teams, budget and scoring, applied to every number the site prints.">
+<meta property="og:title" content="League Settings">
+<meta property="og:description" content="Your team count and your scoring, applied to every number the site prints.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://irontuna.com/my-league">
 <meta property="og:image" content="https://irontuna.com/og.png">
@@ -35,149 +35,99 @@
 <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <style>
+/* ── the league settings, in the homepage's composition ────────────────────
+   Ken, 2026-10-12: the settings page should be about scoring rules, with
+   buttons for the number of teams (8, 10, 12, custom), simpler scoring, and
+   the homepage's look; the FAAB budget and the rosters come off it and are
+   dealt with elsewhere. So the page wears `body.ln-front` the way
+   /trade-finder does: the white centred hero with the one headline, one
+   sentence, the search field and text-link entry points; then two steps as
+   sections on hairlines, the team count and the scoring, each a row of the
+   site's segmented control; the exact numbers and the paste box behind two
+   folds; one primary button; and "where it shows up" as the How-it-works
+   row. The sign-in, the saved league cards, the CBS import and the roster
+   reader that used to open this page live on /my-leagues now, unchanged.
+
+   The record it writes is the same one it always wrote (it-inseason.js,
+   `iron_tuna_inseason_league_v1`): the team count and the scoring fields
+   move; the platform, the FAAB budget, the lineup and the league URL ride
+   through a save untouched, so a reader who set them on the in-season hub
+   does not lose them here. */
 body{overflow-x:hidden}
-/* Mobile masthead: one sideways-scrolling row under a pinned CTA, so the
-   header stays 52px instead of wrapping into three ragged rows. Copied from the
-   other content pages deliberately; when this moves it moves everywhere. */
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
-/* ══ the page's own chrome ═══════════════════════════════════════════
-   The destination of the "Customize My League" button in the masthead of
-   every page on the site, and it opened like a page nobody had styled: an h1
-   on the same white ground as the form under it, the NFL clock as a grey
-   plate between the lede and the steps, and five platform tiles squeezed
-   into an 820px measure while the two lane pages they feed run at 1200.
-
-   It wears .is-hero now, the band the other three in-season pages open on.
-   The three steps go onto the tinted band directly under it — they ARE the
-   summary before the detail, which is the job that band does on /dfs (the
-   setup) and /fantasy (the deck) — and the settings split takes the second
-   band, so the page reads dark, tint, white, tint, white.
-
-   It takes no ribbon, for the reason /in-season takes none: two chapters,
-   and the page is a flow you complete in order rather than a place you
-   navigate around.
-
-   The measure widens to .wrap.wide (1200px) with the rest of the section.
-   That is the whole fix for the platform row: five tiles at 820px gave each
-   one about 140px, which is why "Sportsline, via the extension" wrapped to
-   three lines under a one-word heading. */
-h1{font-size:var(--fs-3xl);line-height:1.1;font-weight:800;letter-spacing:-.01em;margin:0 0 var(--space-3);max-width:22ch;text-wrap:pretty}
-@media(max-width:560px){h1{font-size:var(--fs-2xl)}}
-/* An in-page anchor has to clear the sticky header or it lands with its own
-   chapter head behind it — and every page on this site links
-   /my-league#settings. The two pages with a ribbon get this from site.css,
-   scoped to the ribbon; this one has the header and no ribbon. */
+/* The UA sheet's [hidden] is (0,1,0), the same as any class, and loses to an
+   author sheet at a tie. front.html and /trade-finder carry the same line. */
+[hidden]{display:none !important}
+/* An in-page anchor has to clear the sticky header: every page on this site
+   links /my-league#settings. */
 html{scroll-padding-top:calc(var(--header-h) + 14px)}
 @media(max-width:860px){html{scroll-padding-top:66px}}
-/* The steps are the band's only content, so the band's own padding is the
-   space around them. */
-.is-band .ml-steps{margin:0}
-/* Two clauses, and the break belongs BETWEEN them. Left to balance it came
-   out "Your league, on every / page that prints a number", which splits the
-   second clause across the fold of the headline. The clause takes its own
-   line at every width instead. */
-.is-hero h1{max-width:none}
-.is-hero h1 em{display:block}
-/* The closing method note inherited the page's new width and became a
-   140-character line. Prose keeps a reading measure. */
-.ml-src p{max-width:88ch}
-p{color:var(--sec);margin:0 0 16px}
-.ml-sub{max-width:720px;margin:0 0 var(--space-4)}
-/* Three steps under the lede: what the page asks of you, in order, so the
-   long connect section below reads as step one rather than as the whole ask. */
-.ml-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-5);margin:0 0 var(--space-6)}
-.ml-step{border-top:2px solid var(--line2);padding-top:var(--space-3);display:flex;flex-direction:column;gap:4px}
-.ml-sn{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-2xs);font-weight:700;color:var(--teal)}
-.ml-sn i{font-style:normal;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--teal);display:inline-grid;place-items:center;font-size:12.5px;letter-spacing:0}
-.ml-step b{font-size:var(--fs-sm);color:var(--text);line-height:1.35}
-.ml-step span{font-size:var(--fs-xs);color:var(--muted);line-height:1.5}
-/* The platforms as tiles with a status badge, not a row of pills that said
-   "(unavailable)" after every name. The tile is the button; the badge says
-   whether it syncs, imports through the extension, or is entered by hand. */
-.ml-tiles-h{font-size:var(--fs-2xs);font-weight:700;color:var(--muted);margin:var(--space-5) 0 var(--space-3)}
-.ml-tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--space-3);margin:0}
-.ml-tile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:96px;padding:14px 16px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel);color:var(--text);font:inherit;text-align:left;cursor:pointer;transition:border-color .12s ease,box-shadow .12s ease}
-.ml-tile:hover{border-color:var(--line2);}
-.ml-tile.live{background:var(--teal-tint);border-color:var(--teal)}
-.ml-tile.on{border-color:var(--teal);box-shadow:0 0 0 2px var(--teal-tint)}
-.ml-tile:focus-visible{outline:3px solid var(--focus,#1d6fd8);outline-offset:2px}
-.ml-tile b{font-size:var(--fs-md);line-height:1.2}
-.ml-tile span{font-size:var(--fs-xs);color:var(--muted);line-height:1.4}
-.ml-badge{margin-top:auto;padding-top:6px;font-size:var(--fs-3xs);font-weight:800;color:var(--muted)}
-.ml-badge.up{color:var(--teal)}
-.ml-badge.gold{color:var(--goldink)}
-.ml-badge.off{color:var(--danger)}
-.ml-go{font-size:var(--fs-xs);font-weight:700;color:var(--teal);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--teal)}
-.ml-go::after{content:" \2192"}
-.ml-tile:hover .ml-go,.ml-tile.on .ml-go{text-decoration-color:var(--teal)}
-.ml-flow{margin:var(--space-4) 0 0;border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--bg);padding:var(--space-4) var(--space-5)}
-.ml-flow-h{display:flex;align-items:baseline;gap:var(--space-3);margin:0 0 var(--space-3);padding-bottom:var(--space-3);border-bottom:1px solid var(--line)}
-.ml-flow-h span{font-size:var(--fs-2xs);font-weight:800;color:var(--teal)}
-.ml-flow-h b{font-size:var(--fs-md);color:var(--text)}
-.ml-flow p{margin:0 0 var(--space-3)}
-.ml-priv{margin:var(--space-5) 0 0;font-size:var(--fs-xs);color:var(--muted);line-height:1.6}
-.ml-priv summary{cursor:pointer;font-weight:700;color:var(--sec)}
-.ml-priv p{margin:var(--space-2) 0 0;font-size:inherit;color:inherit}
-#lsList .is-card{margin:10px 0}
-/* The line that says the cheat sheet answered for the settings. It reads as a
-   note rather than a banner: it is an explanation, not news. */
-.ml-from{margin:0 0 var(--space-3);padding:10px 14px;border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:var(--radius-md);background:var(--panel);font-size:var(--fs-xs);color:var(--sec);line-height:1.6}
-.ml-from b{color:var(--text)}
-/* The roster reader sits in the middle card of the row, so it lays out down a
-   column: the drop box, the team picker wrapping under it, then the save. */
-.ml-grid-card{display:flex;flex-direction:column;gap:var(--space-2)}
-.ml-grid-card .is-field{margin:0;gap:6px}
-.ml-grid-card .is-btns{margin:0}
-.ml-grid-card .is-seg{font-size:var(--fs-2xs)}
-/* The roster-grid intake. A dashed box rather than a bare file input, because
-   the screenshot it wants is usually on the clipboard and never on disk. */
-.mg-drop{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border:1px dashed var(--line2);border-radius:var(--radius-md);background:var(--bg);transition:border-color .12s ease,background .12s ease}
-.mg-drop b{font-size:var(--fs-sm);line-height:1.3;color:var(--text)}
-.mg-drop span{font-size:var(--fs-xs);color:var(--muted);line-height:1.5}
-.mg-drop kbd{font-size:var(--fs-2xs);font-weight:700;padding:1px 5px;border:1px solid var(--line2);border-radius:4px;background:var(--panel);color:var(--sec)}
-.mg-drop:focus-visible{outline:3px solid var(--focus,#1d6fd8);outline-offset:2px}
-.mg-drop.over{border-style:solid;border-color:var(--teal);background:var(--teal-tint)}
-.mg-pick{padding:0;border:0;background:none;font:inherit;font-weight:700;color:var(--teal);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-/* The names the board could not place, and the question about each. It is a
-   panel rather than a warning colour: a misread letter is normal, and a reader
-   who is asked eight questions in red reads it as eight things going wrong. */
-.rg-ask{margin:10px 0 0;padding:12px 14px;border:1px solid var(--line2);border-left:3px solid var(--gold);border-radius:var(--radius-md);background:var(--bg)}
-.rg-ask-h{margin:0 0 8px;font-size:var(--fs-xs);color:var(--sec);line-height:1.6}
-.rg-ask-h b{color:var(--text)}
-.rg-asks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-.rg-asks li{display:flex;flex-direction:column;gap:4px}
-.rg-ask-n{font-size:var(--fs-xs);font-weight:700;color:var(--text);line-height:1.3}
-.rg-ask-n small{display:block;font-size:var(--fs-3xs);font-weight:600;color:var(--muted)}
-.rg-ask-p,.rg-ask-t{font-size:var(--fs-xs);padding:6px 8px}
-.rg-ask.done{border-left-color:var(--teal)}
-.mg-pick:hover{color:var(--text)}
-.mg-pick:focus-visible{outline:3px solid var(--focus,#1d6fd8);outline-offset:2px}
-/* Settings: the form on the left at a fixed width, and what it changes on the right. */
-.ml-split{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:var(--space-6);align-items:start}
-.ml-form .is-form{padding:var(--space-5)}
-.ml-form > .is-card{padding:var(--space-5)}
-.ml-side{display:flex;flex-direction:column;gap:var(--space-4)}
-.ml-kick{display:block;font-size:var(--fs-2xs);font-weight:800;color:var(--teal);margin:0 0 var(--space-2)}
-.ml-kick.gold{color:var(--goldink)}
-.ml-rows{margin:0}
-.ml-rows div{padding:10px 0;border-top:1px solid var(--line)}
-.ml-rows b{display:block;font-size:var(--fs-sm);color:var(--text);line-height:1.35}
-.ml-rows span{font-size:var(--fs-xs);color:var(--sec);line-height:1.5}
-.ml-box .is-tag{margin-bottom:var(--space-2)}
-.ml-box p{margin:0 0 var(--space-2)}
-.ml-box .is-btns{margin-top:var(--space-3)}
-.ml-go{font-size:var(--fs-xs);font-weight:700;color:var(--teal)}
-.ml-src{margin:var(--space-6) 0 0;padding-top:var(--space-4);border-top:1px solid var(--line)}
-.ml-src p{font-size:var(--fs-sm)}
-@media(max-width:900px){.ml-split{grid-template-columns:1fr}.ml-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:640px){.ml-steps{grid-template-columns:1fr;gap:var(--space-4)}.ml-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.ml-tile{min-height:0}}
+
+/* ── 1 · the hero ─────────────────────────────────────────────────────────
+   site.css draws it (body.ln-front .hm-hero and its children). The first
+   step sits 48px under the rule. */
+#lsForm>.ls-step:first-child{border-top:0;padding-top:0}
+
+/* ── 2 · the steps ────────────────────────────────────────────────────────
+   A section on a hairline, headed the way the homepage heads a section: the
+   question at 28px, one sentence under it in the secondary ink, then the
+   control. The two steps are the whole form. */
+.ls-step{margin:var(--sp-48) 0 0;padding:var(--sp-32) 0 0;border-top:1px solid var(--line)}
+.ls-step>h2{margin:0 0 var(--sp-12);font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.15}
+.ls-step p.sub{margin:0 0 var(--sp-24);font-size:var(--fs-16);color:var(--ink-2);max-width:64ch;line-height:1.5}
+/* One rule per row: the name on the left at a fixed measure, the segmented
+   control beside it. On a phone the name sits over the control. */
+.ls-row{display:grid;grid-template-columns:200px minmax(0,1fr);column-gap:var(--sp-24);row-gap:var(--sp-8);align-items:center;padding:var(--sp-16) 0;border-top:1px solid var(--line)}
+.ls-row:first-of-type{border-top:0;padding-top:0}
+.ls-row>.ls-lab{font-size:var(--fs-16);font-weight:600;color:var(--ink)}
+.ls-row>.ls-lab small{display:block;font-weight:400;font-size:var(--fs-14);color:var(--ink-3);margin-top:2px}
+.ls-row>.ls-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-12)}
+@media(max-width:640px){.ls-row{grid-template-columns:1fr;row-gap:var(--sp-8)}}
+/* The team count is the one big control on the page: the four choices at
+   48px, wide enough to be tapped, and the custom count as a short field that
+   appears beside them only when Custom is chosen. */
+.ls-seg.big label{min-height:48px;padding:0 22px;font-size:var(--fs-16)}
+.ls-custom{display:inline-flex;align-items:center;gap:var(--sp-8);font-size:var(--fs-14);color:var(--ink-3);font-weight:600}
+.ls-custom .is-input{width:88px;min-height:48px;text-align:center;font-variant-numeric:tabular-nums}
+/* The folds: the exact numbers, and the paste box. Plain disclosure text on
+   a hairline, as /trade-finder's settings fold. */
+.ls-more{margin-top:var(--sp-24);border-top:1px solid var(--line);padding-top:var(--sp-16)}
+.ls-more summary{cursor:pointer;color:var(--teal);font-weight:600;font-size:var(--fs-16)}
+.ls-more summary small{font-weight:400;color:var(--ink-3);font-size:var(--fs-14);margin-left:8px}
+.ls-more[open] summary{margin-bottom:var(--sp-16)}
+.ls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:var(--sp-12) var(--sp-16);max-width:960px}
+.ls-grid label{display:flex;flex-direction:column;gap:4px;font-size:var(--fs-14);font-weight:600;color:var(--ink-3)}
+.ls-grid .is-input{min-height:44px;font-variant-numeric:tabular-nums}
+.ls-grid .is-input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-tint)}
+.ls-hint{margin:var(--sp-12) 0 0;font-size:var(--fs-14);color:var(--ink-3);max-width:64ch;line-height:1.5}
+textarea.ls-paste{display:block;width:100%;max-width:720px;min-height:150px;padding:var(--space-3);border-radius:var(--radius-input);border:1px solid var(--line2);background:#fff;color:var(--text);font:inherit;font-size:var(--fs-16);line-height:1.5;resize:vertical}
+textarea.ls-paste:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-tint)}
+/* The one primary button, its secondary, and the sentence beside them. */
+.ls-save{display:flex;gap:var(--space-3) var(--sp-16);flex-wrap:wrap;align-items:center;margin:var(--sp-32) 0 0}
+.ls-status{font-size:var(--fs-16);color:var(--ink-2);margin:0;min-height:1.2em;max-width:60ch;line-height:1.5}
+.ls-status:empty{display:none}
+.ls-status b{color:var(--ink)}
+.ls-status.err{color:var(--danger)}
+/* The line that says the cheat sheet answered first. A form that opens
+   already filled in looks like it guessed; this is the sentence that says it
+   did not. A note rather than a banner. */
+.ls-from{margin:0 0 var(--sp-24);padding:12px 16px;border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:10px;background:var(--card);font-size:var(--fs-14);color:var(--ink-2);line-height:1.5;max-width:72ch}
+.ls-from b{color:var(--ink)}
+
+/* ── 3 · where it shows up, as How it works ───────────────────────────────
+   The homepage's closing section: a head, a tagline, three cards. */
+.method .hm-tagline{margin:0 0 var(--sp-24);font-size:var(--fs-19);color:var(--ink-2);max-width:60ch}
+.method-more{margin-top:var(--sp-32);padding-top:var(--sp-24);border-top:1px solid var(--line);columns:2;column-gap:var(--sp-48)}
+.method-more p{break-inside:avoid;margin:0 0 var(--sp-16);font-size:var(--fs-16);color:var(--ink-2);line-height:1.55}
+.method-more b,.method .hm-input b{color:var(--ink)}
+@media(max-width:860px){.method-more{columns:1}}
 </style>
 
-<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/my-league","name":"My League: Save Your League and Every Number Reads It","description":"Set your teams, budget and scoring once and every price, rank and projection Iron Tuna publishes is restated in them — on the cheat sheet, in the stories, and across the in-season section.","url":"https://irontuna.com/my-league","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/my-league"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"My League: Save Your League and Every Number Reads It"}]}]}</script>
+<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/my-league","name":"League Settings: Your Teams and Scoring, on Every Number","description":"Pick how many teams are in your league and how it scores, once. Every ranking, waiver price, trade value and DFS number Iron Tuna prints is restated at your scoring.","url":"https://irontuna.com/my-league","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/my-league"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"League Settings: Your Teams and Scoring, on Every Number"}]}]}</script>
 </head>
-<body>
+<body class="ln-front">
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site"><!--chrome:line--><p class="site-line" aria-hidden="true"></p><!--/chrome:line--><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
@@ -203,112 +153,150 @@ p{color:var(--sec);margin:0 0 16px}
   </nav>
 <!--/chrome:tabbar-->
 </header>
-<main id="main">
+<main id="main" class="wrap">
 
-<!-- the opening band. Same words, same ids, same script; .is-hero is in
-     site.css because all four in-season pages open on it now. The clock comes
-     up into the band as the dateline instead of sitting between the lede and
-     the steps as a plate of its own.
+<!-- ── 1 · the hero ─────────────────────────────────────────────────────────
+     front.html's, for this page: the one h1, one sentence, the search field
+     (the site's front door, with the shared typeahead off /player-search.js),
+     the entry points as text links, and the hairline. -->
+<section class="hm-hero" aria-labelledby="heroHead">
+  <h1 id="heroHead">Your league&rsquo;s scoring, on every number.</h1>
+  <p class="hm-lede">A rank means nothing until you know the scoring, and a value nothing until you know the size of the room. Set both once and every ranking, waiver price, trade value and DFS number on this site is restated in them.</p>
+  <form class="search-field hm-find" role="search" autocomplete="off" action="/player" method="get">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+    <input id="lsFind" name="q" type="search" placeholder="Rankings, waivers, DFS or a player" aria-label="Find rankings, waiver prices, DFS lineups or a player"
+           role="combobox" aria-expanded="false" aria-autocomplete="list" data-player-search="my-league" data-search-tools>
+  </form>
+  <ul class="hm-entry">
+    <li><a href="/rankings">Rankings &rarr;</a></li>
+    <li><a href="/faab">Waiver prices &rarr;</a></li>
+    <li><a href="/my-leagues">Saved leagues and rosters &rarr;</a></li>
+  </ul>
+  <hr class="hm-rule">
+</section>
 
-     The two actions are the page's own two paths, named: connect a league, or
-     set the scoring without connecting one. Section 02 already says the
-     settings apply "whether or not a league is connected"; until now the page
-     opened with no way to act on that except to scroll. -->
-<section class="is-hero">
-  <div class="wrap wide">
-    <p class="is-hero-date">
-      <span class="is-eyebrow">In-Season &middot; My Leagues</span>
-    </p>
-    <h1>Your league, <em>on every page that prints a number</em></h1>
-    <p class="is-lede">A dollar figure means nothing until you know the budget behind it, and a rank means nothing until you know the scoring. Set yours once and every page on this site restates its numbers in them.</p>
-    <div class="is-actions">
-      <a class="is-btn primary" href="#connect">Connect my league</a>
-      <a class="is-btn ghost" href="#settings">Just set my scoring &rarr;</a>
+<!-- ── 2 · the two steps ────────────────────────────────────────────────────
+     The whole form: how many teams, and how the league scores. The ids are
+     what the page script below and tools/test-inseason-league.mjs drive.
+     #settings is the anchor every page's "Customize My League" button lands
+     on. -->
+<form id="lsForm" novalidate>
+<section class="ls-step" id="settings" aria-labelledby="teamsHead">
+  <h2 id="teamsHead">How many teams?</h2>
+  <p class="sub">The size of the room sets what a replacement player is worth, and every value on the site is measured against that line. A twelve-team league and an eight-team league price the same running back differently.</p>
+  <div class="ls-row">
+    <div class="ls-lab">Teams</div>
+    <div class="ls-ctl">
+      <div class="is-seg ls-seg big" role="group" aria-label="Number of teams">
+        <label><input type="radio" name="teams" value="8">8</label>
+        <label><input type="radio" name="teams" value="10">10</label>
+        <label><input type="radio" name="teams" value="12">12</label>
+        <label><input type="radio" name="teams" value="custom">Custom</label>
+      </div>
+      <label class="ls-custom" id="lsCustomWrap" hidden><input class="is-input" id="lsTeamsCustom" type="number" inputmode="numeric" min="4" max="20" aria-label="Number of teams, 4 to 20"> teams</label>
     </div>
-    <a class="is-hero-how" href="/data">Where these numbers come from</a>
   </div>
 </section>
 
-<!-- the three steps, on the tinted band: what the page asks of you, in order.
-     They are a real sequence, which is why they are numbered, and they are the
-     summary this page owes a reader before its long connect section. -->
-<div class="is-band is-band-top">
-<div class="wrap wide">
-<div class="ml-steps">
-  <div class="ml-step"><span class="ml-sn"><i>1</i>Describe your league</span><b>Scoring, lineup and budget</b><span>Type it, paste a settings page, or drop in a screenshot. Every platform&rsquo;s wording is read the same way.</span></div>
-  <div class="ml-step"><span class="ml-sn"><i>2</i>Add the rosters</span><b>One screenshot, the whole room</b><span>The middle box of section 02 reads every team off your league&rsquo;s roster grid. On CBS, the free browser extension reads settings and every roster from your signed-in league. No password, no access token.</span></div>
-  <div class="ml-step"><span class="ml-sn"><i>3</i>Every board re-scores</span><b>Rankings, waivers, DFS, the market</b><span>Each page restates its numbers in your points and your dollars. Delete the league at any time and its data goes with it.</span></div>
-</div>
-</div>
-</div><!-- /.is-band -->
-
-<div class="wrap wide">
-
-<section>
-<div class="is-sec" id="connect"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>Your leagues</h2><a class="is-sec-more" href="/my-week">My Week &rarr;</a></div></div>
-<p class="ml-sub">A league saved here follows you across devices, and every in-season board reads it: your exact scoring, your roster, every other roster and the free-agent pool. Rankings, the Pickup Advisor, Best Lineup, the Trade Finder and the stories all read <em>your</em> league instead of a default one. <b>Free.</b> Sign in with an email link; no purchase is required.</p>
-<div id="lsStatus" class="is-note" style="margin:0 0 12px"></div>
-<div id="lsList"></div>
-<div id="lsCbs" hidden></div>
-<div id="lsManual" hidden></div>
-<details class="ml-priv" id="lsPrivacy"><summary>What Iron Tuna keeps, and what it never asks for</summary>
-<p>What you enter: the league&rsquo;s name and size, its scoring and starting lineup, the FAAB budget, team names and the players on each roster. That is all, and it is all typed, pasted or read off a screenshot by you &mdash; Iron Tuna does not connect to Sleeper, Yahoo, ESPN or CBS, holds no password or access token for any of them, and makes no request to any fantasy platform on your behalf. The CBS browser extension runs in your own browser, in the CBS tab you are already signed in to, and sends Iron Tuna only league settings, team names and rosters; your CBS password, cookies and sign-in never leave your browser. The roster-grid screenshot in section 02 is sent to Iron Tuna&rsquo;s reader to be transcribed and is not kept. Your league is used only to personalize your own guidance and is never shown to other readers. Deleting a league removes its settings, teams, rosters and history. Full details in the <a href="/privacy">privacy policy</a>.</p>
-</details>
-</section>
-
-</div><!-- /.wrap -->
-
-<!-- the settings, on the tinted band. This is the destination of the
-     "Customize My League" button in every masthead on the site, and on one
-     continuous white column it was the bottom half of a page rather than the
-     thing that button promises. The form and the rail cards flip to white on
-     the band, the way every --panel surface inside .is-band does. -->
-<div class="is-band">
-<div class="wrap wide">
-<div class="is-sec" id="settings"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>Your in-season settings</h2></div></div>
-<p class="ml-sub">Platform, scoring, lineup, teams and FAAB budget. Every board in the In-Season section restates its numbers at these, whether or not a league is connected. If you already set your league up for the cheat sheet, this page starts from that rather than asking you the same questions twice, and only puts the boxes in front of you that the cheat sheet cannot answer. Otherwise there are three: <b>scoring</b>, your league&rsquo;s <b>rosters</b>, and the <b>FAAB budget</b>. Every box takes the same two things &mdash; type or paste the text, or paste a screenshot straight off the clipboard &mdash; and shows you what it read as values to check before anything moves. The FAAB budget is the one number most tools guess at: a $23 bid out of $100 and a $23 bid out of $1,000 are not the same decision.</p>
-
-<!-- Where the settings came from, filled in only when the cheat sheet answered
-     for them. A form that redraws itself already filled in is a page that looks
-     like it guessed; this is the sentence that says it did not. -->
-<p class="ml-from" id="mlFrom" hidden></p>
-
-<!-- the boxes. Scoring, rosters and the FAAB budget, side by side and each
-     taking typing, a pasted screenshot or a dragged one. They fill the form
-     below rather than saving anything themselves: it-inseason-ui.js intake()
-     hands back a partial and leagueForm()’s handle applies it, so a bad read
-     costs a glance instead of a season of wrong numbers. A cheat sheet in this
-     browser answers the scoring box before it is drawn, so that box is not
-     drawn — see the wiring at the foot of this file. -->
-<div id="mlIntake"></div>
-
-<div class="ml-split">
-  <div class="ml-form" id="mlForm"></div>
-  <div class="ml-side">
-    <div class="is-card"><span class="ml-kick">Where it shows up</span>
-      <div class="ml-rows">
-        <div><b>This section</b><span>Weekly ranks, waiver prices and the market gaps all read the same settings rather than a default league.</span></div>
-        <div><b>The cheat sheet</b><span>Every value re-priced to your budget and re-ranked at your scoring, re-solved live as picks come off the board.</span></div>
-        <div><b>The stories</b><span>A call written as a percentage is restated in your dollars, or in draft slots if you play snake.</span></div>
+<section class="ls-step" id="scoring" aria-labelledby="scoringHead">
+  <h2 id="scoringHead">How does it score?</h2>
+  <p class="sub">Three choices cover most leagues. If yours differs, open the fold under them and type every rule as a number, or paste your platform&rsquo;s scoring page and it is read for you.</p>
+  <div class="ls-row">
+    <div class="ls-lab">Receptions<small>Standard pays nothing per catch.</small></div>
+    <div class="ls-ctl">
+      <div class="is-seg ls-seg" role="group" aria-label="Reception scoring">
+        <label><input type="radio" name="format" value="0">Standard</label>
+        <label><input type="radio" name="format" value="0.5">Half PPR</label>
+        <label><input type="radio" name="format" value="1">PPR</label>
       </div>
     </div>
-    <div class="is-card ml-box"><span class="ml-kick gold">What the draft app knows</span>
-      <p>Your cheat sheet carries the same full scoring &mdash; every yardage divisor and touchdown value &mdash; and it is what the draft board prices against. Where one is set up in this browser, the form on the left opens already filled in from it rather than asking you for it twice.</p>
-      <div id="mlBox"></div>
+  </div>
+  <div class="ls-row">
+    <div class="ls-lab">Passing touchdown</div>
+    <div class="ls-ctl">
+      <div class="is-seg ls-seg" role="group" aria-label="Points per passing touchdown">
+        <label><input type="radio" name="ptd" value="4">4 points</label>
+        <label><input type="radio" name="ptd" value="6">6 points</label>
+      </div>
     </div>
   </div>
-</div>
+  <div class="ls-row">
+    <div class="ls-lab">Tight end premium<small>Extra per catch, on top of the reception.</small></div>
+    <div class="ls-ctl">
+      <div class="is-seg ls-seg" role="group" aria-label="Tight end premium">
+        <label><input type="radio" name="te" value="0">None</label>
+        <label><input type="radio" name="te" value="0.5">+0.5</label>
+        <label><input type="radio" name="te" value="1">+1</label>
+      </div>
+    </div>
+  </div>
 
-</div>
-</div><!-- /.is-band -->
+  <details class="ls-more" id="lsExact">
+    <summary>Every rule, as a number <small id="lsExactNote">optional. The buttons above set these.</small></summary>
+    <div class="ls-grid">
+      <label>Passing yards per point<input class="is-input" type="number" step="1" data-sc="passingYardsPerPoint"></label>
+      <label>Passing TD<input class="is-input" type="number" step="0.5" data-sc="passingTD"></label>
+      <label>Interception<input class="is-input" type="number" step="0.5" data-sc="passingInt"></label>
+      <label>Rushing yards per point<input class="is-input" type="number" step="1" data-sc="rushingYardsPerPoint"></label>
+      <label>Rushing TD<input class="is-input" type="number" step="0.5" data-sc="rushingTD"></label>
+      <label>Receiving yards per point<input class="is-input" type="number" step="1" data-sc="receivingYardsPerPoint"></label>
+      <label>Receiving TD<input class="is-input" type="number" step="0.5" data-sc="receivingTD"></label>
+      <label>Reception<input class="is-input" type="number" step="0.25" data-sc="receptionPoints"></label>
+      <label>RB reception<input class="is-input" type="number" step="0.25" data-sc="rbReceptionPoints"></label>
+      <label>TE premium<input class="is-input" type="number" step="0.25" min="0" data-te></label>
+      <label>Fumble lost<input class="is-input" type="number" step="0.5" data-sc="fumbleLost"></label>
+    </div>
+    <p class="ls-hint">These numbers are what is saved. The buttons are the three questions almost every league answers the same way; a league that pays 5 points for a passing touchdown types the 5 here and the buttons stand aside.</p>
+  </details>
 
-<div class="wrap wide">
-<div class="ml-src">
-<p>Iron Tuna prices players against the <b>betting market</b> first and the consensus projection feeds second. A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news; a ranking carries no such penalty. When a priced market and an unpriced list disagree, the disagreement is the thing worth reading.</p>
-<p class="is-note" style="margin-top:0">The week, the game states and the byes on this page come from the NFL schedule itself, not from the calendar: a week is current until its own last game has finished. Game lines and totals are the market&rsquo;s, pulled on a schedule and cached, never fetched from your browser. Where a number is derived rather than quoted, the page says so.</p>
-</div>
+  <details class="ls-more" id="lsPaste">
+    <summary>Paste your platform&rsquo;s scoring page instead <small>read in your browser, never uploaded</small></summary>
+    <textarea class="ls-paste" id="lsPasteText" rows="6" spellcheck="false" placeholder="Passing TD: 4&#10;Interception: -2&#10;Reception: 0.5&#10;Receiving yards: 1 point per 10 yards"></textarea>
+    <div class="ls-save" style="margin-top:var(--sp-12)">
+      <button type="button" class="is-btn sec" id="lsPasteRead">Read it</button>
+      <button type="button" class="is-btn ghost" id="lsPastePick">Upload a screenshot</button>
+      <input type="file" id="lsPasteFile" accept="image/*" hidden>
+      <p class="ls-status" id="lsPasteMsg" role="status" aria-live="polite"></p>
+    </div>
+    <p class="ls-hint">Copy the text of your league&rsquo;s scoring settings, or paste a screenshot of them straight off the clipboard. Every platform&rsquo;s wording is read the same way, and what it read lands in the numbers above for you to check before you save.</p>
+  </details>
 
-</div><!-- /.wrap -->
+  <p class="ls-from" id="lsFrom" hidden></p>
+  <div class="ls-save">
+    <button type="submit" class="is-btn primary" id="lsSave">Save my scoring</button>
+    <p class="ls-status" id="lsMsg" role="status" aria-live="polite"></p>
+  </div>
+</section>
+</form>
+
+<!-- ── 3 · where it shows up, as How it works ───────────────────────────────
+     The homepage's closing section: a head, a tagline, three cards, and the
+     method as prose. -->
+<section class="hm-sec method" id="where" aria-labelledby="whereHead">
+  <div class="hm-sec-head">
+    <h2 id="whereHead">Where it shows up</h2>
+    <a href="/my-leagues">Saved leagues and rosters &rarr;</a>
+  </div>
+  <p class="hm-tagline">Every board on the site restates its numbers in yours.</p>
+  <div class="hm-how-grid">
+    <div class="hm-input">
+      <h3>This season&rsquo;s boards</h3>
+      <p>Weekly rankings, waiver prices, trade values and the market gaps all read these settings rather than a default league. A tight-end premium moves the tight ends; six-point passing touchdowns move the quarterbacks.</p>
+    </div>
+    <div class="hm-input">
+      <h3>The cheat sheet</h3>
+      <p>The draft board carries the same scoring, down to every yardage divisor. Where you built one in this browser, this page opens already filled in from it rather than asking twice.</p>
+    </div>
+    <div class="hm-input">
+      <h3>Your rosters</h3>
+      <p>Who is on each team is a different question from how the league scores. <a href="/my-leagues">My Leagues</a> saves your league and reads every roster off one screenshot; the FAAB budget is set there and on the waiver tools.</p>
+    </div>
+  </div>
+  <div class="method-more">
+    <p><b>Stored in this browser only.</b> Nothing on this page reaches a server. The settings follow you across the site on this device; a saved league on My Leagues follows you across devices.</p>
+    <p><b>Priced off the market first.</b> Iron Tuna prices players against the betting market first and the consensus projection feeds second, then restates every number at your scoring. A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news; a ranking carries no such penalty.</p>
+  </div>
+</section>
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
@@ -338,463 +326,206 @@ p{color:var(--sec);margin:0 0 16px}
 <script src="/it-inseason.js" defer></script>
 <script src="/it-inseason-import.js" defer></script>
 <script src="/it-inseason-ui.js" defer></script>
-<script src="/it-roster-grid.js" defer></script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  if (!window.ITInSeasonUI) return;
-  // The form takes no importer of its own here: the boxes above it are the same
-  // intake asked one question at a time, and two ways to copy a league in on one
-  // screen is one too many. The handle is how the boxes reach the fields.
-  var form = ITInSeasonUI.leagueForm(document.getElementById('mlForm'), { importer: false });
-  var apply = function (partial, source, n) { if (form) form.apply(partial, source, n); };
-
-  // The cheat sheet, where there is one. A reader who built a draft board in
-  // this browser has already answered the scoring and the lineup, down to the
-  // yardage divisors, and asking them again is the kind of second helping of
-  // work that makes a settings page feel like paperwork. It used to be a button
-  // in the footer of the row — "Copy my cheat sheet across" — which is a button
-  // for a thing the page could simply do.
-  //
-  // Only when §02 has nothing saved of its own. A reader who already set these
-  // settings here meant them, and overwriting them on every page load with a
-  // draft board from August would be the page changing their league behind them.
-  var sheet = null;
-  try {
-    if (window.ITInSeason && window.ITInSeasonImport && !ITInSeason.has()) sheet = ITInSeasonImport.fromDraftApp();
-  } catch (e) { sheet = null; }
-
-  // What the cheat sheet cannot answer is what is left to ask. It carries the
-  // scoring, the lineup and the league size; it has never carried a FAAB budget
-  // (its own budget is the AUCTION budget, a different number in a different
-  // season, and quoting one as the other would be worse than asking) and it has
-  // never carried a room full of players. So: rosters and the budget when there
-  // is a sheet, all three boxes when there is not.
-  var rosters = { slot: 'rosters', title: 'Insert Rosters', hint: 'Every team\u2019s players, off the one page your league prints them on.' };
-  var cards;
-  if (sheet) {
-    rosters.n = '01';
-    cards = [rosters, { kind: 'faab', n: '02' }];
-  } else {
-    rosters.n = '02';
-    cards = ['scoring', rosters, 'faab'];
-  }
-
-  ITInSeasonUI.intake(document.getElementById('mlIntake'), {
-    cards: cards,
-    onSlot: function (name, body) { rosterGrid(body); },
-    // The footer's cheat-sheet button is gone for good: where there is a sheet
-    // this page has already applied it, and where there is not the button never
-    // drew anyway.
-    draft: false,
-    // The default line says every screenshot here is read in the browser. The
-    // rosters box is the one that is not, and a privacy claim that is true of
-    // the boxes beside it and false of that one is worse than no claim at all.
-    // It names only the boxes actually drawn: where the cheat sheet answered
-    // the scoring, there is no scoring box for the sentence to be about.
-    note: (sheet ? 'The budget box reads its screenshot' : 'The scoring and budget boxes read their screenshots') +
-      ' <b>in your browser</b> and never ' + (sheet ? 'uploads it' : 'upload them') +
-      '. The rosters box sends what you give it \u2014 image or text \u2014 to Iron Tuna\u2019s reader, as its own card says. Nothing is saved until you press Save.',
-    onApply: apply
-  });
-
-  // Applied after the row is drawn, so the message the form shows is the last
-  // thing to move rather than something that happened before the page settled.
-  if (sheet) {
-    apply(sheet, 'your cheat sheet', sheet.items.length);
-    var from = document.getElementById('mlFrom');
-    if (from) {
-      from.innerHTML = '<b>Filled in from your cheat sheet.</b> ' +
-        sheet.items.map(function (it) { return ITInSeasonUI.esc(it[0]); }).join(', ') +
-        ' came across from the league you set up for the draft board. Check them in the form below and press Save \u2014 nothing is stored until you do. ' +
-        'The ' + (cards.length === 2 ? 'two boxes' : 'boxes') + ' below are the questions it could not answer.';
-      from.hidden = false;
-    }
-  }
-});
-
-// The rosters box. The boxes beside it fill the form and save nothing
-// themselves; a room full of players has nowhere to live in that form — it
-// holds settings — so this one writes the league record directly, the same
-// POST the by-hand form in §01 makes. That record is what Best Lineup, the
-// Pickup Advisor and the free-agent pool read.
-function rosterGrid(el) {
-  if (!el || !window.ITRosterGrid) return;
-  var esc = window.ITSync ? ITSync.esc : function (x) { return String(x == null ? '' : x); };
-  el.innerHTML = '<div class="ml-grid-card">' +
-    '<div id="mlGridBox"></div>' +
-    '<div class="is-btns"><button type="button" class="is-btn primary" id="mlGridSave">Save these rosters</button></div>' +
-    '<p class="is-note" id="mlGridMsg" role="status" aria-live="polite" style="margin:0"></p>' +
-    // The boxes beside this one read their screenshots in the browser and say
-    // so. This one cannot: a grid of two hundred names needs the reader on the
-    // server, whether it arrives as an image or as words. A privacy line that is
-    // true of its neighbours and false of this box is worse than no line at all.
-    '<p class="is-note" style="margin:0">What you put in this box \u2014 the text you type or paste, or the screenshot \u2014 goes to Iron Tuna\u2019s reader to be transcribed, unlike the boxes beside it. Neither is kept.</p>' +
-  '</div>';
-  var msgEl = document.getElementById('mlGridMsg');
-  function msg(html, bad) { msgEl.innerHTML = html || ''; msgEl.style.color = bad ? 'var(--danger)' : ''; }
-
-  var grid = ITRosterGrid.mount(document.getElementById('mlGridBox'), {
-    // The card above already carries the number and the title.
-    label: '',
-    note: 'Paste the grid as text or as a screenshot \u2014 either one reads. Names only: who starts is projected from the scoring, not read off the page. Send more than one image together if the grid does not fit in one shot.',
-    onPick: function () { msg(''); },
-    // A new answer is a new state of play, so the one warning below is armed
-    // again: a reader who fixes six of eight names should be told about the two.
-    onCheck: function () { warned = false; }
-  });
-
-  // The save asks once about names still unplaced, and saves on the second
-  // press. Blocking outright would hold a whole league hostage to a kicker the
-  // board has never carried; saying nothing is how eight names ended up scored
-  // zero for a season. Once is the number of times to ask.
-  var warned = false;
-
-  document.getElementById('mlGridSave').addEventListener('click', function () {
-    if (!grid || !grid.teams.length) { msg('Paste a screenshot of the rosters first.', true); return; }
-    if (grid.mine < 0) { msg('Pick which of those teams is yours.', true); return; }
-    if (grid.unplaced > 0 && !warned) {
-      warned = true;
-      msg('<b>' + grid.unplaced + (grid.unplaced === 1 ? ' name is' : ' names are') + ' still unplaced.</b> Answer the question' +
-          (grid.unplaced === 1 ? '' : 's') + ' above so ' + (grid.unplaced === 1 ? 'it counts' : 'they count') +
-          ', or press Save again to store ' + (grid.unplaced === 1 ? 'it' : 'them') + ' by name and scored zero.', true);
-      return;
-    }
-    if (!window.ITSync || !window.ITInSeason) { msg('League sync could not load in this browser.', true); return; }
-    var btn = this;
-    btn.disabled = true;
-    msg('Saving\u2026');
-    // The settings on the left go with them: the lineup and the scoring are what
-    // turn a list of names into a starting lineup, and a reader who typed them
-    // thirty seconds ago has not necessarily pressed Save on that form yet.
-    var f = document.querySelector('#mlForm form');
-    if (f) { if (f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })); }
-    var rec = ITInSeason.get() || ITInSeason.draft();
-
-    ITSync.load(true).then(function (st) {
-      if (!st || !st.signedIn) {
-        btn.disabled = false;
-        // Nothing read is thrown away: the room stays on screen, and one sign-in
-        // later the same button saves it.
-        msg('Rosters are saved to your account, so this needs a sign-in. <a href="#connect">Sign in up in \u00a701</a>, then press Save again \u2014 what was read stays here.', true);
-        var box = document.getElementById('lsEmail');
-        if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return null;
-      }
-      // A synced league is rewritten by its next sync, so a room read off a
-      // screenshot belongs to a manual league: this updates the one on the
-      // account if there is one, and makes one if there is not.
-      var manual = (st.leagues || []).filter(function (L) { return L.provider === 'manual'; });
-      var target = manual.filter(function (L) { return L.id === st.activeId || L.isDefault; })[0] || manual[0] || null;
-      var body = {
-        id: target ? target.id : undefined,
-        name: target ? target.name : 'My league',
-        numTeams: Math.max(grid.teams.length, parseInt(rec.teams, 10) || 0),
-        teams: grid.teams.map(function (t, i) {
-          return { teamId: 'm' + (i + 1), name: t.name || ('Team ' + (i + 1)), isUser: i === grid.mine, players: t.players };
-        }),
-        settings: { scoring: rec.settings ? rec.settings.scoring : {}, extras: rec.settings ? rec.settings.extras : { tePremium: 0 },
-                    roster: rec.settings ? rec.settings.roster : null, faab: rec.faab == null ? null : rec.faab }
-      };
-      return ITSync.api('/api/leagues/manual', { method: 'POST', body: body }).then(function (j) {
-        btn.disabled = false;
-        if (!j || !j.ok) { msg(esc((j && (j.message || j.error)) || 'Could not save those rosters.'), true); return; }
-        msg('<b>Saved.</b> ' + esc(j.league.name) + ' now holds ' + grid.teams.length + ' rosters.' +
-            (j.unresolved && j.unresolved.length ? ' Not on the board (kept by name, scored 0): ' + esc(j.unresolved.join(', ')) + '.' : ' Every player mapped to the board.'));
-        ITSync.invalidate();
-        ITSync.load(true);
-      });
-    }).catch(function () { btn.disabled = false; msg('Could not save those rosters. Try again.', true); });
-  });
-}
-</script>
-<script src="/it-sync.js" defer></script>
-<script>
+// The settings form. The markup is static above; this wires it to the record
+// in it-inseason.js (ITInSeason) and to the reader in it-inseason-import.js
+// (ITInSeasonImport). The buttons and the numbers are two readings of one
+// rule, as the preset and the reception fields are on the in-season hub's
+// form: a button sets its numbers, and the numbers are what is saved.
 (function () {
+  'use strict';
   var $ = function (id) { return document.getElementById(id); };
-  var esc = function (s) { return window.ITSync ? ITSync.esc(s) : String(s == null ? '' : s); };
-  var D = String.fromCharCode(36), NL = String.fromCharCode(10);
-  var st = null, LIVE = null;
-  function note(msg, bad) { var el = $('lsStatus'); el.innerHTML = msg; el.style.color = bad ? 'var(--danger)' : ''; }
-  function reload() { ITSync.invalidate(); return ITSync.load(true).then(function (s) { st = s; render(); }); }
-  function slotLabel(s) { return { SFLEX: 'Superflex', REC_FLEX: 'W/T flex', WRRB_FLEX: 'W/R flex', BN: 'Bench', IR: 'IR', TAXI: 'Taxi' }[s] || s; }
-  function scoringRows(S, ov) {
-    var s = S.scoring, rows = [['Receptions (WR/TE)', 'receptionPoints', s.receptionPoints], ['Receptions (RB)', 'rbReceptionPoints', s.rbReceptionPoints], ['TE premium (per catch)', 'tePremium', S.extras.tePremium], ['Passing TD', 'passingTD', s.passingTD], ['Interception', 'passingInt', s.passingInt], ['Passing yards per point', 'passingYardsPerPoint', s.passingYardsPerPoint], ['Rushing TD', 'rushingTD', s.rushingTD], ['Rushing yards per point', 'rushingYardsPerPoint', s.rushingYardsPerPoint], ['Receiving TD', 'receivingTD', s.receivingTD], ['Receiving yards per point', 'receivingYardsPerPoint', s.receivingYardsPerPoint], ['Fumble lost', 'fumbleLost', s.fumbleLost]];
-    return rows.map(function (r) { var o = (ov || []).indexOf((r[1] === 'tePremium' ? 'extras.' : 'scoring.') + r[1]) >= 0; return '<tr><td>' + esc(r[0]) + (o ? ' <span class="is-tag is-accent">your correction</span>' : '') + '</td><td class="num"><input class="is-input" style="width:80px" type="number" step="0.01" data-sc="' + r[1] + '" value="' + esc(r[2]) + '"></td></tr>'; }).join('');
-  }
-  function rosterRows(S, ov) {
-    return ['QB', 'RB', 'WR', 'TE', 'FLEX', 'SFLEX', 'REC_FLEX', 'WRRB_FLEX', 'K', 'DEF', 'BN', 'IR', 'TAXI'].map(function (k) { var o = (ov || []).indexOf('roster.' + k) >= 0; return '<label style="display:inline-flex;flex-direction:column;margin:4px 8px 4px 0;font-size:13.5px;font-weight:700">' + esc(slotLabel(k)) + (o ? ' *' : '') + '<input class="is-input" style="width:56px" type="number" min="0" max="20" data-ro="' + k + '" value="' + esc(S.roster[k] || 0) + '"></label>'; }).join('') + (Object.keys(S.roster.other || {}).length ? '<p class="is-note">Other slots kept but not used in lineups: ' + esc(Object.keys(S.roster.other).map(function (k) { return k + ' ×' + S.roster.other[k]; }).join(', ')) + '</p>' : '');
-  }
-  function card(L) {
-    var s = L.sync || {}, cbs = L.provider === 'cbs_browser';
-    return '<div class="is-card" data-id="' + esc(L.id) + '" style="margin:10px 0">' +
-      '<span class="is-tag is-live">' + (cbs ? 'CBS import' : 'Saved') + (L.isDefault ? ' · default' : '') + '</span>' +
-      '<h3>' + esc(L.name) + ' <span class="is-status">' + esc(L.numTeams || '?') + ' teams · ' + esc(L.season || '') + '</span></h3>' +
-      '<p>' + esc(L.label) + '</p>' +
-      '<p class="is-note" style="margin:6px 0 0">' + esc(ITSync.syncLine(L)) + (cbs ? ' Read from your CBS league by the browser extension' + (s.lastOkAt ? ' on ' + esc(new Date(s.lastOkAt).toLocaleString()) : '') + '. To refresh, open the league on CBS and run the extension again; standings, matchups and transactions are not part of the import.' : '') + '</p>' +
-      (!L.userTeamId ? '<p style="color:var(--danger);margin:8px 0 0"><b>Which team is yours?</b> Iron Tuna could not tell. <button type="button" class="is-btn sec" data-act="teams">Pick my team</button></p>' : '') +
-      '<div class="is-btns" style="margin-top:10px">' +
-        // panel() has always handled 'edit'; the button that asks for it went
-        // missing, and with it the only way back to the by-hand form once a
-        // league was saved — team names, your own starters, the roster grid.
-        // A CBS import is refreshed by the extension, not typed over: the
-        // by-hand form would re-save the room as a manual league with
-        // name-matched players in place of CBS's ids.
-        (cbs ? '' : '<button type="button" class="is-btn primary" data-act="edit">Edit league</button>') +
-        (L.isDefault ? '' : '<button type="button" class="is-btn sec" data-act="default">Make default</button>') +
-        '<button type="button" class="is-btn sec" data-act="settings">Review settings</button>' +
-        (L.userTeamId ? '<button type="button" class="is-btn sec" data-act="teams">Change my team</button>' : '') +
-        '<a class="is-btn sec" href="/my-week">My Week</a>' +
-        '<button type="button" class="is-btn sec" data-act="disconnect" style="margin-left:auto">Delete</button>' +
-      '</div><div data-panel hidden></div></div>';
-  }
-  function render() {
-    if (!st) return;
-    if (!st.signedIn) {
-      note('<div class="is-card"><h3>Sign in to save your league</h3><p><b>Saving a league is free.</b> Enter your email and we will send a one-time link. Signing in keeps your leagues tied to you across devices, and the rosters box in section 02 needs it before it can store a room.</p><div class="is-row2"><div class="is-field"><label for="lsEmail">Email</label><input class="is-input" id="lsEmail" type="email" autocomplete="email" placeholder="you@email.com"></div></div><div class="is-btns"><button type="button" class="is-btn primary" id="lsSignin">Email me a sign-in link</button></div><p class="is-note" id="lsSigninMsg"></p></div>');
-      $('lsSignin').addEventListener('click', function () {
-        var email = $('lsEmail').value.trim(), msg = $('lsSigninMsg'), b = this;
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.textContent = 'Enter a valid email address.'; return; }
-        b.disabled = true; msg.textContent = 'Sending…';
-        ITSync.api('/api/auth/request', { method: 'POST', body: { email: email, returnTo: '/my-league' } }).then(function () {
-          b.hidden = true; $('lsEmail').disabled = true; msg.textContent = 'Check your email. Open the one-time link on this device; it expires in 15 minutes.';
-        });
-      });
-      $('lsList').innerHTML = ''; return;
-    }
-    note('');
-    if (!st.leagues.length) {
-      // No league yet means there is nothing here to choose between, so the
-      // form opens itself rather than hiding behind a button. A reader who
-      // pressed "Customize My League" has already said what they came for;
-      // asking them to press "Enter my league" to be shown the fields is a
-      // click that carries no decision.
-      $('lsList').innerHTML = '<div class="is-vacant"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5 7V5a3 3 0 016 0v2"></path></svg></span><div class="is-vacant-msg"><b>No league saved yet.</b><span>Fill in the form below and every board re-scores itself in your points. Its roster box reads a whole room off one screenshot of your league&rsquo;s roster grid.</span></div></div>';
-    } else {
-      $('lsList').innerHTML = st.leagues.map(card).join('') + '<p class="is-note" style="margin:8px 0 0">' + st.leagues.length + ' league' + (st.leagues.length === 1 ? '' : 's') + ' saved. The default league is what every page uses unless you switch it in the League selector.</p><div class="is-btns"><button type="button" class="is-btn sec" data-add>Add another league</button></div>';
-    }
-    $('lsList').querySelectorAll('[data-add]').forEach(function (b) { b.addEventListener('click', addLeague); });
-    cbsBox();
-    // Opened, not scrolled to, and with no Cancel: there is no earlier state
-    // for a first league to go back to, and a page that jumped here would
-    // fight the anchor the reader arrived on.
-    if (!st.leagues.length) manualForm(null, { scroll: false, cancel: false });
-  }
-  // ── the CBS browser import ────────────────────────────────────────────────
-  // CBS exposes no token and its roster grid is not one screenshot, so a CBS
-  // league comes in through the free extension: it reads settings, team names
-  // and every roster out of the reader's own signed-in CBS tab and posts the
-  // snapshot to /api/leagues/connect from this page's sign-in. This box is the
-  // instructions; the import itself happens in the extension's popup.
-  function cbsBox() {
-    var el = $('lsCbs'); if (!el) return;
-    var has = (st.leagues || []).some(function (L) { return L.provider === 'cbs_browser'; });
-    el.hidden = false;
-    el.innerHTML = '<div class="is-card" style="margin:10px 0"><span class="is-tag">CBS leagues</span><h3>' + (has ? 'Refresh your CBS league' : 'Play on CBS? Import your league') + '</h3>' +
-      '<p>The free <a href="https://github.com/krubins/iron-tuna/tree/main/extensions/cbs-connector" target="_blank" rel="noopener">Iron Tuna CBS Connector</a> reads your league&rsquo;s scoring, roster slots, team names and every roster from the CBS league you are signed in to, and saves it here. Your CBS password and cookies stay in your browser; Iron Tuna never sees them, and never contacts CBS itself.</p>' +
-      '<ol class="is-note" style="margin:0 0 8px 18px;padding:0"><li>Download the extension folder and load it unpacked at <code>chrome://extensions</code> or <code>edge://extensions</code> (Developer mode, then Load unpacked).</li><li>Keep this page open, signed in.</li><li>Open your CBS football league in another tab and click the extension. Confirm the season, press <b>Import to Iron Tuna</b>, then pick your team.</li><li>Come back here and reload. Run the extension again whenever rosters change.</li></ol>' +
-      '<p class="is-note" style="margin:0">Imported: scoring, roster slots, playoff start, team names, players and starter/bench/IR slots. Not imported: standings, matchups, transactions and FAAB balances; set the budget under Review settings.</p></div>';
-  }
-  // The section this page was asked for. Both sections below the masthead
-  // render after their fetch, so the browser's own jump to #settings or
-  // #connect lands on a page that is still short and leaves the reader parked
-  // above the thing they clicked. Re-aim once the heights are real, and only
-  // while the reader has not started scrolling for themselves.
-  var moved = false;
-  ['wheel', 'touchmove', 'keydown'].forEach(function (e) {
-    window.addEventListener(e, function () { moved = true; }, { passive: true, once: true });
-  });
-  var anchored = false;
-  function anchor() {
-    if (anchored || moved) return;
-    var el = /^#(settings|connect)$/.test(location.hash) && document.querySelector(location.hash);
-    if (!el) return;
-    anchored = true;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-  // The one way in. There are no platforms to choose between any more, so the
-  // by-hand form is the flow rather than the fallback at the end of one.
-  function addLeague() { manualForm(null); }
+  var all = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
+  var esc = function (s) { return window.ITInSeasonUI ? ITInSeasonUI.esc(s) : String(s == null ? '' : s); };
 
-  function panel(id, kind) {
-    var host = document.querySelector('[data-id="' + id + '"] [data-panel]'); if (!host) return;
-    host.hidden = false; host.innerHTML = '<p class="is-note">Loading…</p>';
-    ITSync.api('/api/leagues/' + encodeURIComponent(id)).then(function (j) {
-      if (!j || !j.ok) { host.innerHTML = '<p class="is-note">Could not load.</p>'; return; }
-      var L = j.league;
-      if (kind === 'teams') {
-        host.innerHTML = '<p><b>Which team is yours?</b></p><div class="is-btns">' + L.teams.map(function (t) { return '<button type="button" class="is-btn ' + (t.teamId === L.userTeamId ? 'primary' : 'sec') + '" data-team="' + esc(t.teamId) + '">' + esc(t.name) + (t.manager ? ' (' + esc(t.manager) + ')' : '') + '</button>'; }).join('') + '</div>';
-        host.querySelectorAll('[data-team]').forEach(function (b) { b.addEventListener('click', function () { ITSync.api('/api/leagues/' + encodeURIComponent(id) + '/team', { method: 'POST', body: { teamId: b.getAttribute('data-team') } }).then(reload); }); });
-        return;
-      }
-      if (kind === 'settings') {
-        var S = L.settings, ov = S.overridden || [];
-        host.innerHTML = '<h4 style="margin:12px 0 4px">Scoring, as Iron Tuna read it</h4><p class="is-note" style="margin:0 0 8px">' + 'Entered by you. Correct anything below and your correction is kept.' + '</p>' +
-          '<div class="is-scroll"><table class="is-table"><tbody>' + scoringRows(S, ov) + '</tbody></table></div>' +
-          (S.extras.notes && S.extras.notes.length ? '<p class="is-note">' + S.extras.notes.map(esc).join(' ') + '</p>' : '') +
-          (Object.keys(S.extras.unsupported || {}).length ? '<p class="is-note">Kept but not scored: ' + esc(Object.keys(S.extras.unsupported).map(function (k) { return k + '=' + S.extras.unsupported[k]; }).join(', ')) + '</p>' : '') +
-          '<h4 style="margin:12px 0 4px">Starting lineup and roster</h4><div>' + rosterRows(S, ov) + '</div>' +
-          '<div class="is-row2" style="margin-top:8px"><div class="is-field"><label>FAAB budget (' + D + ', blank if waiver priority)</label><input class="is-input" style="width:100px" type="number" data-faab value="' + (S.faab == null ? '' : esc(S.faab)) + '"></div><div class="is-field"><label>Playoffs start week ' + esc(S.playoffWeekStart) + ' · ' + esc(S.playoffTeams) + ' teams · ' + esc(S.leagueType) + '</label></div></div>' +
-          '<div class="is-btns" style="margin-top:8px"><button type="button" class="is-btn primary" data-save-ov>Save corrections</button>' + (ov.length ? '<button type="button" class="is-btn sec" data-clear-ov>Back to synced settings</button>' : '') + '<span class="is-hint">' + (ov.length ? ov.length + ' correction' + (ov.length === 1 ? '' : 's') + ' in force' : 'No corrections; synced values shown') + '</span></div>';
-        host.querySelector('[data-save-ov]').addEventListener('click', function () {
-          var o = { scoring: {}, roster: {}, extras: {} };
-          host.querySelectorAll('[data-sc]').forEach(function (i) { var k = i.getAttribute('data-sc'); var v = parseFloat(i.value); if (!isFinite(v)) return; if (k === 'tePremium') { if (v !== L.synced.extras.tePremium) o.extras.tePremium = v; } else if (v !== L.synced.scoring[k]) o.scoring[k] = v; });
-          host.querySelectorAll('[data-ro]').forEach(function (i) { var k = i.getAttribute('data-ro'); var v = parseInt(i.value, 10); if (isFinite(v) && v !== (L.synced.roster[k] || 0)) o.roster[k] = v; });
-          var fb = host.querySelector('[data-faab]').value; if (fb !== '' && parseInt(fb, 10) !== L.synced.faab) o.faab = parseInt(fb, 10);
-          ITSync.api('/api/leagues/' + encodeURIComponent(id) + '/overrides', { method: 'POST', body: { overrides: o } }).then(function () { reload().then(function () { panel(id, 'settings'); }); });
-        });
-        var cl = host.querySelector('[data-clear-ov]'); if (cl) cl.addEventListener('click', function () { ITSync.api('/api/leagues/' + encodeURIComponent(id) + '/overrides', { method: 'POST', body: { clear: true } }).then(function () { reload().then(function () { panel(id, 'settings'); }); }); });
-        return;
-      }
-      if (kind === 'edit') { manualForm(L); host.hidden = true; return; }
+  document.addEventListener('DOMContentLoaded', function () {
+    var L = window.ITInSeason, IMP = window.ITInSeasonImport;
+    var form = $('lsForm'), msg = $('lsMsg');
+    if (!L) { say(msg, 'Could not read your saved settings in this browser.', true); return; }
+
+    function say(el, html, bad) { if (!el) return; el.innerHTML = html || ''; el.classList.toggle('err', !!bad); }
+    function radio(name) { var r = form.querySelector('input[name="' + name + '"]:checked'); return r ? r.value : null; }
+    function check(name, value) {
+      var hit = false;
+      all('input[name="' + name + '"]', form).forEach(function (r) {
+        // "custom" is a word, so the string is compared first; 0.5 and "0.5" are
+        // the same number, so the number is compared second.
+        var on = value != null && (String(r.value) === String(value) || Number(r.value) === Number(value));
+        r.checked = on; if (on) hit = true;
+      });
+      return hit;
+    }
+    function field(k) { return form.querySelector('[data-sc="' + k + '"]'); }
+    function num(el) { var n = parseFloat(el && el.value); return isFinite(n) ? n : null; }
+
+    // ── the numbers, into the form ──────────────────────────────────────────
+    // Every scoring field the form prints, from the record or the site's
+    // default for it. Fields the form does not print (a bonus ladder off a
+    // screenshot) stay in `carried` and ride through the save untouched.
+    var carried = {};
+    function fill(rec) {
+      var s = rec.settings, sc = s ? s.scoring : {};
+      carried = {};
+      for (var k in sc) if (sc.hasOwnProperty(k) && !field(k)) carried[k] = sc[k];
+      all('[data-sc]', form).forEach(function (i) {
+        var k = i.getAttribute('data-sc');
+        i.value = sc[k] !== undefined ? sc[k] : L.SCORING_DEFAULTS[k];
+      });
+      form.querySelector('[data-te]').value = s && s.extras ? s.extras.tePremium : 0;
+      var t = Number(rec.teams) || 12;
+      if (!check('teams', t)) { check('teams', 'custom'); }
+      $('lsTeamsCustom').value = t;
+      teamsMode();
+      syncButtons();
+    }
+    // The custom count shows only when Custom is chosen; the three buttons
+    // are the answer for most leagues.
+    function teamsMode() {
+      var custom = radio('teams') === 'custom';
+      $('lsCustomWrap').hidden = !custom;
+    }
+    // The buttons follow the numbers. A value none of the buttons name (5 per
+    // passing touchdown, 0.75 per catch) leaves its row unlit and opens the
+    // fold, because the number is then the only honest reading of the rule.
+    function syncButtons() {
+      var rec = num(field('receptionPoints')), ptd = num(field('passingTD')), te = num(form.querySelector('[data-te]'));
+      var off = 0;
+      if (!check('format', rec)) off++;
+      if (!check('ptd', ptd)) off++;
+      if (!check('te', te)) off++;
+      if (off) { $('lsExact').open = true; $('lsExactNote').textContent = 'your league differs from the buttons above'; }
+      else $('lsExactNote').textContent = 'optional. The buttons above set these.';
+    }
+    // A button sets its numbers. The reception button sets the running back's
+    // catch too, as the hub's form does: a league that pays backs differently
+    // for a catch says so in the fold, and nobody arrives at one by accident.
+    form.addEventListener('change', function (e) {
+      var t = e.target;
+      if (!t || t.type !== 'radio') return;
+      if (t.name === 'teams') { teamsMode(); if (t.value === 'custom') $('lsTeamsCustom').focus(); return; }
+      if (t.name === 'format') { field('receptionPoints').value = t.value; field('rbReceptionPoints').value = t.value; }
+      if (t.name === 'ptd') field('passingTD').value = t.value;
+      if (t.name === 'te') form.querySelector('[data-te]').value = t.value;
+      syncButtons();
     });
-  }
-  $('lsList').addEventListener('click', function (ev) {
-    var b = ev.target.closest('[data-act]'); if (!b) return;
-    var cardEl = b.closest('[data-id]'), id = cardEl.getAttribute('data-id'), act = b.getAttribute('data-act');
-    if (act === 'default') ITSync.api('/api/leagues/' + encodeURIComponent(id) + '/default', { method: 'POST' }).then(function () { ITSync.select(id); reload(); });
-    else if (act === 'disconnect') { if (!confirm('Delete this league? Iron Tuna deletes its settings, teams, rosters and history.')) return; ITSync.api('/api/leagues/' + encodeURIComponent(id) + '/disconnect', { method: 'POST' }).then(function (j) { note('Deleted. Removed: ' + esc((j.removed || []).join(', ')) + '.'); reload(); }); }
-    else panel(id, act);
-  });
-  // ── the roster grid ───────────────────────────────────────
-  // it-roster-grid.js, because §02 mounts the same reader: a screenshot of every
-  // roster is what a reader pastes into the section that promises rosters.
+    form.addEventListener('input', function (e) {
+      var t = e.target;
+      if (t && (t.hasAttribute('data-sc') || t.hasAttribute('data-te'))) syncButtons();
+    });
 
-  // ── manual ───────────────────────────────────────────────────────────────
-  function manualForm(L, o) {
-    o = o || {};
-    var el = $('lsManual'); el.hidden = false;
-    var S = L ? L.settings : null, mine = L ? (L.rosters.find(function (r) { return r.teamId === L.userTeamId; }) || { players: [] }) : null;
-    var rec = S ? S.scoring.receptionPoints : 1;
-    // Every scoring field an IMPORT found, including the ones this form does
-    // not print. The form asks for three numbers because three is what anyone
-    // will type; a screenshot or a paste knows twenty, and dropping seventeen
-    // on the way to the server would leave the import a worse answer than the
-    // typing it replaced. mfRecExact is the same idea for a reception value
-    // that is none of the three buttons — a 0.75-PPR league keeps its 0.75
-    // unless the reader moves the control into a different bucket themselves.
-    var mfScoring = S ? Object.assign({}, S.scoring) : {};
-    var mfRecExact = null;
-    // A league already holding a room keeps it through an edit. Without this,
-    // reopening a grid league to change one scoring number would save the one
-    // typed roster and silently drop the other eleven.
-    var seeded = { teams: [], mine: -1 };
-    if (L && L.teams && L.teams.length > 1) {
-      seeded.teams = L.teams.map(function (t) {
-        var r = (L.rosters || []).filter(function (x) { return x.teamId === t.teamId; })[0] || { players: [] };
-        return { name: t.name, players: r.players.map(function (p) { return { name: p.name, position: p.position || null, team: p.team || null }; }) };
+    // ── the form, into the record ───────────────────────────────────────────
+    // The team count and the scoring move; everything else the record holds
+    // (platform, FAAB budget, lineup, league URL) rides through untouched.
+    function readForm() {
+      var base = L.get() || L.draft();
+      var s = base.settings || { scoring: {}, extras: { tePremium: 0 }, roster: null };
+      var scoring = {};
+      for (var k in carried) if (carried.hasOwnProperty(k)) scoring[k] = carried[k];
+      all('[data-sc]', form).forEach(function (i) {
+        var n = num(i);
+        if (n !== null) scoring[i.getAttribute('data-sc')] = n;
       });
-      seeded.mine = L.teams.map(function (t) { return t.teamId; }).indexOf(L.userTeamId);
+      var te = num(form.querySelector('[data-te]'));
+      s.scoring = scoring;
+      s.extras = s.extras || {};
+      s.extras.tePremium = te !== null && te > 0 ? te : 0;
+      base.settings = s;
+      var t = radio('teams') === 'custom' ? parseInt($('lsTeamsCustom').value, 10) : parseInt(radio('teams'), 10);
+      base.teams = t;
+      return base;
     }
-    var grid = { teams: [], mine: -1, partial: false };
-    el.innerHTML = '<div class="is-card"><h3>' + (L ? 'Edit ' + esc(L.name) : 'Enter your league by hand') + '</h3><p class="is-note" style="margin:0 0 10px">Works for ESPN, CBS, Fantrax, MFL or any league. The scoring and lineup below make every ranking exact; your roster makes Best Lineup and the Pickup Advisor personal. Other managers&rsquo; rosters are optional; without them the free-agent pool is everyone not on your team.</p><div id="mfImp"></div><div id="mfGrid"></div>' +
-      '<div class="is-row2"><div class="is-field"><label>League name</label><input class="is-input" id="mfName" value="' + esc(L ? L.name : '') + '"></div><div class="is-field"><label>Teams</label><input class="is-input" id="mfTeams" type="number" min="2" max="20" value="' + esc(L ? L.numTeams : 12) + '"></div></div>' +
-      '<div class="is-field"><label>Scoring</label><div class="is-seg" role="group">' + [['1', 'PPR'], ['0.5', 'Half PPR'], ['0', 'Standard']].map(function (o) { return '<label><input type="radio" name="mfRec" value="' + o[0] + '"' + (String(rec) === o[0] ? ' checked' : '') + '>' + o[1] + '</label>'; }).join('') + '</div></div>' +
-      '<div class="is-row2"><div class="is-field"><label>TE premium (extra per catch)</label><input class="is-input" id="mfTe" type="number" step="0.25" value="' + esc(S ? S.extras.tePremium : 0) + '"></div><div class="is-field"><label>Passing TD</label><input class="is-input" id="mfPtd" type="number" step="1" value="' + esc(S ? S.scoring.passingTD : 4) + '"></div></div>' +
-      '<div class="is-field"><label>Starting lineup and bench</label><div>' + rosterRows(S || { roster: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, SFLEX: 0, REC_FLEX: 0, WRRB_FLEX: 0, K: 1, DEF: 1, BN: 6, IR: 1, TAXI: 0 } }, []) + '</div></div>' +
-      '<div class="is-row2"><div class="is-field"><label>FAAB budget (blank if waiver priority)</label><input class="is-input" id="mfFaab" type="number" value="' + (S && S.faab != null ? esc(S.faab) : '') + '"></div><div class="is-field"><label>Your team name</label><input class="is-input" id="mfTeam" value="' + esc(L ? ((L.teams.find(function (t) { return t.teamId === L.userTeamId; }) || {}).name || 'My team') : 'My team') + '"></div></div>' +
-      '<div class="is-field"><label>Your roster, one player per line (mark starters with * and IR with IR)</label><textarea class="is-input" id="mfRoster" rows="10" placeholder="* Josh Allen QB&#10;* Bijan Robinson RB&#10;Rachaad White RB&#10;IR Nico Collins WR">' + esc(mine ? mine.players.map(function (p) { return (p.slot === 'starter' ? '* ' : p.slot === 'ir' ? 'IR ' : '') + p.name + (p.position ? ' ' + p.position : ''); }).join(NL) : '') + '</textarea></div>' +
-      '<div class="is-btns"><button type="button" class="is-btn primary" id="mfSave">' + (L ? 'Save league' : 'Create league') + '</button>' + (o.cancel === false ? '' : '<button type="button" class="is-btn sec" id="mfCancel">Cancel</button>') + '</div><p class="is-note" id="mfMsg"></p></div>';
-    // The cheat sheet's intake, on the by-hand form. What it replaces is a
-    // reader retyping a settings page they are already looking at, into three
-    // scoring boxes that cannot hold most of what it says.
-    if (window.ITInSeasonUI && window.ITInSeasonUI.importer) {
-      ITInSeasonUI.importer($('mfImp'), {
-        note: 'Scoring and starting lineup, off a screenshot, a paste, or the cheat sheet you already built. Nothing is saved until you press ' + (L ? 'Save league' : 'Create league') + '.',
-        onApply: function (partial) {
-          if (partial.scoring) {
-            Object.assign(mfScoring, partial.scoring);
-            if (partial.scoring.passingTD != null) $('mfPtd').value = partial.scoring.passingTD;
-            var r = partial.scoring.receptionPoints;
-            if (r != null) {
-              mfRecExact = r;
-              var near = r >= 0.9 ? '1' : r >= 0.4 ? '0.5' : '0';
-              var radio = el.querySelector('input[name="mfRec"][value="' + near + '"]');
-              if (radio) radio.checked = true;
-            }
-          }
-          if (partial.extras && partial.extras.tePremium != null) $('mfTe').value = partial.extras.tePremium;
-          if (partial.teams) $('mfTeams').value = partial.teams;
-          if (partial.faab != null) $('mfFaab').value = partial.faab;
-          // A lineup arrives whole and replaces the boxes; a preset patches the
-          // one slot it names and leaves the bench alone.
-          if (partial.roster) el.querySelectorAll('[data-ro]').forEach(function (i) { i.value = Number(partial.roster[i.getAttribute('data-ro')]) || 0; });
-          else if (partial.rosterPatch) el.querySelectorAll('[data-ro]').forEach(function (i) { var v = partial.rosterPatch[i.getAttribute('data-ro')]; if (v != null) i.value = v; });
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var rec = readForm();
+      if (!isFinite(rec.teams) || rec.teams < 4 || rec.teams > 20) {
+        say(msg, 'How many teams? Pick 8, 10 or 12, or type a number from 4 to 20.', true);
+        $('lsTeamsCustom').focus();
+        return;
+      }
+      var saved = L.save(rec);
+      say(msg, '<b>Saved.</b> ' + esc(saved.teams) + ' teams, ' + esc(saved.scoring) +
+        (L.hasCustomScoring() ? ' with your own rules' : '') +
+        ', ' + esc(saved.settings.scoring.passingTD) + '-point passing touchdowns. Every board on the site now reads these.');
+      var from = $('lsFrom'); if (from) from.hidden = true;
+    });
+
+    // ── what was read, into the numbers ─────────────────────────────────────
+    // A paste or a screenshot lands in the fields, not in the record: the
+    // reader checks the numbers and presses Save, which is the contract every
+    // intake on this site keeps.
+    function applyPartial(p, source) {
+      var n = 0;
+      if (p && p.scoring) {
+        for (var k in p.scoring) {
+          if (!p.scoring.hasOwnProperty(k)) continue;
+          var i = field(k);
+          if (i) { i.value = p.scoring[k]; n++; } else { carried[k] = p.scoring[k]; n++; }
         }
-      });
-    }
-    grid = ITRosterGrid.mount($('mfGrid'), {
-      teams: seeded.teams, mine: seeded.mine,
-      // No textarea here: this form already prints one of its own further down,
-      // for the reader's OWN roster, and two boxes of names on one card is a
-      // reader typing their team into the wrong one.
-      text: false,
-      note: 'A league roster grid holds all of the teams at once. Names only: your starting lineup is projected from the scoring below, not read off the page. Send more than one image at a time if the grid does not fit in one shot.',
-      // The team count on this form is the floor the grid just proved.
-      onRead: function (g) { var box = $('mfTeams'); if (box) box.value = Math.max(parseInt(box.value, 10) || 0, g.teams.length); }
-    }) || grid;
-    var cancel = $('mfCancel');
-    if (cancel) cancel.addEventListener('click', function () { el.hidden = true; });
-    $('mfSave').addEventListener('click', function () {
-      var recV = parseFloat((el.querySelector('input[name="mfRec"]:checked') || {}).value || '1');
-      if (mfRecExact != null && (mfRecExact >= 0.9 ? 1 : mfRecExact >= 0.4 ? 0.5 : 0) === recV) recV = mfRecExact;
-      // A league that pays running backs differently for a catch said so in the
-      // import; one control cannot, so the imported split survives the control.
-      var recRbV = (mfRecExact != null && mfScoring.rbReceptionPoints != null && mfScoring.rbReceptionPoints !== mfRecExact) ? mfScoring.rbReceptionPoints : recV;
-      var roster = {}; el.querySelectorAll('[data-ro]').forEach(function (i) { roster[i.getAttribute('data-ro')] = parseInt(i.value, 10) || 0; });
-      var players = $('mfRoster').value.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
-        var slot = /^\*/.test(l) ? 'starter' : /^IR\b/i.test(l) ? 'ir' : 'bench'; l = l.replace(/^(\*|IR)\s*/i, '');
-        var m = l.match(/^(.*?)(?:[\s,]+(QB|RB|WR|TE|K|DEF|DST|D\/ST))?\s*$/i);
-        return { name: (m ? m[1] : l).trim(), position: m && m[2] ? m[2].toUpperCase() : null, slot: slot };
-      });
-      var body = { id: L ? L.id : undefined, name: $('mfName').value || 'My league', numTeams: $('mfTeams').value, teamName: $('mfTeam').value, players: players,
-        settings: { scoring: Object.assign({}, mfScoring, { receptionPoints: recV, rbReceptionPoints: recRbV, passingTD: parseFloat($('mfPtd').value) || 4 }), extras: { tePremium: parseFloat($('mfTe').value) || 0 }, roster: roster, faab: $('mfFaab').value === '' ? null : parseInt($('mfFaab').value, 10) } };
-      // A grid read replaces the one typed roster with the whole room. Which
-      // team is the reader's cannot be guessed from a screenshot, so the save
-      // waits for them to say rather than filing them as team one.
-      if (grid.teams.length) {
-        if (grid.mine < 0) { $('mfMsg').textContent = 'Pick which of those teams is yours.'; return; }
-        // The textarea wins for the reader's own team where they typed one,
-        // because it is the only place a starter or an IR slot can be said.
-        body.teams = grid.teams.map(function (t, i) {
-          return { teamId: 'm' + (i + 1), name: t.name || ('Team ' + (i + 1)), isUser: i === grid.mine,
-                   players: (i === grid.mine && players.length) ? players : t.players };
-        });
-        body.numTeams = Math.max(parseInt($('mfTeams').value, 10) || 0, body.teams.length);
+        // The running back's catch follows everyone else's unless the paste
+        // named it, as ITInSeason.apply does.
+        if (p.scoring.receptionPoints != null && p.scoring.rbReceptionPoints == null) field('rbReceptionPoints').value = p.scoring.receptionPoints;
       }
-      $('mfMsg').textContent = 'Saving…';
-      ITSync.api('/api/leagues/manual', { method: 'POST', body: body }).then(function (j) {
-        if (!j || !j.ok) { $('mfMsg').textContent = (j && (j.message || j.error)) || 'Could not save.'; return; }
-        el.hidden = true;
-        note('<b>Saved.</b> ' + esc(j.league.name) + (j.unresolved && j.unresolved.length ? '. Not on the board (kept by name, scored 0): ' + esc(j.unresolved.join(', ')) : '. Every player mapped to the board.'));
-        reload();
-      });
-    });
-    if (o.scroll !== false) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-  document.addEventListener('DOMContentLoaded', function () {
-    if (!window.ITSync) { note('League sync could not load in this browser.', true); return; }
-    // anchor() after the first render, not inside it: a signed-out reader
-    // returns early from render and their sign-in card shifts the page just
-    // the same.
-    ITSync.load(true).then(function (s) { st = s; render(); anchor(); });
-  });
-})();
-</script>
-
-<script>
-(function () {
-  document.addEventListener('DOMContentLoaded', function () {
-    var el = document.getElementById('mlBox'), L = window.ITLeague, e = ITSeason.esc;
-    if (!L) { el.innerHTML = '<p class="is-note" style="margin:0">Could not read your saved settings.</p>'; return; }
-    if (!L.has) {
-      el.innerHTML = '<p class="is-note" style="margin:0">Nothing saved yet. Every number you have seen on this site so far is at the default league: 12 teams, $200 budget, full PPR. That is almost certainly not your league.</p>' +
-        '<div class="is-btns"><a class="is-btn ghost" href="/auctiondraft?screen=cheat">Set my league up</a>' +
-        '<a class="ml-go" href="/faq">How it works &rarr;</a></div>';
-      return;
+      if (p && p.extras && p.extras.tePremium != null) { form.querySelector('[data-te]').value = p.extras.tePremium; n++; }
+      syncButtons();
+      return n;
     }
-    el.innerHTML = '<span class="is-tag is-live">Saved</span><p><b>' + e(L.label()) + '</b>' + (L.scoringLabel && L.scoringLabel() ? ' <span class="is-status">' + e(L.scoringLabel()) + '</span>' : '') + '</p>' +
-      (L.hasBoard ? '<p class="is-note" style="margin:0"><b>Board saved too.</b> A story can tell you where a player sits on <em>your</em> sheet rather than on a default one.</p>' : '') +
-      '<div class="is-btns"><a class="is-btn ghost" href="/auctiondraft?screen=cheat">Change my settings</a></div>';
+    function chips(items) {
+      var seen = {}, order = [];
+      (items || []).forEach(function (it) { var k = String(it[0]); if (!(k in seen)) order.push(k); seen[k] = it[1]; });
+      return order.map(function (k) { return esc(k) + ' ' + esc(seen[k]); }).join(', ');
+    }
+    function readText(text, source) {
+      var pm = $('lsPasteMsg');
+      if (!IMP || !IMP.parseFor) { say(pm, 'The reader could not load in this browser. Type the numbers in the fold above instead.', true); return; }
+      var res = IMP.parseFor(String(text || ''), 'scoring');
+      var n = res && res.items ? res.items.length : 0;
+      if (!n) { say(pm, 'No scoring rules found in ' + esc(source) + '. Paste the scoring section of your league settings, one rule per line.', true); return; }
+      applyPartial(res, source);
+      $('lsExact').open = true;
+      say(pm, '<b>Read ' + n + ' rule' + (n === 1 ? '' : 's') + ' from ' + esc(source) + ':</b> ' + chips(res.items) + '. Check the numbers above, then save.');
+    }
+    function readImage(file) {
+      var pm = $('lsPasteMsg');
+      if (!IMP || !IMP.fromImageFor) { say(pm, 'The reader could not load in this browser.', true); return; }
+      say(pm, 'Reading the screenshot…');
+      IMP.fromImageFor(file, 'scoring', function (m) { say(pm, esc(m)); }).then(function (res) {
+        var n = res && res.items ? res.items.length : 0;
+        if (!n) { say(pm, 'No scoring rules could be read off that screenshot. Try a tighter crop of the scoring table, or paste the text.', true); return; }
+        applyPartial(res, 'the screenshot');
+        $('lsExact').open = true;
+        say(pm, '<b>Read ' + n + ' rule' + (n === 1 ? '' : 's') + ' from the screenshot:</b> ' + chips(res.items) + '. Check the numbers above, then save.');
+      }).catch(function () { say(pm, 'That screenshot could not be read. Paste the text instead.', true); });
+    }
+    $('lsPasteRead').addEventListener('click', function () { readText($('lsPasteText').value, 'what you pasted'); });
+    $('lsPastePick').addEventListener('click', function () { $('lsPasteFile').click(); });
+    $('lsPasteFile').addEventListener('change', function () { if (this.files && this.files[0]) readImage(this.files[0]); this.value = ''; });
+    // A screenshot pasted into the textarea is read as one.
+    $('lsPasteText').addEventListener('paste', function (e) {
+      var dt = e.clipboardData; if (!dt || !dt.items) return;
+      for (var i = 0; i < dt.items.length; i++) {
+        if (dt.items[i].kind === 'file' && /^image\//.test(dt.items[i].type)) { e.preventDefault(); readImage(dt.items[i].getAsFile()); return; }
+      }
+    });
+
+    // ── open ────────────────────────────────────────────────────────────────
+    // The saved record, or the cheat sheet where there is one and nothing is
+    // saved here yet: a reader who built a draft board in this browser has
+    // already answered the scoring, down to the yardage divisors, and asking
+    // again is the kind of second helping of work that makes a settings page
+    // feel like paperwork. Never over settings the reader already saved here.
+    var sheet = null;
+    try { if (IMP && !L.has()) sheet = IMP.fromDraftApp(); } catch (err) { sheet = null; }
+    if (sheet) {
+      fill(L.apply(L.draft(), sheet));
+      var from = $('lsFrom');
+      from.innerHTML = '<b>Filled in from your cheat sheet.</b> ' +
+        sheet.items.map(function (it) { return esc(it[0]); }).join(', ') +
+        ' came across from the league you set up for the draft board. Check them and press Save — nothing is stored until you do.';
+      from.hidden = false;
+    } else {
+      fill(L.draft());
+      if (L.has()) say(msg, 'Saved: ' + esc(L.scoringLabel()) + '. Change anything and save again.');
+    }
   });
 })();
 </script>

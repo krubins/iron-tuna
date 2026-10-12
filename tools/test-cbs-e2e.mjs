@@ -116,7 +116,7 @@ function fakeDb() {
 // ── a magic link, signed the way the worker signs one ──────────────────────
 const b64url = buf => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 function magicLink(email) {
-  const p = b64url(JSON.stringify({ e: email, n: crypto.randomUUID(), t: 'magic', r: '/my-league', exp: Date.now() + 15 * 60 * 1000 }));
+  const p = b64url(JSON.stringify({ e: email, n: crypto.randomUUID(), t: 'magic', r: '/my-leagues', exp: Date.now() + 15 * 60 * 1000 }));
   return 'https://irontuna.com/api/auth/verify?token=' + encodeURIComponent(p + '.' + b64url(crypto.createHmac('sha256', SECRET).update(p).digest()));
 }
 
@@ -213,7 +213,7 @@ try {
   // 1. sign in on My Leagues
   const tuna = await ctx.newPage();
   await tuna.goto(magicLink('owner@example.com'), { waitUntil: 'load' });
-  ok('the magic link lands on My Leagues', /\/my-league/.test(tuna.url()), tuna.url());
+  ok('the magic link lands on My Leagues', /\/my-leagues/.test(tuna.url()), tuna.url());
   await tuna.waitForFunction(() => /No league connected/.test(document.getElementById('lsStatus')?.textContent || ''), null, { timeout: 15000 }).catch(() => {});
   ok('My Leagues renders the signed-in reader with no league yet', /No league connected/.test(await tuna.evaluate(() => document.getElementById('lsStatus')?.textContent || '')));
   ok('/api/auth/me reports signedIn for the free account', (await tuna.evaluate(() => fetch('/api/auth/me').then(r => r.json()))).signedIn === true);

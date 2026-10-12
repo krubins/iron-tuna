@@ -1,4 +1,4 @@
-# Iron Tuna CBS Connector 0.2.1
+# Iron Tuna CBS Connector 0.2.2
 
 This free browser import reads league settings, team names and rosters from the CBS football league you are signed in to. It replaces the failed 0.1.0 token-detection method. No CBS password, token, cookies or browser storage are copied to Iron Tuna.
 
@@ -6,8 +6,8 @@ This free browser import reads league settings, team names and rosters from the 
 
 1. Keep the extracted extension folder on your computer.
 2. In Edge, open `edge://extensions`; in Chrome, open `chrome://extensions`.
-3. For a new install, enable Developer mode, choose **Load unpacked**, and select the folder containing `manifest.json`. To update an existing installation after replacing its files, click **Reload** on the Iron Tuna CBS Connector card and check that it shows **0.2.1**.
-4. Sign in at [My Leagues](https://irontuna.com/my-league) and leave it open.
+3. For a new install, enable Developer mode, choose **Load unpacked**, and select the folder containing `manifest.json`. To update an existing installation after replacing its files, click **Reload** on the Iron Tuna CBS Connector card and check that it shows **0.2.2**.
+4. Sign in at [My Leagues](https://irontuna.com/my-leagues) and leave it open.
 5. In the same browser, open your CBS football league and sign in there.
 6. Open the extension, confirm the season, then click **Import to Iron Tuna**. Keep the popup open while all team rosters are read.
 7. Choose your team, click **Save my team**, and refresh My Leagues.
@@ -24,7 +24,7 @@ Permissions are unchanged: temporary access to the CBS tab where you click the e
 
 ## Status (2026-10-10)
 
-The connector was removed from the site on 2026-09-18 with the other platform connectors and restored on 2026-10-10 as the one CBS path (HANDOFF §128): the API-token route it replaced depended on a token CBS no longer exposes. The code here is 0.2.1 unchanged; the worker half was rewritten onto the saved-league model (`leagueBrowserImport`, `POST /api/leagues/connect`). The release check that was never run is still the release check: load this folder unpacked, import the live league once from a signed-in CBS tab, and confirm the league card on My Leagues. A CBS markup change shows up as one of the reader's "No import was sent" messages in the popup, with the page it could not read.
+The connector was removed from the site on 2026-09-18 with the other platform connectors and restored on 2026-10-10 as the one CBS path (HANDOFF §128): the API-token route it replaced depended on a token CBS no longer exposes. The code here is 0.2.1 unchanged apart from 0.2.2 (2026-10-12), which finds the Iron Tuna tab at /my-leagues, where My Leagues moved when /my-league became the scoring-settings page; the worker half was rewritten onto the saved-league model (`leagueBrowserImport`, `POST /api/leagues/connect`). The release check that was never run is still the release check: load this folder unpacked, import the live league once from a signed-in CBS tab, and confirm the league card on My Leagues. A CBS markup change shows up as one of the reader's "No import was sent" messages in the popup, with the page it could not read.
 
 ## Validation status
 

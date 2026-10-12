@@ -210,7 +210,7 @@ console.log('\nthe lineup, off the two shapes platforms print');
 }
 
 // ── 3b. one question at a time ─────────────────────────────────────────────
-// /my-league §02 asks three separate questions in three separate boxes, and the
+// /my-league used to ask three separate questions in three separate boxes, and the
 // failure that costs the most is the quiet one: a box labelled FAAB that
 // accepts a scoring screenshot and rewrites a lineup out of it. parseFor()
 // exists so a box can only ever answer its own question, and an empty answer is
@@ -379,80 +379,69 @@ console.log('\nthe form and the importer');
   const unknownImp = [...new Set(impCalls)].filter(k => typeof IMP[k] !== 'function');
   ok('every ITInSeasonImport call it makes exists', unknownImp.length === 0, unknownImp.join(', '));
 
-  for (const page of ['my-league.html', 'in-season.html']) {
+  for (const page of ['my-league.html', 'my-leagues.html', 'in-season.html']) {
     const src = read(page);
     const i = src.indexOf('/it-inseason.js'), j = src.indexOf('/it-inseason-import.js'), k = src.indexOf('/it-inseason-ui.js');
     ok(`${page} loads all three, in order`, i >= 0 && j > i && k > j);
   }
   ok('the by-hand league form mounts the importer',
-    read('my-league.html').includes('id="mfImp"') && read('my-league.html').includes('ITInSeasonUI.importer($(\'mfImp\')'));
+    read('my-leagues.html').includes('id="mfImp"') && read('my-leagues.html').includes('ITInSeasonUI.importer($(\'mfImp\')'));
 
-  // §02 mounts the boxes, and mounts the form WITHOUT its own importer. Both
-  // halves matter: the boxes with no handle to apply through would read a
-  // league and have nowhere to put it, and the form keeping its four-tab
-  // importer would ask the same question twice on one screen.
+  // /my-league is the settings page (2026-10-12): the team count as four
+  // buttons and the scoring as three, every rule as a number behind a fold,
+  // and nothing else — the FAAB budget and the rosters are dealt with on other
+  // pages. The buttons and the numbers are two readings of one rule, the way
+  // the preset and the reception fields are on the hub's form, and the numbers
+  // are what is saved.
   {
     const ml = read('my-league.html');
-    ok('/my-league §02 mounts the boxes', ml.includes('id="mlIntake"') && ml.includes('ITInSeasonUI.intake('));
-    ok('and drops the form\'s own importer so the page asks once', /leagueForm\([\s\S]{0,120}?importer:\s*false/.test(ml));
+    ok('/my-league asks the team count as 8, 10, 12 or custom',
+      ['8', '10', '12', 'custom'].every(v => ml.includes(`name="teams" value="${v}"`)));
+    ok('and the custom count is a field shown only then',
+      /id="lsTeamsCustom"/.test(ml) && /id="lsCustomWrap" hidden/.test(ml) && /\$\('lsCustomWrap'\)\.hidden = !custom/.test(ml));
+    ok('the scoring is three rows of buttons',
+      ['0', '0.5', '1'].every(v => ml.includes(`name="format" value="${v}"`)) &&
+      ['4', '6'].every(v => ml.includes(`name="ptd" value="${v}"`)) &&
+      ['0', '0.5', '1'].every(v => ml.includes(`name="te" value="${v}"`)));
+    const printed = [...ml.matchAll(/data-sc="([a-zA-Z]+)"/g)].map(m => m[1]);
+    ok('and every rule the hub\'s form prints is a number behind the fold',
+      ['passingYardsPerPoint', 'passingTD', 'passingInt', 'rushingYardsPerPoint', 'rushingTD', 'receivingYardsPerPoint',
+       'receivingTD', 'receptionPoints', 'rbReceptionPoints', 'fumbleLost'].every(k => printed.includes(k)) && /data-te/.test(ml),
+      printed.join(','));
+    ok('a button sets its numbers and the numbers are what is saved',
+      /t\.name === 'format'[\s\S]{0,120}field\('receptionPoints'\)\.value = t\.value/.test(ml) &&
+      /t\.name === 'ptd'[\s\S]{0,60}field\('passingTD'\)\.value = t\.value/.test(ml) &&
+      /all\('\[data-sc\]', form\)\.forEach[\s\S]{0,160}scoring\[i\.getAttribute\('data-sc'\)\] = n/.test(ml));
+    ok('a number none of the buttons name leaves its row unlit and opens the fold',
+      /if \(!check\('format', rec\)\) off\+\+/.test(ml) && /if \(off\) \{ \$\('lsExact'\)\.open = true/.test(ml));
+    ok('the FAAB budget and the rosters are not asked here',
+      !/name="faab"|lgFaab|data-ro=|ITRosterGrid|it-roster-grid\.js|data-faab/.test(ml));
+    ok('the save starts from the saved record, so what it does not ask rides through',
+      /var base = L\.get\(\) \|\| L\.draft\(\);/.test(ml) && /L\.save\(rec\)/.test(ml));
+    ok('it reads the cheat sheet itself, only when nothing is saved here',
+      /if \(IMP && !L\.has\(\)\) sheet = IMP\.fromDraftApp\(\)/.test(ml) && /fill\(L\.apply\(L\.draft\(\), sheet\)\)/.test(ml));
+    ok('a paste or a screenshot is read for scoring only, into the numbers',
+      /IMP\.parseFor\(String\(text \|\| ''\), 'scoring'\)/.test(ml) && /IMP\.fromImageFor\(file, 'scoring'/.test(ml) && /applyPartial\(res/.test(ml));
+    // The page calls the record and the reader the same way the shared form
+    // does, so the same guard applies: a call to something that does not exist
+    // is a page that saves nothing.
+    const { L, IMP } = load();
+    const pageCalls = [...new Set([...ml.matchAll(/\bL\.([a-zA-Z_]+)\(/g)].map(m => m[1]))].filter(k => typeof L[k] !== 'function');
+    ok('every ITInSeason call the settings page makes exists', pageCalls.length === 0, pageCalls.join(', '));
+    const pageImp = [...new Set([...ml.matchAll(/\bIMP\.([a-zA-Z_]+)\(/g)].map(m => m[1]))].filter(k => typeof IMP[k] !== 'function');
+    ok('and every ITInSeasonImport call', pageImp.length === 0, pageImp.join(', '));
+  }
 
-    // What matters is the wiring, not how close together it is written — and
-    // not how long the call is either. A fixed-width window over the source
-    // went red once when the row grew a comment, so the call is walked to its
-    // own closing paren instead of guessed at.
-    const callsTo = (src, name) => {
-      const out = [];
-      for (const m of src.matchAll(new RegExp(name.replace(/[.$]/g, '\\$&') + '\\(', 'g'))) {
-        let i = m.index + m[0].length - 1, depth = 0, quote = null, esc = false;
-        for (; i < src.length; i++) {
-          const ch = src[i];
-          if (quote) { if (esc) esc = false; else if (ch === '\\\\') esc = true; else if (ch === quote) quote = null; continue; }
-          if (ch === '\'' || ch === '"' || ch === '`') { quote = ch; continue; }
-          if (ch === '(') depth++;
-          else if (ch === ')') { depth--; if (!depth) break; }
-        }
-        out.push(src.slice(m.index + m[0].length, i));
-      }
-      return out;
-    };
-    const rows = callsTo(ml, 'ITInSeasonUI.intake');
-    ok('every intake row is handed somewhere to apply what it read',
-      rows.length > 0 && rows.every(r => /onApply:\s*(?:function|[A-Za-z_$][\w$]*)/.test(r)),
-      rows.length + ' row(s)');
-    const named = [...new Set(rows.map(r => (r.match(/onApply:\s*([A-Za-z_$][\w$]*)\s*[,}\n]/) || [])[1]).filter(Boolean))];
-    ok('and that handler reaches the form',
-      named.length
-        ? named.every(n => new RegExp(n + '\\s*=\\s*function[\\s\\S]{0,200}form\\.apply\\(').test(ml))
-        : /onApply:\s*function[\s\S]{0,200}form\.apply\(/.test(ml),
-      named.join(', '));
-
-    // THE BUTTON THAT SHOULD NOT HAVE BEEN A BUTTON. The row's footer used to
-    // offer "Copy my cheat sheet across" to a reader who had already built one
-    // in this browser — a button for a thing the page could simply do, sitting
-    // under three boxes asking for what the cheat sheet already knew. The page
-    // now reads it on load and applies it, and asks the row not to draw the
-    // button. Both halves are pinned: an apply with the strip still drawn would
-    // offer to do a thing that was already done.
-    ok('§02 reads the cheat sheet itself rather than offering a button',
-      /fromDraftApp\(\)/.test(ml) && rows.every(r => /draft:\s*false/.test(r)));
-    ok('and applies what it read through the same handle the boxes use',
-      /apply\(sheet,/.test(ml));
-    // Only when §02 has nothing of its own. A reader who set these settings here
-    // meant them, and a draft board from August must not overwrite them on load.
-    ok('but never over settings the reader already saved here',
-      /!ITInSeason\.has\(\)[\s\S]{0,80}fromDraftApp\(\)/.test(ml));
-
-    // The row itself: three boxes, or the two the cheat sheet cannot answer.
-    // The cheat sheet carries scoring, lineup and team count; it has never
-    // carried a FAAB budget — cfg.budget is the AUCTION budget, a different
-    // number — nor a room full of players, so those two boxes stay either way.
-    const cards = ml.slice(ml.indexOf('var cards;'), ml.indexOf('ITInSeasonUI.intake('));
-    ok('with no cheat sheet the row is scoring, rosters and FAAB',
-      /cards\s*=\s*\['scoring',\s*rosters,\s*'faab'\]/.test(cards), cards.slice(0, 200));
-    ok('with one, the scoring box is the only one dropped',
-      /cards\s*=\s*\[rosters,\s*\{\s*kind:\s*'faab'/.test(cards), cards.slice(0, 200));
-    ok('and the lineup card that used to sit under the row is gone',
-      !ml.includes('mlLineup') && !/kind:\s*'roster'/.test(ml));
+  // /my-leagues carries what came off the settings page: the sign-in, the
+  // saved league cards, the CBS import, the by-hand form and the roster reader
+  // in the intake's frame — and nothing that reads scoring or a budget beside it.
+  {
+    const mls = read('my-leagues.html');
+    ok('/my-leagues mounts the rosters box', mls.includes('id="mlIntake"') && /ITInSeasonUI\.intake\(/.test(mls) && /slot:\s*'rosters'/.test(mls));
+    ok('and no scoring or FAAB box beside it', !/cards:\s*\[[^\]]*'(scoring|faab)'/.test(mls));
+    ok('the rosters box asks the row not to read the cheat sheet', /draft:\s*false/.test(mls));
+    ok('and saves against the record /my-league wrote', /var rec = ITInSeason\.get\(\) \|\| ITInSeason\.draft\(\);/.test(mls) && !/#mlForm form/.test(mls));
+    ok('the sign-in comes back to My Leagues', /returnTo: '\/my-leagues'/.test(mls));
     ok('the cheat sheet is never read as a FAAB budget',
       !/budget/.test(importSrc.slice(importSrc.indexOf('function fromDraftApp'), importSrc.indexOf('root.ITInSeasonImport ='))));
   }
@@ -478,7 +467,7 @@ console.log('\nthe form and the importer');
     // The by-hand form in §01 prints its own roster textarea further down the
     // same card, so its grid stays image-only: two boxes of names on one card
     // is a reader typing their team into the wrong one.
-    ok('§01\'s grid keeps one textarea, not two', /mfGrid'\)[\s\S]{0,400}text:\s*false/.test(read('my-league.html')));
+    ok('§01\'s grid keeps one textarea, not two', /mfGrid'\)[\s\S]{0,400}text:\s*false/.test(read('my-leagues.html')));
   }
 
   // THE NAMES IT COULD NOT PLACE. A reader saved a twelve-team grid and was
@@ -488,7 +477,7 @@ console.log('\nthe form and the importer');
   // real board; what is pinned here is that the box actually asks.
   {
     const rg = read('it-roster-grid.js');
-    const ml = read('my-league.html');
+    const ml = read('my-leagues.html');
     ok('every read is checked against the board', /function check\(\)[\s\S]{0,400}'\/api\/roster-check'/.test(rg));
     ok('and the check runs after the read, not only on save', /if \(typeof o\.onRead === 'function'\) o\.onRead\(state\);\s*\n\s*check\(\);/.test(rg));
     ok('a room the box opens with is checked too', /o\.teams && o\.teams\.length\)[\s\S]{0,400}check\(\);/.test(rg));
@@ -505,7 +494,7 @@ console.log('\nthe form and the importer');
     ok('a failed check clears the asks instead of blocking the save',
       /\.catch\(function \(\)[\s\S]{0,240}state\.unplaced = 0/.test(rg));
 
-    ok('§02\'s save asks once about what is still unplaced, then saves',
+    ok('the rosters box\'s save asks once about what is still unplaced, then saves',
       /grid\.unplaced > 0 && !warned/.test(ml) && /warned = true/.test(ml) && /press Save again/.test(ml));
     ok('and a fresh answer arms that question again', /onCheck: function \(\) \{ warned = false/.test(ml));
     ok('the worker answers the check without a model or a write',

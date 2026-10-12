@@ -21,7 +21,7 @@ $('connect').addEventListener('click', async () => {
   let snapshot;
   try {
     const tabs = await chrome.tabs.query({ url: 'https://irontuna.com/*' });
-    targetTab = tabs.find(t => new URL(t.url).pathname === '/my-league') || tabs[0];
+    targetTab = tabs.find(t => /^\/my-leagues?$/.test(new URL(t.url).pathname)) || tabs[0];
     if (!targetTab) throw new Error('Open My Leagues below, sign in, then return to CBS and reopen this extension.');
     status('Checking your Iron Tuna sign-in…');
     const me = await request('/api/auth/me');

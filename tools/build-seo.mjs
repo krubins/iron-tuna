@@ -160,7 +160,7 @@ const COLUMN_PAGES = {
 // contain would be a claim a crawler can check and disbelieve.
 const APP_PAGES = new Set([
   'rankings.html', 'trade-finder.html', 'faab.html', 'dfs.html',
-  'my-league.html', 'my-week.html', 'waivers.html', 'depth-charts.html',
+  'my-league.html', 'my-leagues.html', 'my-week.html', 'waivers.html', 'depth-charts.html',
   'value-coach.html',
 ]);
 
@@ -179,7 +179,7 @@ const READ = { name: 'The Desk', url: SITE + '/in-season/desk' };
 const PARENT = {
   'fantasy.html': IN_SEASON, 'dfs.html': IN_SEASON, 'stats.html': IN_SEASON,
   'waivers.html': IN_SEASON, 'faab.html': IN_SEASON, 'trade-finder.html': IN_SEASON,
-  'my-league.html': IN_SEASON, 'my-week.html': IN_SEASON, 'weekly-intel.html': IN_SEASON,
+  'my-league.html': IN_SEASON, 'my-leagues.html': IN_SEASON, 'my-week.html': IN_SEASON, 'weekly-intel.html': IN_SEASON,
   'rankings.html': IN_SEASON, 'depth-charts.html': IN_SEASON,
   'value-coach.html': IN_SEASON,
   'vegas-edge.html': MARKET, 'game-intel.html': MARKET, 'hidden-value.html': MARKET,

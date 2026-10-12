@@ -80,7 +80,7 @@ async function rl(env, request, bucket, max, ttlSec) {
 // ones unlisted — which is a page silently ungated and advertised in the
 // sitemap while the gate is shut. Spell them out.
 const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
-  '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk',
+  '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/my-leagues', '/player-intel', '/desk',
   '/fantasy', '/stats', '/hidden-value', '/previews', '/the-line', '/weekly-wrap', '/value-coach']);
 // The HUB is never in that set: it is the page a closed route serves in place of
 // itself, so gating it would be a loop. /post-draft is the name the hub used to
@@ -17468,7 +17468,7 @@ export default {
       if (env.AUTH_SECRET) {
         const nonce = crypto.randomUUID();
         if (env.RATE_KV) await env.RATE_KV.put('mln:' + nonce, '1', { expirationTtl: 900 });
-        const returnTo = String(b.returnTo || '') === '/my-league' ? '/my-league' : '/';
+        const returnTo = /^\/my-leagues?$/.test(String(b.returnTo || '')) ? String(b.returnTo) : '/';
         const token = await makeToken(env.AUTH_SECRET, { e: email, n: nonce, t: 'magic', r: returnTo, exp: Date.now() + 15 * 60 * 1000 });
         await sendLoginEmail(env, email, url.origin + '/api/auth/verify?token=' + encodeURIComponent(token));
       }
@@ -17487,7 +17487,7 @@ export default {
         } catch (e) {}
       }
       const sess = await makeToken(env.AUTH_SECRET, { sid: sid, e: email, t: 'sess', exp: now + 90 * 24 * 3600 * 1000 });
-      const returnTo = o.r === '/my-league' ? '/my-league' : '/';
+      const returnTo = /^\/my-leagues?$/.test(String(o.r || '')) ? String(o.r) : '/';
       return new Response(null, { status: 302, headers: { 'Location': url.origin + returnTo + (returnTo.includes('?') ? '&' : '?') + 'restored=1', 'Set-Cookie': 'it_sess=' + sess + '; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=' + (90 * 24 * 3600) } });
     }
     if (url.pathname === '/api/auth/me') {
@@ -18584,11 +18584,11 @@ export default {
       // The pages live at the root because the chrome and SEO generators walk the
       // root. Extensionless target, as above. The gate below sees the SAME name,
       // so a section page cannot be reached ungated by adding the prefix.
-      else if (/^\/in-season\/(fantasy|dfs|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)
+      else if (/^\/in-season\/(fantasy|dfs|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league|my-leagues)\/?$/.test(url.pathname)
                && !(POST_DRAFT_PAGES.has(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, '')) && !POST_DRAFT_OPEN(env) && !postDraftPreview(env, url, request))) {
         __assetReq = new Request(new URL(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, ''), url).toString(), request);
       }
-      else if (/^\/in-season\/(fantasy|dfs|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)) {
+      else if (/^\/in-season\/(fantasy|dfs|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league|my-leagues)\/?$/.test(url.pathname)) {
         __assetReq = new Request(new URL(IN_SEASON_HUB, url).toString(), request);
       }
       // /in-season IS a page now (in-season.html), so it needs no alias here —
