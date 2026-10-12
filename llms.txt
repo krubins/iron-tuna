@@ -106,7 +106,8 @@ The same engine, aimed at draft night. Auction is the format it is built for; sn
 - In-season hub: https://irontuna.com/in-season
 - Fantasy: https://irontuna.com/fantasy
 - DFS: https://irontuna.com/dfs
-- My League: https://irontuna.com/my-league
+- League Settings: https://irontuna.com/my-league
+- My Leagues: https://irontuna.com/my-leagues
 - Rankings (this week, next 3 weeks, playoffs, rest of season): https://irontuna.com/rankings
 - Stats (what has actually been played): https://irontuna.com/stats
 - Depth charts (every club's published order, refreshed daily): https://irontuna.com/depth-charts

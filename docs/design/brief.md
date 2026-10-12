@@ -121,5 +121,15 @@ figure. It is gone, and the band is three figures that change.
   the method as the How-it-works row (a tagline, three cards, the rest as
   two columns of prose). Every id and class the page script and its browser
   test drive is unchanged.
+  /my-league followed on 2026-10-12 (Ken: the settings page should be
+  about scoring rules, with buttons for the number of teams, simpler
+  scoring, and the landing page's look; FAAB and rosters off it). It wears
+  `body.ln-front` as /trade-finder does: the centred hero, two steps on
+  hairlines (the team count as four segmented buttons, the scoring as three
+  rows of them), the exact numbers and the paste reader behind folds, one
+  primary button, and "Where it shows up" as the How-it-works row. The
+  sign-in, saved league cards, CBS import and roster reader moved to
+  /my-leagues in the dress they had; that page has not been read for this
+  brief and is the next one to.
 - The player card's search box keeps the page's own 42px field. It should
   become the shared 52px field when that page is next touched.

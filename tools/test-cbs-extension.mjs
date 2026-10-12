@@ -71,7 +71,7 @@ assert(!(await request('/api/leagues/connect', {}, 'https://irontuna.com', true)
 const elements = new Map();
 const el = id => { if (!elements.has(id)) elements.set(id, { value: '', dataset: {}, disabled: false, hidden: false, addEventListener(type, fn) { this[type] = fn; }, replaceChildren(...children) { this.children = children; this.value = children[0]?.value; } }); return elements.get(id); };
 const calls = [];
-const context = vm.createContext({ leagueFromUrl, readCbsPage, ironTunaRequest, URL, document: { getElementById: el, createElement: () => ({}) }, chrome: { tabs: { query: async filter => filter.active ? [{ id: 1, url: 'https://fixture.football.cbssports.com/' }] : [{ id: 2, url: 'https://irontuna.com/my-league' }] }, scripting: { executeScript: async req => {
+const context = vm.createContext({ leagueFromUrl, readCbsPage, ironTunaRequest, URL, document: { getElementById: el, createElement: () => ({}) }, chrome: { tabs: { query: async filter => filter.active ? [{ id: 1, url: 'https://fixture.football.cbssports.com/' }] : [{ id: 2, url: 'https://irontuna.com/my-leagues' }] }, scripting: { executeScript: async req => {
   calls.push(req);
   if (req.func === readCbsPage) return [{ result: req.args[1] === 'rules' ? {name:'Fixture',numTeams:2} : req.args[1] === 'grid' ? [{teamId:'8',name:'Tuna'},{teamId:'9',name:'Other'}] : {teamId:req.args[2],players:[{name:'Fixture'}]} }];
   if (req.args[0] === '/api/auth/me') return [{ result: { signedIn: true } }];
@@ -89,11 +89,11 @@ await el('saveTeam').click();
 assert.match(el('status').textContent, /Your team is saved/);
 assert(!/localStorage|sessionStorage|chrome\.storage|document\.cookie/.test(source + popup + readerSource));
 // The surfaces the extension depends on. The popup finds the signed-in Iron
-// Tuna tab by its /my-league path and posts to /api/leagues/connect with
+// Tuna tab by its /my-leagues path and posts to /api/leagues/connect with
 // provider cbs_browser; My Leagues tells the reader where the extension is and
 // renders a browser league as one it cannot type over.
 const worker = fs.readFileSync(new URL('../_worker.js', import.meta.url), 'utf8');
-const page = fs.readFileSync(new URL('../my-league.html', import.meta.url), 'utf8');
+const page = fs.readFileSync(new URL('../my-leagues.html', import.meta.url), 'utf8');
 assert.match(worker, /path === '\/api\/leagues\/connect'/);
 assert.match(worker, /cbs_browser: PROVIDER_CBS_BROWSER/);
 assert.match(worker, /CBS_SYNC:\s*\{ dflt: true/);
