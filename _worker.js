@@ -2089,7 +2089,7 @@ const AVAILABILITY = {
   "isaacguerendo|RB": {"status":"PUP","gamesOut":4,"note":"Pectoral; reserve/PUP, misses at least the first four games.","asOf":"2026-09-02"},
   "zachcharbonnet|RB": {"status":"PUP","gamesOut":4,"note":"January ACL tear; reserve/PUP, misses at least the first four games and is described as still far from returning.","asOf":"2026-09-02"},
   "jeremymcnichols|RB": {"status":"IR","gamesOut":4,"note":"Quadriceps; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
-  "bakermayfield|QB": {"status":"Out","gamesOut":4,"note":"Dislocated right thumb in the Week 3 loss to the Vikings (Sept. 27); not placed on injured reserve. Bowles gave a 3-to-6 week timetable on Sept. 28 and said three weeks is the minimum. Missed Weeks 4 and 5; Jalon Daniels named the Week 6 starter. Counted out through Week 7, the four-week mark, with Week 8 (Nov. 1) the first realistic return; the Week 10 bye is the outer bound.","asOf":"2026-09-29"}
+  "bakermayfield|QB": {"status":"Out","gamesOut":4,"note":"Dislocated right thumb in the Week 3 loss to the Vikings (Sept. 27); not placed on injured reserve. Bowles gave a 3-to-6 week timetable on Sept. 28 and said three weeks is the minimum. Missed Weeks 4 and 5; Jalon Daniels named the Week 6 starter. Counted out through Week 7, the four-week mark, with Week 8 (Nov. 1) the first realistic return; the Week 10 bye is the outer bound.","asOf":"2026-09-30"}
 };
 // ── live availability (ESPN's public injury report, pulled by the 11:00Z cron) ──
 // The committed block above is only as current as the last hand edit, and the
