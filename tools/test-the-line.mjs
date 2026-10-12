@@ -132,7 +132,7 @@ ok('a reader the edge cannot place is not fenced',
 const blocked = worker.match(/const WA_MARKET_BLOCKED_HTML = `([\s\S]*?)`;/);
 ok('the notice served in Washington says why', blocked && /not available in Washington/i.test(blocked[1]));
 ok('and it is not indexable', blocked && /noindex,nofollow/.test(blocked[1]));
-ok('it still sends the reader to fantasy football pages', blocked && /href="\/weekly-rankings"/.test(blocked[1]));
+ok('it still sends the reader to fantasy football pages', blocked && /href="\/rankings"/.test(blocked[1]));
 ok('the homepage market tab is removed server-side for Washington',
   /function stripWashingtonMarketLane\(html\)/.test(worker) &&
   /id="laneTabMarket"/.test(worker) &&

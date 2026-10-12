@@ -138,7 +138,9 @@ Object.entries(RANK_N).forEach(([pos, n]) => {
   for (let k = 0; k < n; k++) RANK_PLAYERS.push({ name: pos + ' Player ' + k, position: pos, team: 'T' + (k % 16), priced: k % 3 !== 0 });
 });
 const RANK = { ok: true, week: { label: 'Week 3', number: 3, type: 'REG', status: 'upcoming' },
-  oddsAsOf: Date.UTC(2026, 8, 17, 18, 42), oddsProvider: 'propline', marketBoard: true, players: RANK_PLAYERS };
+  oddsAsOf: Date.UTC(2026, 8, 17, 18, 42), oddsProvider: 'propline', marketBoard: true,
+  props: { live: true, season: 2026, week: 3, players: RANK_PLAYERS.filter(p => p.priced).length, asOf: Date.UTC(2026, 8, 17, 18, 42) },
+  players: RANK_PLAYERS };
 const NOW = Date.now();
 const AGO = h => NOW - h * 3600 * 1000;
 const CONTENT = { ok: true, pieces: [
@@ -202,6 +204,15 @@ const server = http.createServer((req, res) => {
     if (MODE === 'live') {
       if (u.pathname === '/api/vegas-edge') body = EDGE;
       else if (u.pathname === '/api/rankings') body = RANK;
+      else if (u.pathname === '/api/newsroom') body = CONTENT;
+      else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
+      else if (u.pathname === '/api/season') body = SEASON;
+    } else if (MODE === 'noboard') {
+      // The worker with nothing in this week's prop store: the board answers,
+      // but with no book quoting anyone every row comes back unpriced.
+      if (u.pathname === '/api/vegas-edge') body = EDGE;
+      else if (u.pathname === '/api/rankings') body = { ...RANK, marketBoard: false, oddsAsOf: null, oddsProvider: null,
+        props: { live: false, season: 2026, week: 3, players: 0, asOf: null }, players: RANK_PLAYERS.map(p => ({ ...p, priced: false })) };
       else if (u.pathname === '/api/newsroom') body = CONTENT;
       else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
       else if (u.pathname === '/api/season') body = SEASON;
@@ -357,7 +368,9 @@ for (const [w, h, tag] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
   // The chrome is the shared one.
   ok(`${tag}: the black bar above the ribbon carries no text`, r.line === '', r.line);
   ok(`${tag}: the navy bar above the ribbon is 3px`, r.lineH === 3, String(r.lineH));
-  ok(`${tag}: the ribbon is ${w > 860 ? 95 : 53}px`, r.ribbonH === (w > 860 ? 95 : 53), r.ribbonH + 'px');
+  // 60px above 860px and 44px on a phone since the evening of 2026-10-10, when
+  // the mark was halved and the bar cut with it (95 and 53 before).
+  ok(`${tag}: the ribbon is ${w > 860 ? 60 : 44}px`, r.ribbonH === (w > 860 ? 60 : 44), r.ribbonH + 'px');
   ok(`${tag}: the nav is the shared five`, r.nav.join(',') === '/fantasy,/dfs,/in-season/desk,/faq#faq-start,/player', r.nav.join(','));
   if (w > 860) {
     ok(`${tag}: the one header button customizes the league`, !!r.cta && r.cta.shown && r.cta.href === '/my-league#settings' && r.cta.text === 'Customize My League', JSON.stringify(r.cta));
@@ -398,8 +411,8 @@ console.log('\nsix sections, in order, and nothing else');
      r.lanes.every(l => l.kit.length === 4 && l.kit.every(f => f.svg && Math.abs(f.w - f.h) <= 1 && f.w < l.w / 3 && f.top > l.top + l.h))
        && new Set(r.lanes.flatMap(l => l.kit.map(f => f.top))).size === 1, JSON.stringify(r.lanes.map(l => l.kit)));
   ok('the market figures live inside the hero, not as a sixth section', !r.allSections.includes('different') && !!(await page.$('#heroBand #different')));
-  ok('six tiles, one per position, each linking its weekly board',
-     r.tiles.map(t => t.href).join(' ') === '/weekly-qb-rankings /weekly-rb-rankings /weekly-wr-rankings /weekly-te-rankings /weekly-k-rankings /weekly-dst-rankings', r.tiles.map(t => t.href).join(' '));
+  ok('six tiles, one per position, each opening the one rankings page on that position',
+     r.tiles.map(t => t.href).join(' ') === '/rankings#pos=QB /rankings#pos=RB /rankings#pos=WR /rankings#pos=TE /rankings#pos=K /rankings#pos=DST', r.tiles.map(t => t.href).join(' '));
   ok('each tile is portrait, with its own illustration', r.tiles.every(t => t.svg && t.h > t.w), JSON.stringify(r.tiles.map(t => [t.w, t.h])));
   ok('on one row', r.tileTops === 1, String(r.tileTops));
   ok('three How-it-works cards, outlined and rounded', r.howCards.length === 3 && r.howCards.every(c => c.radius === 10 && c.border === '1px'), JSON.stringify(r.howCards));
@@ -532,9 +545,9 @@ console.log('\nwith the boards answering');
 
   ok('the KPI band is shown, navy, with white 44px figures', r.kpi === true && r.kpiBg === 'rgb(0, 30, 71)' && r.kpis.every(k => k.px === 44), JSON.stringify({ bg: r.kpiBg, px: r.kpis.map(k => k.px) }));
   ok('its figures come off the board and the desk',
-     r.kpis.map(k => k.v + ' ' + k.k).join(' | ') === '310 Players ranked this week (Week 3) | 205 Priced off a market line | 7 Pieces the desk published',
+     r.kpis.map(k => k.v + ' ' + k.k).join(' | ') === '310 Players ranked this week (Week 3) | 205 Priced off a prop this week | 7 Pieces the desk published',
      r.kpis.map(k => k.v + ' ' + k.k).join(' | '));
-  ok('only the market-priced count is mint', r.kpis.filter(k => k.good).map(k => k.k).join() === 'Priced off a market line');
+  ok('only the market-priced count is mint', r.kpis.filter(k => k.good).map(k => k.k).join() === 'Priced off a prop this week');
   ok('and no loading copy survives anywhere on the page', !LOADING.test(r.body), (r.body.match(LOADING) || [''])[0]);
   await ctx.close();
 }
@@ -716,6 +729,27 @@ MODE = 'thin';
   ok('no photograph runs twice in the grid: a finding about the lead\'s player takes a different picture',
      (() => { const shots = r.rows.filter(x => x.action).map(x => x.face); return new Set(shots).size === shots.length; })(), JSON.stringify(r.rows.map(x => [x.face, x.action])));
   ok('four cards in the row under the lead', new Set(r.rows.slice(1).map(x => x.top)).size === 1, JSON.stringify(r.rows.map(x => x.top)));
+  await ctx.close();
+}
+MODE = 'live';
+
+// ── 3g. a board with no market behind it ────────────────────────────────────
+// When this week's prop store is empty (props.live false) every row is
+// unpriced. That zero is not a figure, it is the props not having been read,
+// so the KPI band drops the cell and the tiles drop their priced count rather
+// than printing a 0.
+console.log('\na board with no market behind it');
+MODE = 'noboard';
+{
+  const { page, ctx } = await open(1440, 900);
+  const r = await read(page);
+  ok('the KPI band still shows', r.kpi === true && r.kpis.length === 2, JSON.stringify(r.kpis));
+  ok('the priced cell is dropped, not printed as zero',
+     r.kpis.map(k => k.v + ' ' + k.k).join(' | ') === '310 Players ranked this week (Week 3) | 7 Pieces the desk published',
+     r.kpis.map(k => k.v + ' ' + k.k).join(' | '));
+  ok('and nothing on the band is mint', r.kpis.every(k => !k.good));
+  ok('the tiles keep their ranked count and drop the priced one',
+     r.tiles.map(t => t.live).join(' | ') === '34 ranked | 72 ranked | 98 ranked | 42 ranked | 32 ranked | 32 ranked', r.tiles.map(t => t.live).join(' | '));
   await ctx.close();
 }
 MODE = 'live';

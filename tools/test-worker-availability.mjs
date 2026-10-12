@@ -37,7 +37,7 @@ const harness = new Function('PROJECTIONS', '_xb64encode', 'PROJ_KEY', 'fetch', 
   ${section}
   return { AVAILABILITY, AVAILABILITY_GAMES, AVAIL_MIN_MATCHED, AVAIL_MIN_TEAMS, AVAIL_MIN_GAMES, AVAIL_RESERVE_MIN,
            AVAIL_FEED_URL, AVAIL_SEASON_ENDING, AVAIL_MAX_AGE_MS, _oddsNorm, _oddsRound, _availF, _availStatusOf, _availKickoff, _availWeekAt, _availGamesOut,
-           _availBoardIndex, buildAvailabilityOverlay, availabilityMerge, availabilityTable, _availTable,
+           _availBoardIndex, buildAvailabilityOverlay, availabilityMerge, _availLastWeek, availabilityTable, _availTable,
            _availFactor, _availRowFactor, applyAvailability, blendProjections, _withAvailability, _availPool,
            availabilityCacheRead, availabilityCacheWrite, runAvailabilityRefresh, availabilityReport,
            fetchInjuriesEspn, oddsCacheRead, projectionsPayload, boardPayload, buildTeamEnvOverlay,
@@ -327,6 +327,25 @@ console.log('\nunion: committed block + live row');
     m['a|RB'].committedGamesOut === 6 && m['b|WR'].committedGamesOut === G && m['c|TE'].committedGamesOut === 4);
   ok('a null live row is the committed block', Object.keys(W.availabilityMerge(committed, null)).length === 3);
   ok('the merge never edits its inputs', committed['a|RB'].gamesOut === 6 && !('committedGamesOut' in committed['a|RB']));
+}
+{
+  // A hand entry written mid-season counts from the week of its asOf; the
+  // feed counts from Week 1 and its return date on a plain "Out" is the next
+  // game. 29 Sep 2026 is Week 4, so four games out is Weeks 4-7; the feed's
+  // five is Weeks 1-5. The window that reaches further is served.
+  const committed = { 'thumb|QB': { status: 'Out', gamesOut: 4, note: 'hand: dislocated thumb, 3-6 weeks', asOf: '2026-09-29' },
+                      'pre|RB': { status: 'IR', gamesOut: 4, note: 'hand', asOf: '2026-09-02' } };
+  const live = { 'thumb|QB': { status: 'Out', gamesOut: 5, note: 'feed', source: 'ESPN', asOf: '2026-10-11' },
+                 'pre|RB': { status: 'IR', gamesOut: 6, note: 'feed', source: 'ESPN', asOf: '2026-10-11' } };
+  const m = W.availabilityMerge(committed, live);
+  ok('a mid-season hand entry whose window outlasts the feed\'s placeholder is served whole',
+    m['thumb|QB'].gamesOut === 4 && m['thumb|QB'].asOf === '2026-09-29' && m['thumb|QB'].status === 'Out' && /hand/.test(m['thumb|QB'].note) && !m['thumb|QB'].live, JSON.stringify(m['thumb|QB']));
+  ok('...with the feed\'s view riding along for the report', m['thumb|QB'].feed && m['thumb|QB'].feed.gamesOut === 5 && m['thumb|QB'].feed.asOf === '2026-10-11');
+  ok('...and the committed number still recorded once', m['thumb|QB'].committedGamesOut === 4);
+  ok('a preseason entry is in the feed\'s own frame, so the feed still wins upward', m['pre|RB'].live && m['pre|RB'].gamesOut === 6 && m['pre|RB'].committedGamesOut === 4);
+  const later = W.availabilityMerge(committed, { 'thumb|QB': { status: 'IR', gamesOut: 9, note: 'feed', source: 'ESPN', asOf: '2026-10-13' } });
+  ok('a feed window that reaches past the hand entry\'s wins, as before', later['thumb|QB'].live && later['thumb|QB'].gamesOut === 9 && later['thumb|QB'].status === 'IR');
+  ok('the last week a window covers is read off its start', W._availLastWeek(4, '2026-09-29') === 7 && W._availLastWeek(4, '2026-09-02') === 4 && W._availLastWeek(3, '') === 3);
 }
 
 console.log('\nthe pro-rating is applied once');

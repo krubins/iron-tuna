@@ -198,7 +198,7 @@ console.log('\nstructured data');
   // A board fills itself in the browser. Markup listing rows the served HTML
   // does not contain is a claim a crawler can check and disbelieve, so the
   // in-season boards must never grow an itemListElement they cannot back.
-  const boards = ['weekly-rankings.html', 'season-long-rankings.html', 'stats.html', 'previews.html', 'hidden-value.html'];
+  const boards = ['rankings.html', 'stats.html', 'previews.html', 'hidden-value.html'];
   const claiming = boards.filter((f) => /"itemListElement"/.test((read(f).match(/data-seo="build-seo">([\s\S]*?)<\/script>/) || [, ''])[1].replace(/"@type":"BreadcrumbList"[\s\S]*/, '')));
   ok('no client-rendered board claims rows it does not serve', claiming.length === 0, claiming.join(', '));
 }
@@ -473,17 +473,22 @@ console.log('\nthe sitemap and the pages agree');
   });
   ok('the sitemap advertises nothing that says noindex', contradiction.length === 0, contradiction.slice(0, 6).join(', '));
 
-  // The gate is open, so the section's boards belong in the file. They were left
-  // out while it was shut, correctly: the worker served the waiting-list gate's
-  // BODY at their URLs, and sixteen addresses for one body is how a site teaches
-  // Google it has duplicate content. Both halves of that are pinned here, so
-  // whichever way the switch moves the sitemap has to move with it.
+  // The gate is open, so the rankings page belongs in the file. It is left out
+  // while the gate is shut, correctly: the worker serves the waiting-list
+  // gate's BODY at its URL then, and advertising a second address for one body
+  // is how a site teaches Google it has duplicate content. Both halves of that
+  // are pinned here, so whichever way the switch moves the sitemap has to move
+  // with it.
   const open = /"POST_DRAFT_OPEN"\s*:\s*"1"/.test(read('wrangler.jsonc'));
-  const boards = pages.filter((f) => /^(?:weekly|season-long)-(?:qb|rb|wr|te|flex|k|dst|rankings)/.test(f))
-    .map((f) => (read(f).match(/<link rel="canonical" href="([^"]*)"/) || [])[1]);
-  const missing = boards.filter((u) => !locs.includes(u));
-  if (open) ok('the gate is open, so every rankings board is advertised', missing.length === 0, missing.slice(0, 6).join(', '));
-  else ok('the gate is shut, so no rankings board is advertised', missing.length === boards.length, String(boards.length - missing.length));
+  const rk = 'https://irontuna.com/rankings';
+  if (open) ok('the gate is open, so the rankings page is advertised', locs.includes(rk));
+  else ok('the gate is shut, so the rankings page is not advertised', !locs.includes(rk));
+  // The sixteen per-position boards and their two hubs left the repo on
+  // 11 Oct 2026 and 301 onto /rankings. A sitemap that still named them would
+  // send every crawl through a redirect, and the generator walks the root, so
+  // a file that came back would be advertised the same day.
+  const retired = locs.filter((u) => /\/(?:weekly|season-long)-(?:[a-z]+-)?rankings$/.test(u));
+  ok('and no retired rankings address is advertised', retired.length === 0, retired.join(', '));
 }
 
 // ── /analysts/<id> ───────────────────────────────────────────────────────────
@@ -802,43 +807,6 @@ console.log('\n/players');
     read('sitemap.xml').includes('<loc>https://irontuna.com/players</loc>'));
 }
 
-// ── the rankings board, pre-rendered ─────────────────────────────────────────
-// Sixteen pages shipped as an empty div for /it-ranks.js to fill. The crawlers
-// robots.txt invites by name do not run JavaScript, so the board this site is
-// FOR reached them with not one player's name on it.
-console.log('\nthe rankings board, pre-rendered');
-{
-  const src = read('_worker.js');
-  const lift = (a, b) => { const i = src.indexOf(a); return i < 0 ? null : src.slice(i, src.indexOf(b, i) + b.length); };
-  const pre = lift('async function ranksPrerender(env, html) {', '\n}');
-  const html = lift('function rkPreHtml(pre) {', '\n}');
-  const ld = lift('function rkPreLd(pre, url) {', '\n}');
-  ok('the worker still carries the pre-render', !!pre && !!html && !!ld);
-
-  // NO ROUTE TABLE: the horizon and the position are read off each page's own
-  // data-rk-* attributes. So the host regex has to match every shell that has
-  // one, or that page silently goes back to shipping empty.
-  const shells = pages.filter((f) => read(f).includes('data-rk-board'));
-  ok('there are rankings shells to pre-render', shells.length >= 16, String(shells.length));
-  const unmatched = shells.filter((f) => !/<div class="rk-board"[\s\S]{0,600}?>/.test(read(f)));
-  ok('the worker finds the host on every one of them', unmatched.length === 0, unmatched.join(', '));
-  const noAttrs = shells.filter((f) => !/data-rk-horizon="(week|ros)"/.test(read(f))
-    || !/data-rk-pos="[A-Z]+"/.test(read(f)));
-  ok('every shell declares the board it is', noAttrs.length === 0, noAttrs.join(', '));
-
-  // The handoff. Two boards of the same rows left in the DOM is two boards a
-  // screen reader walks and a crawler weighs, so the pre-render is REMOVED —
-  // not hidden — once the live one has painted.
-  const ranks = read('it-ranks.js');
-  ok('the board adopts the pre-render', ranks.includes("host.querySelector('[data-rk-prerender]')"));
-  ok('and removes it once it has painted', /if \(pre\) \{ pre\.remove\(\); pre = null; \}/.test(ranks));
-  ok('and does not overwrite it with "Reading the board"', ranks.includes('empty.hidden = !!pre;'));
-  // A pre-render on screen makes the file's usual "nothing rather than a stale
-  // board" line false: those rows arrived WITH the page.
-  ok('a failed fetch keeps the rows that came with the page', /function stall\(\)/.test(ranks)
-    && ranks.includes('served with this page'));
-}
-
 // ── the boards have addresses ────────────────────────────────────────────────
 // Every board on this site was one URL: the reader who sorted, filtered and
 // found the row worth arguing about had nothing to send but "go to the
@@ -846,7 +814,7 @@ console.log('\nthe rankings board, pre-rendered');
 // are hundreds of useful views.
 console.log('\nthe boards have addresses');
 {
-  const boards = ['it-ranks.js', 'fantasy.html', 'previews.html', 'weekly-wrap.html'];
+  const boards = ['fantasy.html', 'previews.html', 'weekly-wrap.html'];
   for (const f of boards) {
     const src = read(f);
     ok(`${f} reads its view out of the URL`, /new URLSearchParams\(location\.search\)/.test(src));

@@ -42,9 +42,6 @@ body{overflow-x:hidden}
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
-/* The page head the section pages wear (fantasy.html, in-season.html). */
-h1{font-size:var(--fs-3xl);line-height:1.1;font-weight:800;letter-spacing:-.01em;margin:0 0 var(--space-3);max-width:22ch;text-wrap:pretty}
-@media(max-width:560px){h1{font-size:var(--fs-2xl)}}
 h2{font-size:clamp(23px,3vw,28px);margin:34px 0 10px;letter-spacing:.01em}
 p{color:var(--sec);margin:0 0 16px}
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;background:var(--teal);color:#fff;font-weight:600;border-radius:4px;padding:0 24px;border:none;cursor:pointer}
@@ -590,8 +587,6 @@ p{color:var(--sec);margin:0 0 16px}
    The setup, its help lines and the tooltips are unchanged. */
 .df-config{margin:18px 0 18px;border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--bg);padding:0;overflow:hidden}
 .df-config-title{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin:0;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
-.df-config-title span,.df-reading-head span{font-size:12.5px;color:var(--teal);font-weight:800}
-.df-config-title b,.df-reading-head b{font-size:19px;color:var(--text)}
 .df-config-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0}
 .df-select-block{display:block;min-width:0;padding:16px 20px;border-left:1px solid var(--line)}
 .df-select-block:first-child{border-left:0}
@@ -632,14 +627,6 @@ p{color:var(--sec);margin:0 0 16px}
 .df-play-week-score{border-left:1px solid rgba(191,145,0,.3);padding-left:16px}
 .df-play-week-score b{display:block;font-size:22px;color:var(--text)}
 .df-play-week-score span{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
-.df-reading{margin:22px 0}
-.df-reading-head{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px}
-.df-reading-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.df-reading-card{display:block;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:16px;color:var(--text);text-decoration:none}
-.df-reading-card:hover{border-color:var(--teal);text-decoration:none}
-.df-reading-card>span{font-size:11px;color:var(--teal);font-weight:800}
-.df-reading-card h3{margin:5px 0 6px;font-size:20px}.df-reading-card p{margin:0;font-size:14.5px;line-height:1.55}
-@media(max-width:850px){.df-config-grid{grid-template-columns:1fr}.df-select-block{border-left:0;border-top:1px solid var(--line)}.df-select-block:first-child{border-top:0}.df-play-week-grid{grid-template-columns:1fr}.df-play-week-score{border-left:0;border-top:1px solid rgba(191,145,0,.3);padding:12px 0 0}.df-reading-grid{grid-template-columns:1fr}}
 
 .df-game-scope{margin:18px 0;border:1px solid var(--line2);border-radius:10px;background:var(--panel);padding:15px 16px}
 .df-game-scope .df-game-style-head{margin-bottom:5px}
@@ -693,6 +680,10 @@ p{color:var(--sec);margin:0 0 16px}
 .df-edge-up{color:var(--teal);font-weight:700}.df-edge-down{color:var(--danger);font-weight:700}.df-edge-flat{color:var(--muted)}
 .df-player-actions{margin-top:14px}
 @media(max-width:560px){.df-player-sheet{width:100vw;padding:18px}.df-player-grid{grid-template-columns:1fr 1fr}}
+/* On a phone the setup selects and the Play of the Week figures stack. After
+   every rule they override, because they tie on specificity. */
+@media(max-width:850px){.df-config-grid{grid-template-columns:1fr}.df-select-block{border-left:0;border-top:1px solid var(--line)}.df-select-block:first-child{border-top:0}.df-play-week-grid{grid-template-columns:1fr}.df-play-week-score{border-left:0;border-top:1px solid rgba(191,145,0,.3);padding:12px 0 0}}
+
 /* ══ the page's own chrome ════════════════════════════════════════════════════
    /dfs is a tool, and it used to OPEN like a document that had lost its style
    sheet: an h1 on the same white ground as everything under it, two loose pill
@@ -802,68 +793,19 @@ body.sl-dress .df-play-week h2{font-size:clamp(21px,2.2vw,26px);line-height:1.2}
 body.sl-dress .df-play-week-dek{font-size:var(--fs-sm);line-height:1.55}
 body.sl-dress .df-play-week-copy{font-size:var(--fs-sm);line-height:1.6}
 body.sl-dress .df-play-week-score b{font-size:19px}
-body.sl-dress .df-reading-card{border-radius:var(--sl-r);border-color:var(--line2);padding:var(--space-4)}
-body.sl-dress .df-reading-card h3{font-size:17px;line-height:1.3}
-body.sl-dress .df-reading-card p{font-size:var(--fs-2xs);line-height:1.5}
-body.sl-dress .df-reading-head b,body.sl-dress .df-config-title b{font-size:17px}
-body.sl-dress .df-reading-head span,body.sl-dress .df-config-title span{font-family:var(--font-body);font-size:11px;}
 body.sl-dress .df-config{border-radius:var(--sl-r);border-color:var(--line2)}
 body.sl-dress .df-must,body.sl-dress .df-tune{border-radius:var(--sl-r);border-color:var(--line2)}
 body.sl-dress .df-sub{font-size:var(--fs-2xs);color:var(--muted);line-height:1.55}
 
-/* The NFL clock now dates the setup band rather than the band that used to open
-   the page. .its-strip paints itself --panel, which is the tinted band's own
-   ground, so inside a band it would read as a bare outline; white is what every
-   other plate on a band already does (see .is-band .is-plate in site.css). */
-.is-band .its-strip{background:var(--bg)}
-
-/* ── what the rail costs the board, said plainly ────────────────────────────
-   The lineup board used to break out past the 1,200px column on a wide screen
-   — width:min(100vw - 40px, 1440px), centred on the viewport — because it is
-   the answer this page exists to give. It cannot do that any more, and the
-   reason is geometry rather than taste: a breakout centred on the viewport
-   runs under a rail that is pinned to the left of it, and this page now has
-   one that stays there the whole way down because it carries the board
-   switch.
-
-   So the board takes the column, and the column is made wider to pay for it:
-   .df-shell is 1,600px where the three-column front is 1,340px, which puts
-   the boards at about 1,308px against the 1,200px the rest of the page read
-   in before. On a 1440-wide screen the lineup board is the one thing that
-   ends up narrower than it was. Its table sets min-width:620px and scrolls
-   inside its own frame, so nothing about it breaks; it is less roomy, and
-   that is the trade for a switch the reader can always reach. */
-/* Two columns, not three, and 1,600px rather than 1,340px: the third column
-   the shared shell declares is the player rail, and on this page that rail
-   sits beside the stories instead (.sl-front) so the boards below get the
-   whole measure. These rules come after site.css, so they beat its own
-   media-query versions at equal specificity without needing to repeat them. */
-.df-shell{max-width:1600px;grid-template-columns:224px minmax(0,1fr);grid-template-areas:"nav main"}
-@media(max-width:860px){
-  .df-shell{grid-template-columns:minmax(0,1fr);grid-template-areas:"nav" "main"}
-}
-/* The nameplate is the shell's width, not the three-column front's. */
-.df-mast .sl-in{max-width:1600px}
+/* ── what the rail costs the board, said plainly ────────────────────────
+   The lineup board takes the column, and the column is made wider to pay
+   for it: .df-shell is 1,600px where the lane front's shell is 1,440px. The
+   two-column grid itself is the lane front's (body.ln-front .sl-shell in
+   site.css), which /fantasy wears too. */
+.df-shell{max-width:1600px}
 .df-shell .sl-left{z-index:2}
-/* The stories are the front's left-hand column; the player rail is beside
-   them, not down the page, because below them the boards want the width. */
-.sl-front>section{margin:0}
-.sl-front>section>.is-sec:first-child{margin-top:0}
-
-/* The white column between the two tinted bands. */
-.df-main{padding-top:var(--space-4)}
-/* Inside the shell the column supplies its own measure, so the wrap that used
-   to cap it at 1,200px is gone from the markup and these rules address the
-   column directly. */
+/* Inside the shell the column supplies its own measure. */
 .sl-main>.df-main{max-width:none;padding-left:0;padding-right:0}
-.df-main>.df-play-week:first-child{margin-top:0}
-/* The roster now opens the column, directly under the setup band it is
-   solved from, so its section rule does not need the full gap a section
-   following another section does -- and the board hangs straight off that
-   rule, with the note about it and the Must include box below it. */
-.df-main>#sec-lineup:first-of-type{margin-top:0}
-.df-main>#sec-lineup:first-of-type>.is-sec:first-child{margin-top:var(--space-5)}
-.df-main>#sec-lineup>.is-sec+#dfLineups>:first-child{margin-top:0}
 .df-est{display:inline-block;margin-left:4px;font-style:normal;font-size:10px;font-weight:800;color:#b7791f;vertical-align:2px}
 /* ══ THE PAPER PASS — THIS PAGE'S OWN HALF (2026-10-10) ═══════════════════
    The shared half sits at the foot of the scoreboard dress in site.css and
@@ -886,8 +828,8 @@ body.sl-dress .sl-nav:has(#dfNav[hidden]) .sl-nav-more{margin-top:0;border-top:0
 /* the setup: the system's one form surface, the tinted panel under a navy
    rule, and inside it plain labels — no numbered discs, no teal kicker, the
    selects at the input radius */
-body.sl-dress .df-config{margin:var(--space-5) 0 0;border:0;border-top:3px solid var(--mast);border-radius:var(--radius-md);background:var(--panel)}
-.df-config-title{background:none;border-bottom:1px solid var(--line2);padding:var(--space-4) var(--space-5)}
+body.sl-dress .df-config{margin:0;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.df-config-title{background:none;border-bottom:1px solid var(--line);padding:var(--space-4) var(--space-5)}
 body.sl-dress .df-config-title span{font-size:var(--fs-13);font-weight:400;color:var(--muted)}
 body.sl-dress .df-config-title b{font-size:var(--fs-19);font-weight:600}
 .df-select-block{border-left-color:var(--line2)}
@@ -912,18 +854,6 @@ body.sl-dress .df-play-week-copy{font-size:var(--fs-16);line-height:1.5}
 body.sl-dress .df-play-week-score b{font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em}
 .df-play-week-score span{font-size:var(--fs-13)}
 @media(max-width:850px){.df-play-week-score{border-top-color:var(--line)}}
-/* the academy: a section head and two outlined cards */
-.df-reading{margin:var(--space-8) 0 0}
-.df-reading-head{display:block;margin-bottom:var(--space-4)}
-.df-reading-head span{display:block;margin-bottom:var(--space-1)}
-body.sl-dress .df-reading-head span{font-size:var(--fs-13);font-weight:400;color:var(--muted)}
-body.sl-dress .df-reading-head b{font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.15}
-.df-reading-grid{gap:var(--space-5)}
-body.sl-dress .df-reading-card{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--bg);padding:var(--space-5)}
-.df-reading-card:hover{border-color:var(--line2)}
-.df-reading-card>span{font-size:var(--fs-13);font-weight:400;color:var(--muted)}
-body.sl-dress .df-reading-card h3{font-size:var(--fs-19);margin:var(--space-1) 0 var(--space-2)}
-body.sl-dress .df-reading-card p{font-size:var(--fs-16);line-height:1.5;color:var(--sec)}
 /* the standfirsts, the boxes under the roster, the controls and the coach */
 body.sl-dress .df-sub{font-size:var(--fs-16);color:var(--sec);line-height:1.5;max-width:60ch}
 body.sl-dress .df-tune{border-radius:var(--radius-md);border-color:var(--line);background:var(--bg)}
@@ -945,7 +875,7 @@ body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);
 <link rel="stylesheet" href="/tuna-market.css">
 <script defer src="/tuna-market.js"></script>
 </head>
-<body class="sl-dress">
+<body class="df-page sl-dress ln-front">
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site"><!--chrome:line--><p class="site-line" aria-hidden="true"></p><!--/chrome:line--><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
@@ -973,21 +903,26 @@ body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);
 </header>
 <main id="main">
 
-<!-- ── the nameplate ──────────────────────────────────────────────────────
-     /dfs had no opening band at all: the h1 was off the screen and the page
-     started on the board switcher, on the argument that a reader here already
-     knows what DFS is. That argument holds against a 300px hero and not
-     against a nameplate, which is a strip: the lane's name, the sentence the
-     lane is FOR, and nothing else. /fantasy wears the same one from the day
-     before this, and the pair of them are now the two doors into the section
-     rather than two different-looking pages. -->
-<section class="sl-mast df-mast">
-  <div class="sl-in">
-    <p class="sl-date">
-      <span class="is-eyebrow">In-Season &middot; DFS</span>
-    </p>
-    <h1>DFS: <em>the odds makers&rsquo; edge</em> to one slate, one cap and one lineup</h1>
-    <p class="sl-deck">Every salary on the slate read against market-implied points, then solved against the cap for the contest you are actually entering.</p>
+<!-- ── the hero ───────────────────────────────────────────────────────────
+     front.html's, for this lane: one headline, one sentence, the search
+     field and the entry points as text links. The element keeps .sl-mast
+     because tools/test-boards-render.mjs finds the nameplate by it; the
+     lane front in site.css undoes every dress rule on it. -->
+<section class="sl-mast hm-hero" aria-labelledby="heroHead">
+  <div class="wrap">
+    <h1 id="heroHead">One slate, priced off the betting market.</h1>
+    <p class="hm-lede">Every salary on the slate read against market-implied points, then solved against the cap for the contest you are actually entering: the lineup, the values, the stacks and the touchdown board.</p>
+    <form class="search-field hm-find" role="search" autocomplete="off" action="/player" method="get">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+      <input id="dfFind" name="q" type="search" placeholder="Lineups, values, rankings or a player" aria-label="Find DFS lineups, values, rankings or a player"
+             role="combobox" aria-expanded="false" aria-autocomplete="list" data-player-search="dfs" data-search-tools>
+    </form>
+    <ul class="hm-entry">
+      <li><a href="#setup">Set up the slate &rarr;</a></li>
+      <li><a href="#lineup">This week&rsquo;s lineup &rarr;</a></li>
+      <li><a href="/dfs-getting-started">How the lobby works &rarr;</a></li>
+    </ul>
+    <hr class="hm-rule">
   </div>
 </section>
 
@@ -1006,38 +941,19 @@ body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);
     <div class="rk-seg" id="dfNav" role="group" aria-labelledby="dfNavLab"><button type="button" data-sec="lineup">The Lineup</button><button type="button" data-sec="values">Vegas Values</button><button type="button" data-sec="stacks">Game Stacks</button><button type="button" data-sec="td">TD Board</button><button type="button" data-sec="dash">The Slate</button></div>
     <div class="sl-nav-more">
       <p>Also here</p>
-      <a href="#desk">The Newsroom</a>
       <a href="#setup">Set up the slate</a>
+      <a href="#lineup">This week&rsquo;s lineup</a>
+      <a href="#desk">From the Desk</a>
+      <a href="#academy">DFS Academy</a>
       <a href="#df-method">Where the numbers come from</a>
-      <a href="/dfs-getting-started">How the lobby works</a>
       <a href="/fantasy">Season Long</a>
     </div>
   </nav>
-</aside>
-
-<div class="sl-main">
-
-<!-- ── the front: the desk, and the newest thing known about one player ────
-     Ken, 2026-09-22: the same front /fantasy wears. Three stories where there
-     were six, and a player rail beside them.
-
-     The rail sits BESIDE the stories rather than down the page, which is the
-     one place this page's front differs from the other's. Below the stories
-     are the boards, and a 300px column taken out of them for the whole scroll
-     would cost the lineup board more than the rail is worth. -->
-<div class="sl-front">
-  <section>
-    <div class="is-sec" id="desk"><div class="is-sec-top"><span class="is-sec-n">Lead</span><h2>The Newsroom</h2><a class="is-sec-more" href="/in-season/desk">The whole desk &rarr;</a></div>
-      <p>The desk&rsquo;s newest packages read for the slate: price, ownership, leverage. The <a href="/analysts/dfs">DFS Desk</a> writes the DFS lens of every shared story. <a href="/analysts">The desk, and the AI disclosure &rarr;</a></p></div>
-    <div class="sl-stories" id="dfDesk" hidden></div>
-    <div class="is-vacant" id="dfDeskEmpty">
-      <span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span>
-      <div class="is-vacant-msg"><b id="dfDeskEmptyH">Reading the desk&hellip;</b><span id="dfDeskEmptyP"></span></div>
-      <a class="is-btn ghost" href="/in-season/desk">Read the desk</a>
-    </div>
-  </section>
-
-  <aside class="sl-updrail">
+  <!-- The player rail, under the navigation: one player at a time, the
+       Wednesday board's own movers first, then the signal engine's
+       detections. It sat beside the stories at the top of the column; the
+       column is the boards' now, and the rail is the rail. -->
+  <div class="ln-rail-upd">
     <div class="sl-upd" id="dfUpd" hidden>
       <div class="sl-upd-h"><b>Player updates</b><span class="sl-upd-n" id="dfUpdN"></span></div>
       <div class="sl-upd-body" id="dfUpdBody" aria-live="polite"></div>
@@ -1048,24 +964,25 @@ body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);
       </div>
     </div>
     <div class="is-vacant" id="dfUpdEmpty">
-      <span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span>
       <div class="is-vacant-msg"><b id="dfUpdEmptyH">Reading the board&hellip;</b><span id="dfUpdEmptyP"></span></div>
     </div>
     <p class="sl-upd-note">Every update is a field that changed between two boards, or a rule the signal engine fired on. These are season-long reads on the men who are also on this slate, not salary calls.</p>
-  </aside>
-</div>
+  </div>
+</aside>
 
-<!-- ── 3 · the setup band ────────────────────────────────────────────────
-     The one question the whole page depends on, on the tinted surface so it
-     reads as a step the reader completes rather than as the first of nine
-     white blocks. The plate inside it, its three ordered selects and its help
-     lines are exactly as they were. -->
-<div class="is-band" id="setup">
-  <div class="wrap">
-    <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">Setup</span><h2>Set up the slate</h2><a class="is-sec-more" href="/dfs-getting-started">How the lobby works &rarr;</a></div></div>
-    <p class="df-sub">Three choices, in this order: the roster format, the games that define the eligible player pool, and the way the contest pays. Every board below is solved for what you pick here.</p>
-    <p class="is-note" id="dfNote"></p>
-    <p class="is-note" id="dfSiteNote"></p>
+<div class="sl-main">
+
+<!-- ── the setup ─────────────────────────────────────────────────────────
+     The one question the whole page depends on. The plate, its three ordered
+     selects and its help lines are exactly as they were. -->
+<section class="hm-sec" id="setup" aria-labelledby="setupHead">
+  <div class="hm-sec-head">
+    <h2 id="setupHead">Set up the slate</h2>
+    <a href="/dfs-getting-started">How the lobby works &rarr;</a>
+  </div>
+  <p class="hm-sub">Three choices, in this order: the roster format, the games that define the eligible player pool, and the way the contest pays. Every board below is solved for what you pick here.</p>
+  <p class="is-note" id="dfNote"></p>
+  <p class="is-note" id="dfSiteNote"></p>
 
 <div class="df-config" id="dfConfig">
   <div class="df-config-title"><span>DraftKings DFS Setup</span><b>Match the contest you are actually entering</b></div>
@@ -1133,8 +1050,7 @@ body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);
   </div>
 </div>
 
-  </div>
-</div><!-- /.is-band -->
+</section>
 
 <!-- ── 4 · the answer, and the evidence behind it ───────────────────────────────
      White ground between the two tinted bands, so the gold Play of the Week
@@ -1152,7 +1068,7 @@ body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);
      It solves on load. A reader who arrives, reads the roster and leaves has
      got the whole product; the controls are for the reader who wants to argue
      with it, and they are folded away until that reader opens them. -->
-<section id="sec-lineup">
+<section class="hm-sec" id="sec-lineup">
   <!-- ── the rule, then the board ───────────────────────────────────────────────
        The three selects in the band above are a question and the board is
        its answer, so the one thing allowed between them is the rule that
@@ -1160,7 +1076,7 @@ body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);
        box sit underneath the board instead: a reader who has just named the
        contest they are entering gets the roster itself next, not two
        paragraphs about it. -->
-  <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>This week’s lineup</h2><a class="is-sec-more" href="#values">The board behind it &rarr;</a></div></div>
+  <div class="hm-sec-head"><h2>This week’s lineup</h2><a href="#values">The board behind it &rarr;</a></div>
   <div id="dfLineups"></div>
 
   <p class="df-sub">Solved against the cap for the contest shape above, on the same market numbers that price the season-long board. <b>Nothing on this page enters a contest</b> &mdash; it builds a roster to read and copy.</p>
@@ -1228,13 +1144,6 @@ body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);
   <div class="df-play-week-grid" id="dfPlayWeekBody"><p class="is-note">Waiting for this week&rsquo;s salary and projection board.</p></div>
 </section>
 
-<div class="df-reading">
-  <div class="df-reading-head"><span>DFS Academy</span><b>Understand the lobby before you optimize the lineup.</b></div>
-  <div class="df-reading-grid">
-    <a class="df-reading-card" href="/dfs-getting-started"><span>Start Here</span><h3>How DraftKings DFS Is Structured</h3><p>Game Style, game pool, payout structure, entry limits and why each choice changes the lineup you should build.</p></a>
-    <a class="df-reading-card" href="/dfs-strategy-guide"><span>Strategy</span><h3>Stacks, Correlation, Leverage and Contest Selection</h3><p>When correlation helps, when chalk is good, when leverage matters and how to match roster construction to the payout curve.</p></a>
-  </div>
-</div>
 
 <div class="df-player-modal" id="dfPlayerModal" hidden role="dialog" aria-modal="true" aria-labelledby="dfPlayerTitle">
   <button class="df-player-backdrop" type="button" data-player-close aria-label="Close player calculation"></button>
@@ -1248,18 +1157,18 @@ body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);
   </div>
 </div>
 
-<section id="sec-dash" hidden>
-  <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">05</span><h2>The Slate</h2></div></div>
-  <p class="df-sub">What the board looks like underneath the lineup: the market&rsquo;s scoring environment, the widest values, and the desk&rsquo;s reading of the week.</p>
+<section class="hm-sec" id="sec-dash" hidden>
+  <div class="hm-sec-head"><h2>The Slate</h2></div>
+  <p class="hm-sub">What the board looks like underneath the lineup: the market&rsquo;s scoring environment, the widest values, and the desk&rsquo;s reading of the week.</p>
   <div class="is-grid" id="dfCards"></div>
   <h3>This week’s scoring environment</h3>
   <div class="is-scroll"><table class="is-table" id="dfTable" hidden><thead><tr><th>Club</th><th>Opponent</th><th class="num">Implied points</th><th class="num">Game total</th></tr></thead><tbody id="dfBody"></tbody></table></div>
   <p class="is-empty" id="dfEmpty">Reading the slate&hellip;</p>
 </section>
 
-<section id="sec-values" hidden>
-  <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>Vegas Values</h2></div></div>
-  <p>The Vegas Value Score is market-implied points per $1,000 of salary, indexed to the slate’s median: 100 is an ordinary price, 130 is a bargain. Every row carries the salary, the three projections, Market Delta, the TD probability and the team total.</p>
+<section class="hm-sec" id="sec-values" hidden>
+  <div class="hm-sec-head"><h2>Vegas Values</h2></div>
+  <p class="hm-sub">The Vegas Value Score is market-implied points per $1,000 of salary, indexed to the slate’s median: 100 is an ordinary price, 130 is a bargain. Every row carries the salary, the three projections, Market Delta, the TD probability and the team total.</p>
   <p class="is-note" id="dfContestNote"></p>
   <div class="rk-seg" id="dfBoard" role="group"><button type="button" data-board="metrics">Value &amp; Leverage</button><button type="button" data-board="bestVegasValues">Best Vegas Values</button><button type="button" data-board="tdUpside">TD Upside</button><button type="button" data-board="volumeValues">Volume Values</button><button type="button" data-board="expensiveFades">Expensive Fades</button></div>
   <div class="is-scroll"><table class="is-table" id="dfMetrics" hidden><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna Projection</th><th class="num" id="dfMetricsFppgHead">DraftKings FPPG</th><th class="num">Tuna Edge</th><th class="num">Value</th><th class="num">Floor</th><th class="num">Ceiling</th><th class="num">Own% <small>(model)</small></th><th class="num">Leverage</th><th class="num">Cash</th><th class="num">Tourney</th><th>Chalk</th></tr></thead><tbody></tbody></table></div>
@@ -1267,44 +1176,101 @@ body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);
   <div class="is-scroll"><table class="is-table" id="dfValues" hidden><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna Projection</th><th class="num" id="dfValuesFppgHead">DraftKings FPPG</th><th class="num">Tuna Edge</th><th class="num">Vegas</th><th class="num">Consensus</th><th>Market Delta</th><th class="num">TD %</th><th class="num">Team total</th><th class="num">VVS</th></tr></thead><tbody></tbody></table></div>
 </section>
 
-<section id="sec-stacks" hidden>
-  <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">03</span><h2>Game Stacks</h2></div></div>
-  <p>Every game on the slate by total, each side’s QB with his best-priced pass catchers, and the bring-back from the other side.</p>
+<section class="hm-sec" id="sec-stacks" hidden>
+  <div class="hm-sec-head"><h2>Game Stacks</h2></div>
+  <p class="hm-sub">Every game on the slate by total, each side’s QB with his best-priced pass catchers, and the bring-back from the other side.</p>
   <div id="dfStacks"></div>
 </section>
 
-<section id="sec-td" hidden>
-  <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">04</span><h2>TD Board</h2></div></div>
-  <p>Players by the probability of scoring at least once, with the salary it costs to own that chance. Quoted where a book prices it, derived where none does, and labeled either way.</p>
+<section class="hm-sec" id="sec-td" hidden>
+  <div class="hm-sec-head"><h2>TD Board</h2></div>
+  <p class="hm-sub">Players by the probability of scoring at least once, with the salary it costs to own that chance. Quoted where a book prices it, derived where none does, and labeled either way.</p>
   <div class="is-scroll"><table class="is-table" id="dfTd" hidden><thead><tr><th>#</th><th>Player</th><th class="num">Salary</th><th class="num">Anytime TD</th><th class="num">TD % per $1K</th><th class="num">Team total</th><th>Basis</th></tr></thead><tbody></tbody></table></div>
 </section>
 
 </div><!-- /.df-main -->
 
-<!-- ── 5 · the rest of the lane, and the method ────────────────────────────────
-     Everything after the tool, on the tinted surface: where else to go in the
-     section, where the numbers come from, and the market signal. Same copy,
-     same links, same order. -->
-<div class="is-band">
-  <div class="wrap">
-
-<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">More</span><h2>The rest of the section</h2><a class="is-sec-more" href="/in-season">In-season overview &rarr;</a></div></div>
-<div class="is-grid">
-  <div class="is-card"><h3><a href="/in-season">Overview</a></h3><p>This week&rsquo;s readings across both lanes, and the one place to save your league.</p></div>
-  <div class="is-card"><h3><a href="/fantasy">Fantasy</a></h3><p>Your league, re-scored every week: rankings, start/sit, waiver prices and trades.</p></div>
-  <div class="is-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offense is implied to score.</p></div>
-  <div class="is-card"><h3><a href="/vegas-edge">Vegas Edge</a></h3><p>The players the betting market and the consensus rankings disagree about, and by how much.</p></div>
-  <div class="is-card"><h3><a href="/my-league">My League</a></h3><p>Your teams, budget and scoring, and every number on this site restated in them.</p></div>
-</div>
-
-<div class="is-sec" id="df-method"><div class="is-sec-top"><span class="is-sec-n">Method</span><h2>Where these numbers come from</h2><a class="is-sec-more" href="/data">Data &amp; sources &rarr;</a></div></div>
-<p>Iron Tuna prices players against the <b>betting market</b> first and the consensus projection feeds second. A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news; a ranking carries no such penalty. When a priced market and an unpriced list disagree, the disagreement is the thing worth reading.</p>
-<p class="is-note">The week, the game states and the byes on this page come from the NFL schedule itself, not from the calendar: a week is current until its own last game has finished. Game lines and totals are the market’s, pulled on a schedule and cached, never fetched from your browser. Where a number is derived rather than quoted, the page says so.</p>
-
-<section id="tuna-market" data-kind="props" aria-label="Tuna Market Signal"></section>
-
+<!-- ── from the desk ──────────────────────────────────────────────────────
+     Ken, 2026-09-22: three stories where there were six, the newest at lead
+     weight. They sat above the setup; the boards are what a reader came for
+     and the desk reads under them now, as it does on /fantasy. -->
+<section class="hm-sec" id="desk" aria-labelledby="deskHead">
+  <div class="hm-sec-head">
+    <h2 id="deskHead">From the Desk</h2>
+    <a href="/in-season/desk">The whole desk &rarr;</a>
   </div>
-</div><!-- /.is-band -->
+  <p class="hm-sub">The desk&rsquo;s newest packages read for the slate: price, ownership, leverage. The <a href="/analysts/dfs">DFS Desk</a> writes the DFS lens of every shared story. <a href="/analysts">The desk, and the AI disclosure &rarr;</a></p>
+  <div class="sl-stories" id="dfDesk" hidden></div>
+  <div class="is-vacant" id="dfDeskEmpty">
+    <div class="is-vacant-msg"><b id="dfDeskEmptyH">Reading the desk&hellip;</b><span id="dfDeskEmptyP"></span></div>
+    <a class="is-btn ghost" href="/in-season/desk">Read the desk &rarr;</a>
+  </div>
+</section>
+
+<!-- ── the academy ────────────────────────────────────────────────────────
+     Two reading pieces, as the homepage's cards. -->
+<section class="hm-sec" id="academy" aria-labelledby="acadHead">
+  <div class="hm-sec-head">
+    <h2 id="acadHead">DFS Academy</h2>
+    <a href="/dfs-getting-started">Start here &rarr;</a>
+  </div>
+  <p class="hm-sub">Understand the lobby before you optimize the lineup.</p>
+  <div class="hm-how-grid two">
+    <a class="hm-input" href="/dfs-getting-started"><span class="k">Start here</span><h3>How DraftKings DFS is structured</h3><p>Game Style, game pool, payout structure, entry limits and why each choice changes the lineup you should build.</p></a>
+    <a class="hm-input" href="/dfs-strategy-guide"><span class="k">Strategy</span><h3>Stacks, correlation, leverage and contest selection</h3><p>When correlation helps, when chalk is good, when leverage matters and how to match roster construction to the payout curve.</p></a>
+  </div>
+</section>
+
+<!-- ── the tools ─────────────────────────────────────────────────────────
+     The lane's four boards as front.html draws them under the DFS lane
+     tile, then the rest of the section as an index. A tile names a board by
+     hash and the switch opens it (the hashchange listener in the script). -->
+<section class="hm-sec" id="tools" aria-labelledby="toolsHead">
+  <div class="hm-sec-head">
+    <h2 id="toolsHead">Play the slate</h2>
+    <a href="/in-season">In-season overview &rarr;</a>
+  </div>
+  <ul class="hm-lane-kit" aria-label="DFS tools">
+    <li><a class="hm-lane-fn" href="#lineup" style="--t1:#14365a" data-fn="lineup">
+      <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="200" height="200" fill="#14365a"/><g stroke="#cfe3f5" stroke-width="1" opacity=".22"><path d="M0 40h200M0 80h200M0 120h200M0 160h200"/></g><g transform="translate(20 6) scale(.8)"><g fill="#cfe3f5" opacity=".9"><rect x="28" y="22" width="96" height="12" rx="3"/><rect x="28" y="44" width="76" height="12" rx="3"/><rect x="28" y="66" width="86" height="12" rx="3"/></g><rect x="28" y="92" width="144" height="12" rx="6" fill="#cfe3f5" opacity=".35"/><rect x="28" y="92" width="112" height="12" rx="6" fill="#7fd1ae"/><text x="144" y="40" fill="#f2c14e" font-family="Geist,system-ui,sans-serif" font-size="30" font-weight="700">$</text></g></svg>
+      <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">The Lineup</span><span class="hm-lane-fn-sub">Build the lineup</span></span>
+    </a></li>
+    <li><a class="hm-lane-fn" href="#values" style="--t1:#14365a" data-fn="values">
+      <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="200" height="200" fill="#14365a"/><g stroke="#cfe3f5" stroke-width="1" opacity=".22"><path d="M0 40h200M0 80h200M0 120h200M0 160h200"/></g><g transform="translate(20 6) scale(.8)"><g fill="#cfe3f5" opacity=".55"><rect x="30" y="80" width="18" height="40" rx="3"/><rect x="74" y="64" width="18" height="56" rx="3"/><rect x="118" y="92" width="18" height="28" rx="3"/><rect x="162" y="48" width="18" height="72" rx="3"/></g><g fill="#7fd1ae"><rect x="50" y="60" width="18" height="60" rx="3"/><rect x="94" y="36" width="18" height="84" rx="3"/><rect x="138" y="100" width="18" height="20" rx="3"/><rect x="182" y="24" width="18" height="96" rx="3"/></g><text x="24" y="40" fill="#f2c14e" font-family="Geist,system-ui,sans-serif" font-size="30" font-weight="700">$</text></g></svg>
+      <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">Vegas Values</span><span class="hm-lane-fn-sub">Salary vs. market</span></span>
+    </a></li>
+    <li><a class="hm-lane-fn" href="#stacks" style="--t1:#14365a" data-fn="stacks">
+      <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="200" height="200" fill="#14365a"/><g stroke="#cfe3f5" stroke-width="1" opacity=".22"><path d="M0 40h200M0 80h200M0 120h200M0 160h200"/></g><g transform="translate(20 6) scale(.8)"><g fill="#cfe3f5" opacity=".9"><rect x="34" y="30" width="54" height="22" rx="5"/><rect x="34" y="58" width="54" height="22" rx="5"/><rect x="34" y="86" width="54" height="22" rx="5"/></g><g fill="#7fd1ae"><rect x="118" y="44" width="54" height="22" rx="5"/><rect x="118" y="72" width="54" height="22" rx="5"/></g><path d="M88 69h30" fill="none" stroke="#f2c14e" stroke-width="5" stroke-linecap="round"/><path d="M88 97c20 0 20-14 30-14" fill="none" stroke="#f2c14e" stroke-width="5" stroke-linecap="round"/></g></svg>
+      <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">Game Stacks</span><span class="hm-lane-fn-sub">Correlated plays</span></span>
+    </a></li>
+    <li><a class="hm-lane-fn" href="#td" style="--t1:#14365a" data-fn="td">
+      <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="200" height="200" fill="#14365a"/><g stroke="#cfe3f5" stroke-width="1" opacity=".22"><path d="M0 40h200M0 80h200M0 120h200M0 160h200"/></g><g transform="translate(20 6) scale(.8)"><path d="M64 34v76M136 34v76M64 70h72M100 70v46" fill="none" stroke="#f2c14e" stroke-width="7" stroke-linecap="round"/><rect x="80" y="116" width="40" height="10" rx="3" fill="#f2c14e"/><ellipse cx="100" cy="46" rx="16" ry="10" fill="#7fd1ae"/><path d="M92 46h16" stroke="#14365a" stroke-width="2.5" stroke-linecap="round"/></g></svg>
+      <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">TD Board</span><span class="hm-lane-fn-sub">Who scores</span></span>
+    </a></li>
+  </ul>
+  <ul class="ln-index" aria-label="The rest of the section">
+    <li><a href="/in-season"><b>Overview</b><span>This week&rsquo;s readings across both lanes, and the one place to save your league.</span></a></li>
+    <li><a href="/fantasy"><b>Fantasy</b><span>Your league, re-scored every week: rankings, start/sit, waiver prices and trades.</span></a></li>
+    <li><a href="/game-intel"><b>Game Intel</b><span>Every game this week with its line, its total, and the points each offense is implied to score.</span></a></li>
+    <li><a href="/vegas-edge"><b>Vegas Edge</b><span>The players the betting market and the consensus rankings disagree about, and by how much.</span></a></li>
+    <li><a href="/my-league"><b>My League</b><span>Your teams, budget and scoring, and every number on this site restated in them.</span></a></li>
+    <li><a href="/player-intel"><b>Player Intel</b><span>Every horizon, prop movement, TD probability and usage for any player.</span></a></li>
+  </ul>
+</section>
+
+<!-- ── the method, and the market signal ─────────────────────────────── -->
+<section class="hm-sec" id="df-method" aria-labelledby="methodHead">
+  <div class="hm-sec-head">
+    <h2 id="methodHead">Where these numbers come from</h2>
+    <a href="/data">Data &amp; sources &rarr;</a>
+  </div>
+  <p class="hm-sub">Iron Tuna prices players against the <b>betting market</b> first and the consensus projection feeds second. A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news; a ranking carries no such penalty. When a priced market and an unpriced list disagree, the disagreement is the thing worth reading.</p>
+  <p class="is-note">The week, the game states and the byes on this page come from the NFL schedule itself, not from the calendar: a week is current until its own last game has finished. Game lines and totals are the market&rsquo;s, pulled on a schedule and cached, never fetched from your browser. Where a number is derived rather than quoted, the page says so.</p>
+</section>
+
+<div class="hm-sec">
+<section id="tuna-market" data-kind="props" aria-label="Tuna Market Signal"></section>
+</div>
 
 </div><!-- /.sl-main -->
 </div><!-- /.sl-shell -->
@@ -4451,6 +4417,20 @@ body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);
       try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({event:'dfs_payout_structure',uid:localStorage.getItem('it.uid')||'',props:{path:location.pathname,payout:payoutStructure,site:site}})],{type:'application/json'})); } catch(x){}
     });
     $('dfNav').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; sec = b.getAttribute('data-sec'); show(); });
+    // A board is a link (fromHash, above) on load. The tool tiles at the
+    // foot of the page and the rail's own links name a board by hash too,
+    // and without this a click on "Vegas Values" changed the address bar and
+    // nothing else. Before the slate is set up there are no boards to open,
+    // so the click lands on the setup instead of on a hidden section.
+    window.addEventListener('hashchange', function () {
+      var h = String(location.hash || '').replace(/^#/, '');
+      if (h === 'builder' || h === 'dfTune') h = 'lineup';
+      h = h.replace(/^sec-/, '');
+      if (SEC_IDS.indexOf(h) < 0) return;
+      if ($('dfNav').hidden) { try { $('setup').scrollIntoView(); } catch (err) {} return; }
+      sec = h; show();
+      try { $('sec-' + h).scrollIntoView(); } catch (err) {}
+    });
     $('dfBoard').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); var view=filteredSlate(); if (view) values(view); });
     desk();
     updates();

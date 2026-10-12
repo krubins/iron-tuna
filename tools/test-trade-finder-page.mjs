@@ -12,7 +12,7 @@
 // tab, the step order and a trade judged with no roster behind it are proved
 // here too, and so is the gauge under the verdict (every side scored again
 // on the next three weeks and the long term, the reader's weighted needle,
-// the Go / No go call and the situation row). The FAAB manual form is here
+// the Go / No go call, the situation row and the lineup fit). The FAAB manual form is here
 // too, because it is the same kind of claim: a league typed by hand has to
 // produce the same shape of answer the Sleeper path does, and the typed bid
 // history has to move the going rate.
@@ -260,6 +260,48 @@ console.log('\nthe screenshot reader');
   await page.dispatchEvent(R(3) + ' .tf-fix input', 'change').catch(() => {});
   await page.waitForFunction(sel => document.querySelectorAll(sel + ' .chip').length === 3, R(3), { timeout: 4000 }).catch(() => {});
   ok('a typed fix resolves and joins the roster', (await page.$$(R(3) + ' .chip')).length === 3);
+
+  // The same screenshot pasted rather than picked. Ctrl+V with the cursor in
+  // a box lands in that box through the document listener; the Paste button
+  // reads the clipboard itself (stubbed here: headless Chromium has no system
+  // clipboard to put a PNG on); and a browser with no clipboard reader is told
+  // the shortcut and left with the cursor in the box, so the shortcut works.
+  const emptyBox3 = async () => {
+    while ((await page.$$(R(3) + ' .chip button')).length) await page.click(R(3) + ' .chip button');
+    while ((await page.$$(R(3) + ' .tf-fix button[data-drop]')).length) await page.click(R(3) + ' .tf-fix button[data-drop]');
+    await page.fill(R(3) + ' input.nm', ''); await page.press(R(3) + ' input.nm', 'Tab');
+    await page.$eval('#tf-read-status', e => { e.textContent = ''; });
+  };
+  const readBack = () => page.waitForFunction(() => /From the screenshot/.test(document.getElementById('tf-read-status').textContent), null, { timeout: 8000 });
+  const pasteImage = sel => page.$eval(sel, (el, b64) => {
+    const bin = atob(b64), arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    const dt = new DataTransfer(); dt.items.add(new File([arr], 'shot.png', { type: 'image/png' }));
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  }, png.toString('base64'));
+  await emptyBox3();
+  await page.focus(rosterIn(3)); await pasteImage(rosterIn(3));
+  await readBack();
+  ok('a screenshot pasted with Ctrl+V lands in the box the cursor was in', readerCalls === 2 && (await names())[3] === 'Screenshot Team' && (await chipsOf(3)).length === 2, readerCalls + ' ' + (await names())[3]);
+  await emptyBox3();
+  await page.evaluate(b64 => {
+    const bin = atob(b64), arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    const blob = new Blob([arr], { type: 'image/png' });
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { read: () => Promise.resolve([{ types: ['text/plain', 'image/png'], getType: () => Promise.resolve(blob) }]) } });
+  }, png.toString('base64'));
+  await page.click(R(3) + ' button[data-paste]');
+  await readBack();
+  ok('the Paste button reads the clipboard into its own box', readerCalls === 3 && (await names())[3] === 'Screenshot Team' && (await chipsOf(3)).length === 2, readerCalls + ' ' + (await names())[3]);
+  await page.evaluate(() => { Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { read: () => Promise.resolve([{ types: ['text/plain'], getType: () => Promise.reject(new Error('no')) }]) } }); });
+  await page.click(R(3) + ' button[data-paste]');
+  await page.waitForFunction(() => /no image on the clipboard/.test(document.getElementById('tf-read-status').textContent), null, { timeout: 4000 });
+  ok('words on the clipboard are not sent to the reader', readerCalls === 3, String(readerCalls));
+  await page.evaluate(() => { Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {} }); });
+  await page.click(R(3) + ' button[data-paste]');
+  const noReader = await page.textContent('#tf-read-status');
+  ok('without a clipboard reader the button names the shortcut', /Ctrl\+V/.test(noReader) && readerCalls === 3, noReader);
+  ok('and leaves the cursor in that box for it', await page.$eval(rosterIn(3), e => e === document.activeElement));
+  await page.evaluate(() => { delete navigator.clipboard; });
+  await emptyBox3();
   // Put the fourth team back the way the paste had it, for the search below.
   while ((await page.$$(R(3) + ' .chip button')).length) await page.click(R(3) + ' .chip button');
   await page.fill(R(3) + ' input.nm', 'Bubble Boys'); await page.press(R(3) + ' input.nm', 'Tab');
@@ -277,12 +319,17 @@ ok('the rosters typed under the Evaluator are still there', (await names()).leng
 await page.click('#tf-find');
 await page.waitForSelector('#tf-results:not([hidden]) .tf-trade', { timeout: 15000 });
 const read = () => page.$$eval('.tf-trade', els => els.map(e => {
-  const sides = [...e.querySelectorAll('.tf-side')].map(s => ({ who: s.querySelector('.who').textContent, gain: parseFloat(s.querySelector('.gain').textContent.replace('−', '-')), horizon: s.querySelector('.gain small').textContent, give: s.querySelector('.give').textContent }));
+  const sides = [...e.querySelectorAll('.tf-side')].map(s => ({ who: s.querySelector('.who').textContent, gain: parseFloat(s.querySelector('.gain').textContent.replace('−', '-')), horizon: s.querySelector('.gain small').textContent, give: s.querySelector('.give').textContent,
+    kase: s.querySelector('.tf-case') ? { accept: s.querySelector('.tf-case').dataset.accept, h: s.querySelector('.tf-case .h').textContent, why: [...s.querySelectorAll('.tf-case li')].map(li => li.textContent) } : null }));
   return { title: e.querySelector('h3').textContent, sides };
 }));
 let trades = await read();
 ok('with no players in the trade, the finder searches', trades.length > 0 && trades.length <= 12, String(trades.length));
 ok('every trade gains both sides', trades.every(t => t.sides.length === 2 && t.sides.every(s => s.gain > 0)), JSON.stringify(trades[0]));
+ok('every side carries the case that manager would make, accepted', trades.every(t => t.sides.every(s => s.kase && s.kase.accept === 'yes' && s.kase.why.length > 0)), JSON.stringify(trades[0].sides.map(s => s.kase)));
+ok('headed for the reader and for the other manager', trades[0].sides[0].kase.h === 'Why you would do it' && trades[0].sides[1].kase.h === 'Why they would do it', trades[0].sides.map(s => s.kase.h).join(' | '));
+ok('and the first reason is the lineup, on that team’s horizon', trades.every(t => t.sides.every(s => /^The lineup gains \+\d+\.\d a week on rest of season/.test(s.kase.why[0]))), trades[0].sides[0].kase.why[0]);
+ok('the note says the swaps set aside were ones a manager would refuse', /gave both managers a reason to say yes/.test(await page.textContent('#tf-results-note')));
 ok('the reader is always "You"', trades.every(t => t.sides[0].who.startsWith('You')), trades[0].sides[0].who);
 ok('the reader sends a running back and gets a receiver in the first trade', /Sends[^]*RB/.test(trades[0].sides[0].give) && /Gets[^]*WR/.test(trades[0].sides[0].give), trades[0].sides[0].give.slice(0, 160));
 ok('the bar names the reader’s team and lineup', /Iron Tuna \(Ken\)/.test(await page.textContent('#tf-bar')) && /pts\/wk/.test(await page.textContent('#tf-bar')));
@@ -296,10 +343,15 @@ await page.waitForFunction(() => /In your favor/.test(document.getElementById('t
 trades = await read();
 ok('tilted, the top trade gains the reader at least as much', trades[0].sides[0].gain >= evenTop.sides[0].gain - 0.05, `${trades[0].sides[0].gain} vs ${evenTop.sides[0].gain}`);
 ok('and every partner still gains', trades.every(t => t.sides[1].gain > 0));
+ok('and at full tilt no partner is paid a fraction of the reader’s gain', trades.every(t => t.sides[1].gain >= 2 || t.sides[1].gain >= 0.3 * t.sides[0].gain - 0.05), JSON.stringify(trades.map(t => [t.sides[0].gain, t.sides[1].gain])));
 
 await page.$eval('#tf-tilt', el => { el.value = '50'; el.dispatchEvent(new Event('input', { bubbles: true })); });
 await page.click('#tf-settings summary');
-await page.click('#tf-hA button[data-h="playoffs"]');
+// The reader's focus is a slider: four stops, this week → get me to the
+// playoffs → playoffs → rest of the season. Drag it to the third stop.
+await page.$eval('#tf-focus-range', el => { el.value = '2'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+ok('the focus slider names its stop', await page.$eval('#tf-focus-range', e => e.getAttribute('aria-valuetext')) === 'Playoffs' && await page.$eval('#tf-hA button[data-h="playoffs"]', e => e.getAttribute('aria-pressed') === 'true'));
+ok('and says what it scores', /fantasy playoff weeks/.test(await page.textContent('#tf-focus-note')));
 await page.click('#tf-hB button[data-h="next3"]');
 await page.click('#tf-find');
 await page.waitForFunction(() => /Fantasy playoffs/.test(document.querySelector('#tf-bar').textContent), null, { timeout: 15000 });
@@ -319,7 +371,7 @@ await page.reload({ waitUntil: 'load' });
 await page.waitForFunction(() => document.querySelectorAll('#tf-teams .chip').length > 0, null, { timeout: 8000 });
 ok('a reload keeps the rosters', (await names()).join() === 'Iron Tuna (Ken),The Hammers');
 ok('and the hidden two', await page.$eval('#tf-count', e => e.value) === '2' && (await (async () => { await page.selectOption('#tf-count', '4'); const n = await names(); await page.selectOption('#tf-count', '2'); return n.length === 4 && n[2] === 'Clinched'; })()));
-ok('and the horizons', await page.$eval('#tf-hA button[data-h="playoffs"]', e => e.getAttribute('aria-pressed') === 'true'));
+ok('and the horizons', await page.$eval('#tf-hA button[data-h="playoffs"]', e => e.getAttribute('aria-pressed') === 'true') && await page.$eval('#tf-focus-range', e => e.value) === '2');
 ok('and the tool', await selectedTool() === 'finder');
 if (process.env.IT_SHOT) { await page.evaluate(() => window.scrollTo(0, 0)); await page.screenshot({ path: process.env.IT_SHOT, fullPage: true }); console.log('wrote ' + process.env.IT_SHOT); }
 ok('nothing on the Trade Finder threw', errors.length === 0, errors[0]);
@@ -332,7 +384,7 @@ const verdict = () => page.evaluate(() => ({ cls: document.querySelector('.tf-ve
 const clearDeal = async () => { for (const sel of ['#tf-sends .chip button']) while ((await page.$$(sel)).length) await page.click(sel); };
 // The gauge: the call, the needle's place on the track (0 is three points a
 // week lost, 100 three gained, the zone edges at 37.5 and 62.5), the fill's
-// colour, and the three rows' text.
+// colour, and the four rows' text.
 const gauge = () => page.evaluate(() => {
   const g = document.getElementById('tf-gauge'), pin = g.querySelector('.pin'), meter = g.querySelector('.tf-meter');
   return { hidden: g.hidden, call: (g.querySelector('.tf-call .v') || {}).textContent, data: (g.querySelector('.tf-call .v') || { getAttribute: () => null }).getAttribute('data-call'),
@@ -344,7 +396,8 @@ const gauge = () => page.evaluate(() => {
   await page.click('#tf-tool button[data-tool="evaluator"]');
   ok('switching tools puts the result away', await page.$eval('#tf-results', e => e.hidden));
   if (!(await page.$eval('#tf-settings', e => e.open))) await page.click('#tf-settings summary');
-  await page.click('#tf-hA button[data-h="ros"]');
+  await page.click('#tf-hA button[data-h="ros"]');   // a tap on a stop label moves the slider too
+  ok('a stop label moves the focus slider', await page.$eval('#tf-focus-range', e => e.value) === '3');
   await page.click('#tf-hB button[data-h="ros"]');
   ok('each trade box is named for its team', /Iron Tuna \(Ken\) sends/.test(await page.textContent(S(0))) && /The Hammers sends/.test(await page.textContent(S(1))));
   // The sends box offers that team's own players first.
@@ -363,13 +416,14 @@ const gauge = () => page.evaluate(() => {
   ok('a swap that helps both is called a win', /win/.test(v1.cls) && /Both sides win/.test(v1.h), JSON.stringify(v1));
   ok('the reader’s side reads first', /^You/.test(v1.sides[0].who) && v1.sides.length === 2);
   let g = await gauge();
-  ok('the gauge is shown under the verdict', !g.hidden && g.rows.length === 3, JSON.stringify(g));
+  ok('the gauge is shown under the verdict', !g.hidden && g.rows.length === 4, JSON.stringify(g));
   ok('a clear gain for the reader is a Go', g.data === 'go' && /^Go$/.test(g.call) && /clear gain/.test(g.why), JSON.stringify([g.call, g.why]));
   ok('with the needle in the Send it zone, filled in teal', g.pos > 62.5 && g.pos <= 100 && !g.no && g.fill === 'rgb(11, 79, 108)', JSON.stringify([g.pos, g.fill]));
-  ok('the short-term row scores the next three weeks for everyone', /Short term · Next 3 weeks/.test(g.rows[0].k) && /^\+\d/.test(g.rows[0].v) && /Helps The Hammers most/.test(g.rows[0].w), JSON.stringify(g.rows[0]));
-  ok('the long-term row scores the rest of the season', /Long term · Rest of season/.test(g.rows[1].k) && /^\+\d/.test(g.rows[1].v) && /Helps The Hammers most, \+\d+\.\d a week against \+\d+\.\d for you\./.test(g.rows[1].w), JSON.stringify(g.rows[1]));
-  ok('the situation row reads the settings and weighs 35/65', /Your situation/.test(g.rows[2].k) && /Whole season/.test(g.rows[2].v) && /From the settings/.test(g.rows[2].w) && /count 35% and rest of season 65%/.test(g.rows[2].w), JSON.stringify(g.rows[2]));
-  ok('and the roster fit is read off the lineup', /weakest start/.test(g.rows[2].w) && !/Add your roster/.test(g.rows[2].w), g.rows[2].w);
+  ok('the first row scores the next three weeks for everyone', /^Next 3 weeks$/.test(g.rows[0].k) && /^\+\d+\.\d for you$/.test(g.rows[0].v) && /^The Hammers \+\d+\.\d\.$/.test(g.rows[0].w), JSON.stringify(g.rows[0]));
+  ok('with the team helped most in bold', await page.$eval('#tf-gauge .tf-gauge-rows .row .w b', b => /^The Hammers \+\d+\.\d$/.test(b.textContent)));
+  ok('the second row scores the rest of the season', /^Rest of season$/.test(g.rows[1].k) && /^\+\d+\.\d for you$/.test(g.rows[1].v) && /^The Hammers \+\d+\.\d\.$/.test(g.rows[1].w), JSON.stringify(g.rows[1]));
+  ok('the situation row reads the settings and weighs 35/65', /Your situation/.test(g.rows[2].k) && /Whole season/.test(g.rows[2].v) && /From the settings/.test(g.rows[2].w) && /next 3 weeks 35% and rest of season 65%/.test(g.rows[2].w), JSON.stringify(g.rows[2]));
+  ok('and the lineup fit is read off the lineup', /Lineup fit/.test(g.rows[3].k) && /^(Fills a need|Opens a hole|No change)$/.test(g.rows[3].v) && /weakest start/.test(g.rows[3].w) && !/Add your roster/.test(g.rows[3].w), JSON.stringify(g.rows[3]));
   ok('the meter is described for a screen reader', /^Go: \+\d+\.\d points a week/.test(g.aria), g.aria);
 
   // An overpay: the reader's only quarterback for the partner's tight end.
@@ -384,9 +438,9 @@ const gauge = () => page.evaluate(() => {
   g = await gauge();
   ok('an overpay is a No go', g.data === 'no' && /^No go$/.test(g.call) && /clear loss/.test(g.why), JSON.stringify([g.call, g.why]));
   ok('with the needle in the Walk away zone, filled in the danger brown', g.pos >= 0 && g.pos < 37.5 && g.no && g.fill === 'rgb(138, 59, 0)', JSON.stringify([g.pos, g.fill]));
-  ok('the rows say nobody gains, with every side’s figure', g.rows.slice(0, 2).every(r => /^−\d/.test(r.v) && /Nobody gains here: you −\d+\.\d, The Hammers [+−]\d+\.\d\./.test(r.w)), JSON.stringify(g.rows));
-  ok('and that the only quarterback leaving opens a hole at QB', /Opens a hole: QB goes unfilled; .* was starting there/.test(g.rows[2].w), g.rows[2].w);
-  if (process.env.IT_SHOT) { const p4 = process.env.IT_SHOT.replace(/(\.\w+)?$/, '-gauge$1'); await page.$eval('#tf-gauge', e => e.scrollIntoView()); await page.locator('#tf-gauge').screenshot({ path: p4 }); console.log('wrote ' + p4); }
+  ok('the rows say nobody gains, with every side’s figure', g.rows.slice(0, 2).every(r => /^−\d+\.\d for you$/.test(r.v) && /^(Nobody gains|About even)\. The Hammers [+−]\d+\.\d\.$/.test(r.w)), JSON.stringify(g.rows));
+  ok('and that the only quarterback leaving opens a hole at QB', /^Opens a hole$/.test(g.rows[3].v) && /^QB goes unfilled; .* was starting there\.$/.test(g.rows[3].w), JSON.stringify(g.rows[3]));
+  if (process.env.IT_SHOT) { const p4 = process.env.IT_SHOT.replace(/(\.\w+)?$/, '-gauge$1'); await page.locator('#tf-results').screenshot({ path: p4 }); console.log('wrote ' + p4); }
   await clearDeal();
   ok('an empty trade turns evaluate back off', await page.$eval('#tf-eval', e => e.disabled));
 }
@@ -444,9 +498,9 @@ console.log('\nevaluate a three-team trade, with notes');
   ok('each team is scored on the horizon its notes set', /Fantasy playoffs/.test(horizons[0]) && /Next 3 weeks/.test(horizons[1]) && /Rest of season/.test(horizons[2]), JSON.stringify(horizons));
   ok('the reader gets the receiver and sends two', v3.sides[0].give.split('Gets')[1].includes(NAMES.WR[6]) && /^You/.test(v3.sides[0].who), v3.sides[0].give);
   const g3 = await gauge();
-  ok('a clinched reader’s long term is the fantasy playoffs', /Long term · Fantasy playoffs/.test(g3.rows[1].k) && /Short term · Next 3 weeks/.test(g3.rows[0].k), JSON.stringify(g3.rows.map(r => r.k)));
-  ok('the situation row reads the notes and weighs 25/75', /Playoff-bound/.test(g3.rows[1 + 1].v) && /From your notes: “[^”]*clinched”/.test(g3.rows[2].w) && /count 25% and fantasy playoffs 75%/.test(g3.rows[2].w), JSON.stringify(g3.rows[2]));
-  ok('every side in a three-team deal is on each row', g3.rows.slice(0, 2).every(r => /Helps .* most, [+−]\d+\.\d a week against [+−]\d+\.\d for .*, [+−]\d+\.\d for .*\./.test(r.w)), JSON.stringify(g3.rows.slice(0, 2)));
+  ok('a clinched reader’s long term is the fantasy playoffs', /^Fantasy playoffs$/.test(g3.rows[1].k) && /^Next 3 weeks$/.test(g3.rows[0].k), JSON.stringify(g3.rows.map(r => r.k)));
+  ok('every side in a three-team deal is on each row, the one helped most named', g3.rows.slice(0, 2).every(r => /^(Helps (you|\S.*) most\. |Nobody gains\. |About even\. )?(The Hammers|Clinched) [+−]\d+\.\d, (The Hammers|Clinched) [+−]\d+\.\d\.$/.test(r.w)), JSON.stringify(g3.rows.slice(0, 2)));
+  ok('the situation row reads the notes and weighs 25/75', /Playoff-bound/.test(g3.rows[2].v) && /From your notes: “[^”]*clinched”/.test(g3.rows[2].w) && /next 3 weeks 25% and fantasy playoffs 75%/.test(g3.rows[2].w), JSON.stringify(g3.rows[2]));
   ok('and the call is made', /^(Go|No go)/.test(g3.call) && g3.pos >= 0 && g3.pos <= 100, JSON.stringify([g3.call, g3.pos]));
   ok('a team taking more players than it sends is told it needs room', /roster spot/.test(await page.textContent('.tf-proposed')));
   ok('and whom it is scored as dropping to make it', /roster spots? opened, scored as dropping /.test(await page.textContent('.tf-proposed')), (await page.textContent('.tf-proposed')).match(/Needs[^.]*\./)?.[0]);
@@ -503,7 +557,7 @@ console.log('\nevaluate with no rosters entered');
   ok('on the players alone, the better player going out is a loss', v0.sides[0].neg && /Don/.test(v0.h), JSON.stringify(v0));
   const g0 = await gauge();
   ok('and the gauge says No go', g0.data === 'no' && g0.pos < 50, JSON.stringify([g0.call, g0.pos]));
-  ok('with no roster, the fit asks for one', /Add your roster in step 2/.test(g0.rows[2].w), g0.rows[2].w);
+  ok('with no roster, the fit asks for one', /^Not known$/.test(g0.rows[3].v) && /Add your roster in step 2/.test(g0.rows[3].w), JSON.stringify(g0.rows[3]));
   await pasteInto(rosterIn(0), PASTE);
   await page.waitForFunction(() => document.querySelectorAll('#tf-teams .tf-team').length === 4, null, { timeout: 4000 });
   ok('the paste fills the rosters under the Evaluator too', (await names()).join() === 'Iron Tuna (Ken),The Hammers,Clinched,Bubble Boys' && (await chipsOf(0)).length === 12, (await names()).join());
@@ -513,7 +567,7 @@ console.log('\nevaluate with no rosters entered');
   const v1 = await verdict();
   ok('with the rosters in, the same deal is scored on the lineups, and wins', /win/.test(v1.cls), JSON.stringify(v1));
   const g1 = await gauge();
-  ok('and the gauge turns to Go', g1.data === 'go' && g1.pos > 62.5 && /weakest start/.test(g1.rows[2].w), JSON.stringify([g1.call, g1.pos, g1.rows[2].w]));
+  ok('and the gauge turns to Go', g1.data === 'go' && g1.pos > 62.5 && /weakest start/.test(g1.rows[3].w), JSON.stringify([g1.call, g1.pos, g1.rows[3].w]));
   ok('and the bar prices the lineup', /pts\/wk/.test(await page.textContent('#tf-bar')));
   // The ribbon is sticky at the top of the window: scrolled to the verdict, it is still at 0.
   ok('the header ribbon stays anchored to the top while scrolled', await page.evaluate(() => { const h = document.querySelector('header.site'); return window.scrollY > 100 && getComputedStyle(h).position === 'sticky' && Math.round(h.getBoundingClientRect().top) === 0; }), String(await page.evaluate(() => [window.scrollY, document.querySelector('header.site').getBoundingClientRect().top])));
@@ -625,6 +679,35 @@ console.log('\nthe saved league, teams typed by name');
   ok('in any box, whatever the case', (await nm())[3] === 'Rival F' && (await pg.$$('#tf-teams .tf-team[data-i="3"] .chip')).length === 3);
   ok('the saved league page threw nothing', errs.length === 0, errs[0]);
   await c2.close();
+}
+
+// ── a phone, keyboard up ───────────────────────────────────────────────────
+// The on-screen keyboard leaves a short visual viewport, and the sticky
+// masthead and the fixed tab bar cover the ends of it. A box in the bottom
+// half opens its list straight under the keyboard unless the page moves the
+// box up first, so the list has to land inside what is on screen.
+console.log('\na phone with the keyboard up');
+{
+  const c3 = await browser.newContext({ viewport: { width: 390, height: 320 }, isMobile: true, hasTouch: true });
+  const pg = await c3.newPage();
+  const errs = [];
+  pg.on('pageerror', e => errs.push(String(e).slice(0, 300)));
+  await pg.goto(BASE + '/trade-finder#evaluator', { waitUntil: 'load' });
+  await pg.waitForFunction(() => document.getElementById('tf-read-status').textContent === '', null, { timeout: 8000 });
+  const box = '#tf-sends .tf-team[data-i="1"] .tf-type';
+  // Where the keyboard would put the box: at the foot of the visible screen.
+  await pg.$eval(box, el => { el.scrollIntoView({ block: 'end' }); el.focus(); });
+  await pg.type(box, NAMES.WR[2].slice(0, 4), { delay: 5 });
+  await pg.waitForSelector(box + ' + .tf-sug:not([hidden]) li', { timeout: 4000 });
+  const fit = await pg.$eval(box, el => {
+    const ul = el.parentNode.querySelector('.tf-sug'), r = ul.getBoundingClientRect(), b = el.getBoundingClientRect();
+    const head = document.querySelector('header.site').getBoundingClientRect(), tab = document.querySelector('.tabbar').getBoundingClientRect();
+    return { listTop: r.top, listBottom: r.bottom, boxTop: b.top, headBottom: head.bottom, tabTop: tab.top, h: innerHeight };
+  });
+  ok('the list opens on screen, above the tab bar', fit.listBottom <= fit.tabTop && fit.listBottom <= fit.h, JSON.stringify(fit));
+  ok('and the box is not pushed under the masthead', fit.boxTop >= fit.headBottom, JSON.stringify(fit));
+  ok('the phone page threw nothing', errs.length === 0, errs[0]);
+  await c3.close();
 }
 
 await browser.close();

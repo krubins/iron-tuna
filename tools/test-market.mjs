@@ -58,6 +58,8 @@ const M = new Function(
   'providerRun, providerReport, PROVIDER_UNAVAILABLE, snapshotWrite, snapshotStatus, ' +
   'snapshotPulls, snapshotPulledAt, snapshotPrune, snapshotLast, ' +
   'marketHistoryFrom, marketHistory, marketHistoryAll, marketAgreement, _median, _snapSame, ' +
+  'marketHistoryWeek, marketSubjectsBefore, marketHistoryGames, marketDigestBuild, marketDigestRead, ' +
+  '_marketHistoryWeekRead, _marketSubjectsBeforeRead, _marketHistoryGamesRead, ' +
   'vegasProjection, vegasCountMarket, vegasTdProbability, vegasConfidence, VEGAS_MARKETS, applyMarketTd, VEGAS_TD_STATS, ' +
   '_oddsImpliedProb, _oddsDevigOver, parseOddsApiEvent, buildVegasOverlay, snapshotSubject, _snapLookup };'
 )(_oddsRound, teamKey, _oddsNorm, ODDS_CV, stub,
@@ -130,9 +132,21 @@ function fakeDb() {
   // of grouping the whole store, so the fake must hold it for "unchanged" to
   // mean anything.
   const latest = new Map();
+  // market_digest, keyed (key, part). `scans` counts odds_snapshots rows the
+  // fake handed back: the digest's whole point is that a served read scans none.
+  const digest = new Map();
+  const stat = { scans: 0 };
   const lkey = (t, s, m, b) => [t, s, m, b].join(' ');
   const run = (sql, args) => {
     if (/^CREATE|^ALTER/i.test(sql)) return { meta: {} };
+    if (/^DELETE FROM market_digest WHERE key = \?/i.test(sql)) {
+      for (const k of [...digest.keys()]) if (k.split('#')[0] === args[0]) digest.delete(k);
+      return { meta: {} };
+    }
+    if (/^INSERT INTO market_digest/i.test(sql)) {
+      digest.set(args[0] + '#' + args[1], { key: args[0], part: args[1], payload: args[2], updated_at: args[3] });
+      return { meta: { changes: 1 } };
+    }
     if (/^INSERT OR REPLACE INTO odds_latest/i.test(sql)) {
       for (const r of rows) {
         const k = lkey(r.subject_type, r.subject, r.market, r.book);
@@ -167,8 +181,25 @@ function fakeDb() {
     }
     return { meta: {} };
   };
+  const scanned = list => { stat.scans += list.length; return { results: list }; };
   const all = (sql, args) => {
     if (/FROM odds_snapshot_pulls/i.test(sql)) return { results: [...pulls.values()] };
+    if (/FROM market_digest WHERE key = \?/i.test(sql)) {
+      return { results: [...digest.values()].filter(r => r.key === args[0]).sort((a, b) => a.part - b.part) };
+    }
+    if (/WHERE season IS \? AND week IS \? ORDER BY ts DESC LIMIT \?/i.test(sql)) {
+      return scanned(rows.filter(r => r.season === args[0] && r.week === args[1]).sort((a, b) => b.ts - a.ts).slice(0, args[2]));
+    }
+    if (/SELECT DISTINCT subject FROM odds_snapshots WHERE season IS \? AND week IN/i.test(sql)) {
+      const [season, ...weeks] = args;
+      const hit = rows.filter(r => r.season === season && weeks.includes(r.week) && r.subject_type === 'player');
+      stat.scans += hit.length;
+      return { results: [...new Set(hit.map(r => r.subject))].map(subject => ({ subject })) };
+    }
+    if (/WHERE subject_type = \? AND subject IN/i.test(sql) && /FROM odds_snapshots/i.test(sql)) {
+      const [t, ...subs] = args;
+      return scanned(rows.filter(r => r.subject_type === t && subs.includes(r.subject)).sort((a, b) => a.ts - b.ts));
+    }
     if (/FROM odds_latest WHERE subject_type = \? AND subject IN/i.test(sql)) {
       const [t, ...subs] = args;
       return { results: [...latest.values()].filter(r => r.subject_type === t && subs.includes(r.subject)) };
@@ -207,7 +238,7 @@ function fakeDb() {
     st.first = () => first(sql, []);
     return st;
   };
-  return { _rows: rows, _pulls: pulls, _latest: latest, prepare, batch: async (stmts) => stmts.map(s => s.run()) };
+  return { _rows: rows, _pulls: pulls, _latest: latest, _digest: digest, _stat: stat, prepare, batch: async (stmts) => stmts.map(s => s.run()) };
 }
 
 console.log('\nthe historical betting store');
@@ -563,6 +594,67 @@ console.log('\nconfidence');
   ok('the worst case is LOW, not an error',
      M.vegasConfidence({ coreMissing: 2, marketCount: 1, books: 1, agreement: null, lastMoveHours: null,
                          injuryStatus: 'IR' }).level === 'LOW');
+}
+
+// ── 4. the market digest ──────────────────────────────────────────────────
+// The pull reads the store once and stores what every reader needs; a reader
+// served by the digest scans no snapshot rows and gets the store's own answer.
+console.log('\nthe market digest');
+{
+  const db = fakeDb();
+  const env = { LEADS_DB: db };
+  const G = '2026_05_KC_BUF';
+  const pull = async (week, ts, rows) => M.snapshotWrite(env, rows, { season: 2026, week, ts });
+  const player = (subject, market, line, book = 'dk', overOdds = -110, underOdds = -110) => ({ book, subjectType: 'player', subject, market, line, overOdds, underOdds, gameId: G });
+  const game = (market, line, book = 'dk') => ({ book, subjectType: 'game', subject: G, market, line, overOdds: -110, underOdds: -110, gameId: G });
+  // Two prior weeks price two receivers; the current week prices three and a game, across two pulls.
+  await pull(3, 1000, [player('Test Receiver', 'recYd', 70.5), player("Ja'Marr Chase", 'recYd', 88.5)]);
+  await pull(4, 2000, [player('Test Receiver', 'recYd', 72.5)]);
+  await pull(5, 3000, [player('Test Receiver', 'recYd', 74.5), player("Ja'Marr Chase", 'recYd', 90.5), player('Same Name', 'rushYd', 60.5),
+                       player('Test Receiver', 'recYd', 75.5, 'fd'), game('total', 47.5), game('spread', -3.5)]);
+  await pull(5, 4000, [player('Test Receiver', 'recYd', 77.5), player("Ja'Marr Chase", 'recYd', 90.5), player('Same Name', 'rushYd', 58.5),
+                       player('Test Receiver', 'recYd', 75.5, 'fd'), game('total', 49.5), game('spread', -3.5)]);
+  const J = x => JSON.stringify(x);
+  const live = { week: await M._marketHistoryWeekRead(env, 2026, 5),
+                 prior: [...await M._marketSubjectsBeforeRead(env, 2026, [4, 3])].sort(),
+                 games: await M._marketHistoryGamesRead(env, [G]) };
+  // The week read carries every subject the week priced, the game among them: four.
+  ok('the store has the week (three players and the game) and the game lines', Object.keys(live.week).length === 4 && live.games[G] && live.games[G].total.movement === 2);
+  ok('and two subjects priced in the prior weeks', live.prior.length === 2);
+  // Before any digest, the readers go to the store.
+  db._stat.scans = 0;
+  const before = await M.marketHistoryWeek(env, 2026, 5);
+  ok('with no digest the week is read from the store', J(before) === J(live.week) && db._stat.scans > 0);
+  // The pull's digest, chunked small so the row split is exercised.
+  const built = await M.marketDigestBuild(env, 2026, 5, [G], { partBytes: 1000 });
+  ok('the digest builds', built.ok === true, J(built));
+  ok('across several rows', built.parts > 1 && db._digest.size === built.parts, J(built));
+  ok('and counts what it holds', built.subjects === 4 && built.games === 1 && built.priorSubjects === 2 && built.priorReused === false, J(built));
+  const stored = await M.marketDigestRead(env);
+  ok('it reads back whole', stored && stored.v === 1 && stored.week === 5 && Object.keys(stored.markets).length === 4);
+  // Served reads: the store's answers, no snapshot rows scanned.
+  db._stat.scans = 0;
+  const w = await M.marketHistoryWeek(env, 2026, 5);
+  const p = [...await M.marketSubjectsBefore(env, 2026, 5)].sort();
+  const g = await M.marketHistoryGames(env, [G]);
+  ok('the week comes from the digest, unchanged', J(w) === J(live.week));
+  ok('so does the prior-week subject set', J(p) === J(live.prior));
+  ok('and the game lines', J(g) === J(live.games));
+  ok('and none of them scanned a snapshot row', db._stat.scans === 0, 'scans=' + db._stat.scans);
+  // What the digest does not hold still comes from the store.
+  db._stat.scans = 0;
+  const w4 = await M.marketHistoryWeek(env, 2026, 4);
+  ok('a past week falls back to the store', db._stat.scans > 0 && Object.keys(w4).length === 1);
+  db._stat.scans = 0;
+  const g2 = await M.marketHistoryGames(env, [G, '2026_05_NE_NYJ']);
+  ok('a game outside the slate falls back to the store', db._stat.scans > 0 && g2[G] && g2[G].total.current === 49.5);
+  // The prior-week set is reused while its weeks are the same, rebuilt when they move.
+  const again = await M.marketDigestBuild(env, 2026, 5, [G]);
+  ok('a rebuild for the same week reuses the prior-week set', again.ok && again.priorReused === true && again.parts === 1, J(again));
+  const next = await M.marketDigestBuild(env, 2026, 6, [G]);
+  ok('a new week reads it afresh', next.ok && next.priorReused === false && next.priorSubjects === 3, J(next));
+  ok('and the readers follow the digest to the new week', Object.keys(await M.marketHistoryWeek(env, 2026, 6)).length === 0
+     && [...await M.marketSubjectsBefore(env, 2026, 6)].length === 3);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

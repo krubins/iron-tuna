@@ -75,6 +75,11 @@ for (const e of entries) {
   // the file's: inheriting a later file date would push every preseason
   // entry's first missed week forward with it.
   if (e.asOf != null && !/^\d{4}-\d{2}-\d{2}$/.test(String(e.asOf))) problem(`${e.name}: asOf ${JSON.stringify(e.asOf)} is not YYYY-MM-DD`);
+  // A date is read at 00:00 UTC, which is Monday evening in the US. The worker's
+  // boards put a Tuesday there in the week whose Monday game had not yet ended,
+  // while the live-list calendar turns the week on Tuesday, so a Tuesday asOf
+  // starts the absence a week apart in the two readers (Mayfield, 29 Sep 2026).
+  if (e.asOf != null && new Date(String(e.asOf) + 'T00:00:00Z').getUTCDay() === 2) problem(`${e.name}: asOf ${e.asOf} is a Tuesday; use the Wednesday of the first week missed`);
   const k = norm(e.name) + '|' + String(e.position).toUpperCase();
   if (seen.has(k)) problem(`${e.name} (${e.position}) listed twice`);
   seen.add(k);

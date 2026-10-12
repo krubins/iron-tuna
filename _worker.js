@@ -81,13 +81,7 @@ async function rl(env, request, bucket, max, ttlSec) {
 // sitemap while the gate is shut. Spell them out.
 const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
   '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk',
-  '/fantasy', '/stats', '/hidden-value', '/previews', '/the-line', '/weekly-wrap', '/value-coach',
-  '/weekly-rankings', '/weekly-qb-rankings', '/weekly-rb-rankings', '/weekly-wr-rankings',
-  '/weekly-te-rankings', '/weekly-flex-rankings', '/weekly-k-rankings', '/weekly-dst-rankings',
-  '/weekly-overall-rankings',
-  '/season-long-rankings', '/season-long-qb-rankings', '/season-long-rb-rankings',
-  '/season-long-wr-rankings', '/season-long-te-rankings', '/season-long-flex-rankings',
-  '/season-long-k-rankings', '/season-long-dst-rankings', '/season-long-overall-rankings']);
+  '/fantasy', '/stats', '/hidden-value', '/previews', '/the-line', '/weekly-wrap', '/value-coach']);
 // The HUB is never in that set: it is the page a closed route serves in place of
 // itself, so gating it would be a loop. /post-draft is the name the hub used to
 // carry and 301s here — see the redirect at the top of fetch().
@@ -150,7 +144,7 @@ const WA_MARKET_BLOCKED_HTML = `<!doctype html>
 <p class="is-eyebrow">Iron Tuna &middot; Betting Market Intel</p>
 <h1>Betting Market Intel is not available in Washington</h1>
 <p class="is-lede">Iron Tuna does not serve its betting-market section, current odds, props, spreads, totals or line-movement data to requests located in Washington State.</p>
-<p>The fantasy tools remain available. <a href="/weekly-rankings">This week&rsquo;s rankings</a>, <a href="/season-long-rankings">season-long rankings</a>, waiver tools and league-specific analysis continue to work without transmitting the current betting-market board.</p>
+<p>The fantasy tools remain available. <a href="/rankings">Rankings</a>, waiver tools and league-specific analysis continue to work without transmitting the current betting-market board.</p>
 <p class="is-note">If you believe you are seeing this in error, it is because the network you are on places you in Washington. Iron Tuna takes no wagers, holds no funds and is not a sportsbook. If gambling has stopped being entertainment, the National Problem Gambling Helpline is 1-800-MY-RESET, free and confidential.</p>
 <p><a href="/">Back to Iron Tuna</a></p>
 </main>
@@ -319,7 +313,7 @@ const PROJECTIONS = [
   { name: "Justin Herbert", position: "QB", team: "LAC", projectedStats: { passYd: 3850, passTD: 25.6, passInt: 11, rushYd: 406, rushTD: 2.4, fumLost: 3.6 }},
   { name: "Jared Goff", position: "QB", team: "DET", projectedStats: { passYd: 4216, passTD: 29, passInt: 10, rushYd: 49, fumLost: 3.4 }},
   { name: "Caleb Williams", position: "QB", team: "CHI", projectedStats: { passYd: 3821, passTD: 25.3, passInt: 9.9, rushYd: 382, rushTD: 2.3, fumLost: 4 }},
-  { name: "Baker Mayfield", position: "QB", team: "TB", projectedStats: { passYd: 3823, passTD: 24.6, passInt: 11.6, rushYd: 323, rushTD: 1.4, fumLost: 4.4 }},
+  { name: "Baker Mayfield", position: "QB", team: "TB", projectedStats: { passYd: 2923, passTD: 18.8, passInt: 8.9, rushYd: 247, rushTD: 1.1, fumLost: 3.4 }},
   { name: "Malik Willis", position: "QB", team: "MIA", projectedStats: { passYd: 3560, passTD: 13.2, passInt: 10.4, rushYd: 546, rushTD: 3.4, fumLost: 6.2 }},
   { name: "Sam Darnold", position: "QB", team: "SEA", projectedStats: { passYd: 4013, passTD: 24, passInt: 12.4, rushYd: 126, fumLost: 4.6 }},
   { name: "Bo Nix", position: "QB", team: "DEN", projectedStats: { passYd: 3877, passTD: 26.5, passInt: 11.1, rushYd: 356, rushTD: 4, fumLost: 3.1 }},
@@ -2094,7 +2088,8 @@ const AVAILABILITY = {
   "christiankirk|WR": {"status":"IR","gamesOut":4,"note":"Calf injury from July 26; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
   "isaacguerendo|RB": {"status":"PUP","gamesOut":4,"note":"Pectoral; reserve/PUP, misses at least the first four games.","asOf":"2026-09-02"},
   "zachcharbonnet|RB": {"status":"PUP","gamesOut":4,"note":"January ACL tear; reserve/PUP, misses at least the first four games and is described as still far from returning.","asOf":"2026-09-02"},
-  "jeremymcnichols|RB": {"status":"IR","gamesOut":4,"note":"Quadriceps; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"}
+  "jeremymcnichols|RB": {"status":"IR","gamesOut":4,"note":"Quadriceps; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
+  "bakermayfield|QB": {"status":"Out","gamesOut":4,"note":"Dislocated right thumb in the Week 3 loss to the Vikings (Sept. 27); not placed on injured reserve. Bowles gave a 3-to-6 week timetable on Sept. 28 and said three weeks is the minimum. Missed Weeks 4 and 5; Jalon Daniels named the Week 6 starter. Counted out through Week 7, the four-week mark, with Week 8 (Nov. 1) the first realistic return; the Week 10 bye is the outer bound.","asOf":"2026-09-30"}
 };
 // ── live availability (ESPN's public injury report, pulled by the 11:00Z cron) ──
 // The committed block above is only as current as the last hand edit, and the
@@ -2297,12 +2292,39 @@ function buildAvailabilityOverlay(feed, prior) {
 // committed ∪ live, live winning per player except downward on gamesOut (see the
 // note at the top of this block). Every entry records the committed number so
 // the row factor can be the DIFFERENCE, not the whole factor twice.
+//
+// The two count games out from different places: a live entry from Week 1
+// (kickoff to ESPN's return date), a hand entry from the week of its own asOf.
+// For every preseason entry those are the same frame and max() compares like
+// with like. For a hand entry written mid-season they are not: the feed's
+// return date on a plain "Out" is the next game, so on 11 Oct 2026 a
+// quarterback three weeks into a six-week thumb injury was "out Weeks 1-5"
+// to the feed while the file said Weeks 4-7, and max(5, 4) handed the window
+// to the feed. So for a hand entry that starts after Week 1 the LAST week each
+// window covers is what is compared, and when the file's window reaches
+// further the file's entry is served whole (its asOf keeps the start week;
+// buildBoards counts a hand entry from there) with the feed's view riding
+// along as `feed` for the report. A hand entry that starts in Week 1 is in
+// the feed's own frame and keeps the rule above: live status and note, the
+// larger count.
+function _availStartWeek(asOf) {
+  const ms = Date.parse(String(asOf || ''));
+  const year = Number(String(asOf || '').slice(0, 4));
+  return Number.isFinite(ms) && Number.isFinite(year) ? _availWeekAt(ms, _availKickoff(year)) : 1;
+}
+function _availLastWeek(gamesOut, asOf) { return _availStartWeek(asOf) - 1 + (Number(gamesOut) || 0); }
 function availabilityMerge(committed, live) {
   const out = {};
   for (const [k, c] of Object.entries(committed || {})) out[k] = { ...c, committedGamesOut: Number(c.gamesOut) || 0 };
   for (const [k, l] of Object.entries(live || {})) {
-    const cg = out[k] ? out[k].committedGamesOut : 0;
-    out[k] = { status: l.status, gamesOut: Math.max(Number(l.gamesOut) || 0, cg), note: l.note || '',
+    const c = out[k];
+    const cg = c ? c.committedGamesOut : 0;
+    const lg = Number(l.gamesOut) || 0;
+    if (c && cg > 0 && _availStartWeek(c.asOf) > 1 && _availLastWeek(cg, c.asOf) > lg) {
+      out[k] = { ...c, feed: { status: l.status, gamesOut: lg, asOf: l.asOf || '', note: l.note || '' } };
+      continue;
+    }
+    out[k] = { status: l.status, gamesOut: Math.max(lg, cg), note: l.note || '',
                asOf: l.asOf || '', source: l.source || '', live: true, committedGamesOut: cg,
                ...(l.carried ? { carried: true } : {}) };   // the feed stopped mentioning him; see buildAvailabilityOverlay
   }
@@ -5307,7 +5329,11 @@ const SNAP_DDL = [
   // ago reads as 52 hours old the moment the market goes quiet, and the health
   // board could not tell a stopped poll from a settled one. One row per subject
   // type, stamped by every pull that reaches the store.
-  'CREATE TABLE IF NOT EXISTS odds_snapshot_pulls (subject_type TEXT PRIMARY KEY, ts INTEGER NOT NULL, seen INTEGER, changed INTEGER)'
+  'CREATE TABLE IF NOT EXISTS odds_snapshot_pulls (subject_type TEXT PRIMARY KEY, ts INTEGER NOT NULL, seen INTEGER, changed INTEGER)',
+  // THE WEEK'S MARKETS, DIGESTED, written by the pull that changes them and
+  // read by everything else. See marketDigestBuild for why the request path
+  // must not read the store itself. Chunked: D1 caps a row at 2 MB.
+  'CREATE TABLE IF NOT EXISTS market_digest (key TEXT NOT NULL, part INTEGER NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY (key, part))'
 ];
 // Additive migrations for a table that may already exist. Each is a no-op
 // once applied and is allowed to fail (D1 raises on a duplicate column).
@@ -5625,6 +5651,11 @@ const MARKET_WEEK_ROW_CAP = 40000;
 // caller handing in a different store never reads another's rows.
 let _MKT_WEEK_MEMO = { db: null, key: '', at: 0, out: null };
 async function marketHistoryWeek(env, season, week) {
+  // The digest first: one small read, built by the last pull. The store is
+  // read only for a week the digest does not hold (a requested past week, or
+  // the hours between the week turning and the next pull).
+  const d = await marketDigestRead(env);
+  if (d && _digestCovers(d, season, week)) return d.markets || {};
   const mkey = season + '|' + week;
   const db = env && env.LEADS_DB;
   if (db && _MKT_WEEK_MEMO.db === db && _MKT_WEEK_MEMO.key === mkey && Date.now() - _MKT_WEEK_MEMO.at < 300000) return _MKT_WEEK_MEMO.out;
@@ -5641,23 +5672,33 @@ async function marketHistoryWeek(env, season, week) {
 // its own memo so the week read's single-key memo is not thrashed.
 const MARKET_PRIOR_WEEKS = 2;
 let _MKT_PRIOR_MEMO = { db: null, key: '', at: 0, out: null };
-async function marketSubjectsBefore(env, season, week) {
-  const cur = Number(week);
-  if (!Number.isFinite(cur) || cur <= 1) return new Set();
-  const weeks = [];
+function _marketPriorWeeks(week) {
+  const cur = Number(week), weeks = [];
+  if (!Number.isFinite(cur) || cur <= 1) return weeks;
   for (let w = cur - 1; w >= Math.max(1, cur - MARKET_PRIOR_WEEKS); w--) weeks.push(w);
+  return weeks;
+}
+async function marketSubjectsBefore(env, season, week) {
+  const weeks = _marketPriorWeeks(week);
+  if (!weeks.length) return new Set();
+  const d = await marketDigestRead(env);
+  if (d && _digestCovers(d, season, week)) return new Set(d.priorSubjects || []);
   const mkey = season + '|' + weeks.join(',');
   const db = env && env.LEADS_DB;
   if (db && _MKT_PRIOR_MEMO.db === db && _MKT_PRIOR_MEMO.key === mkey && Date.now() - _MKT_PRIOR_MEMO.at < 600000) return _MKT_PRIOR_MEMO.out;
-  if (!(await snapshotReady(env))) return new Set();
+  const out = await _marketSubjectsBeforeRead(env, season, weeks);
+  if (db) _MKT_PRIOR_MEMO = { db, key: mkey, at: Date.now(), out };
+  return out;
+}
+async function _marketSubjectsBeforeRead(env, season, weeks) {
   const out = new Set();
+  if (!weeks.length || !(await snapshotReady(env))) return out;
   try {
     const q = await env.LEADS_DB.prepare(
       'SELECT DISTINCT subject FROM odds_snapshots WHERE season IS ? AND week IN (' + weeks.map(() => '?').join(',') + ") AND subject_type = 'player'")
       .bind(season == null ? null : Number(season), ...weeks).all();
     for (const r of (q.results || [])) if (r && r.subject) out.add(String(r.subject));
   } catch (e) { return new Set(); }
-  if (db) _MKT_PRIOR_MEMO = { db, key: mkey, at: Date.now(), out };
   return out;
 }
 async function _marketHistoryWeekRead(env, season, week) {
@@ -5708,6 +5749,19 @@ function marketPropsFrom(hist) {
 // so the game id, not the week column, is the key here.
 async function marketHistoryGames(env, gameIds) {
   const ids = (gameIds || []).map(String).filter(Boolean).slice(0, 40);
+  if (!ids.length) return {};
+  // The digest covers a fixed set of games (the week's slate when it was
+  // built). A request inside that set is answered from it; one that names a
+  // game outside it reads the store, as before.
+  const d = await marketDigestRead(env);
+  if (d && Array.isArray(d.gameIds) && ids.every(id => d.gameIds.indexOf(id) >= 0)) {
+    const out = {};
+    for (const id of ids) if (d.games && d.games[id]) out[id] = d.games[id];
+    return out;
+  }
+  return _marketHistoryGamesRead(env, ids);
+}
+async function _marketHistoryGamesRead(env, ids) {
   if (!ids.length || !(await snapshotReady(env))) return {};
   try {
     const q = await env.LEADS_DB.prepare(
@@ -5720,6 +5774,83 @@ async function marketHistoryGames(env, gameIds) {
     for (const [g, mk] of Object.entries(by)) { out[g] = {}; for (const [m, rows] of Object.entries(mk)) out[g][m] = marketHistoryFrom(rows); }
     return out;
   } catch (e) { return {}; }
+}
+// ── the market digest ─────────────────────────────────────────────────────
+// WHY. D1 bills rows scanned, and the free allowance is five million a day.
+// Until 2026-10-10 the three reads above ran on the request path: the week's
+// history (up to 40,000 rows) under a five-minute memo per isolate, the prior
+// weeks' subjects under ten, and the game lines with none of their own. Every
+// isolate paid them again every five minutes, every cold isolate paid them on
+// arrival, and the quarter-hour cron paid them on every tick. One warm isolate
+// alone could spend the day's allowance; the account did, three times in
+// twelve days (HANDOFF §120, §125, §130), and when D1 refused reads the
+// schedule row went with it and every in-season page read "The board did not
+// answer."
+//
+// The store only changes when a pull writes it (runMarketSnapshot, eight to
+// fifteen times a day), so the pull is the one place that reads it: it builds
+// everything the request path used to compute -- the week's markets, the
+// prior weeks' subject set, the slate's game lines -- and stores the result
+// as one row set. Readers take that (a handful of rows, memoized five minutes)
+// and touch odds_snapshots only for what the digest does not hold.
+const MARKET_DIGEST_KEY = 'week';
+const MARKET_DIGEST_PART = 1500000;          // bytes per row; D1 caps a row at 2 MB
+const MARKET_DIGEST_MEMO_MS = 300000;
+const _digestCovers = (d, season, week) => d && Number(d.season) === Number(season) && Number(d.week) === Number(week);
+let _MKT_DIGEST_MEMO = { db: null, at: 0, out: null };
+async function marketDigestRead(env) {
+  const db = env && env.LEADS_DB;
+  if (!db) return null;
+  if (_MKT_DIGEST_MEMO.db === db && Date.now() - _MKT_DIGEST_MEMO.at < MARKET_DIGEST_MEMO_MS) return _MKT_DIGEST_MEMO.out;
+  if (!(await snapshotReady(env))) return null;
+  let out = null;
+  try {
+    const q = await db.prepare('SELECT part, payload FROM market_digest WHERE key = ? ORDER BY part ASC').bind(MARKET_DIGEST_KEY).all();
+    const parts = (q.results || []).map(r => String(r.payload));
+    if (parts.length) {
+      const j = JSON.parse(parts.join(''));
+      if (j && j.v === 1 && j.markets && typeof j.markets === 'object') out = j;
+    }
+  } catch (e) { out = null; }
+  // A refused or empty read is not memoized: the next caller tries again, so
+  // a digest written moments later is seen inside the memo window.
+  if (out) _MKT_DIGEST_MEMO = { db, at: Date.now(), out };
+  return out;
+}
+// Build and store the digest for one week and one slate. `opts.partBytes`
+// is for the tests; the prior-week subject set is reused from the stored
+// digest while its weeks are the same, so that read costs once a week.
+async function marketDigestBuild(env, season, week, gameIds, opts) {
+  const db = env && env.LEADS_DB;
+  if (!db) return { ok: false, error: 'no_db' };
+  if (!Number.isFinite(Number(week))) return { ok: false, error: 'no_week' };
+  if (!(await snapshotReady(env))) return { ok: false, error: 'no_db' };
+  const o = opts || {};
+  const ids = (gameIds || []).map(String).filter(Boolean).slice(0, 40);
+  const weeks = _marketPriorWeeks(week);
+  const priorKey = season + '|' + weeks.join(',');
+  const prev = await marketDigestRead(env);
+  let priorSubjects, priorReused = false;
+  if (prev && prev.priorKey === priorKey && Array.isArray(prev.priorSubjects)) { priorSubjects = prev.priorSubjects; priorReused = true; }
+  else priorSubjects = [...(await _marketSubjectsBeforeRead(env, season, weeks))].sort();
+  const [markets, games] = await Promise.all([
+    _marketHistoryWeekRead(env, season, week),
+    ids.length ? _marketHistoryGamesRead(env, ids) : {}
+  ]);
+  const digest = { v: 1, builtAt: Date.now(), season: season == null ? null : Number(season), week: Number(week),
+                   markets, priorKey, priorSubjects, gameIds: ids, games };
+  const text = JSON.stringify(digest);
+  const size = Math.max(1000, Number(o.partBytes) || MARKET_DIGEST_PART);
+  const stmts = [db.prepare('DELETE FROM market_digest WHERE key = ?').bind(MARKET_DIGEST_KEY)];
+  const ins = db.prepare('INSERT INTO market_digest (key, part, payload, updated_at) VALUES (?, ?, ?, ?)');
+  let parts = 0;
+  for (let i = 0; i < text.length; i += size) stmts.push(ins.bind(MARKET_DIGEST_KEY, parts++, text.slice(i, i + size), digest.builtAt));
+  try { await db.batch(stmts); }
+  catch (e) { return { ok: false, error: (e && e.message) || 'write_failed' }; }
+  // This isolate has the fresh copy in hand; the next reader here takes it.
+  _MKT_DIGEST_MEMO = { db, at: Date.now(), out: digest };
+  return { ok: true, season: digest.season, week: digest.week, subjects: Object.keys(markets).length,
+           priorSubjects: priorSubjects.length, priorReused, games: Object.keys(games).length, bytes: text.length, parts };
 }
 // How far a game's line has moved, and off what. THE BOOK'S OWN OPEN WINS: the
 // snapshot store can only call "open" the first row it recorded, so a history
@@ -6509,8 +6640,25 @@ async function buildMarketRecords(env, opts) {
 //
 // Three lines per player, because the whole point of the product is the gap:
 // what the projections say, what the odds alone say, and what the site ships.
-const RANKINGS_CONTRACT = 1;
+// Contract 2 (2026-10-10): `priced` means a book quoted a market on THIS man
+// THIS week, read off the prop store the week boards price from. Under
+// contract 1 it meant the season overlay had moved his line, which counted
+// every man on a club with a game spread and went to zero for a fortnight's
+// outage of one daily job. `marketBoard` still describes statsMarket.
+const RANKINGS_CONTRACT = 2;
 let _RANK_CACHE = null, _RANK_AT = 0;
+// How many of a player's markets at least one book is currently quoting, and
+// when a book last touched any of them. Off the in-memory week history, so the
+// whole board costs the one read marketHistoryWeek already makes.
+function _propsQuoted(hist) {
+  let markets = 0, asOf = 0;
+  for (const h of Object.values(hist || {})) {
+    if (!h || !(h.perBook || []).length) continue;
+    markets++;
+    if (h.lastSeen > asOf) asOf = h.lastSeen;
+  }
+  return { markets, asOf: asOf || null };
+}
 async function rankingsPayload(env) {
   if (_RANK_CACHE && Date.now() - _RANK_AT < 900000) return _RANK_CACHE;
   const sched = await scheduleCacheRead(env);
@@ -6519,6 +6667,14 @@ async function rankingsPayload(env) {
   const tctx = cached ? await oddsCtxRead(env) : null;
   const board = cached && cached.overlay ? buildVegasBoard(cached.overlay, tctx) : { ok: false, rows: [] };
   const avail = await availabilityTable(env);
+  // THIS WEEK'S PROPS: one read for the whole board, the same store and the
+  // same join (normalized name, ambiguous names get nothing) buildMarketRecords
+  // uses, so the front page cannot call a man priced whom the week board does
+  // not. No current week, or an empty store, and nobody is priced.
+  const week = state.ok ? state.week.number : null;
+  const weekMarkets = sched && week != null ? await marketHistoryWeek(env, sched.season, week) : {};
+  const nameIndex = _oddsProjectionIndex();
+  let pricedCount = 0, propsAsOf = 0;
   // Who plays whom this week, so a ranking can say the opponent and the bye
   // without a second call.
   const byTeam = new Map();
@@ -6539,12 +6695,17 @@ async function rankingsPayload(env) {
     const team = teamKey(p.team);
     const slot = byTeam.get(team) || null;
     const a = avail[k] || null;
+    const nk = _oddsNorm(p.name);
+    const quoted = _propsQuoted(nameIndex.get(nk) === null ? null : weekMarkets[nk]);
+    if (quoted.markets) pricedCount++;
+    if (quoted.asOf > propsAsOf) propsAsOf = quoted.asOf;
     players.push({
       name: p.name, position: p.position, team,
       statsConsensus: r ? r.statsConsensus : _colStatLine(p.projectedStats),
       statsMarket: r ? r.statsMarket : null,
       statsIronTuna: r ? r.statsIronTuna : _colStatLine(p.projectedStats),
-      priced: r ? !!r.priced : false,
+      priced: quoted.markets > 0,
+      propMarkets: quoted.markets,
       opponent: slot ? slot.opponent : null,
       home: slot ? slot.home : null,
       teamImplied: slot ? slot.implied : null,
@@ -6566,6 +6727,12 @@ async function rankingsPayload(env) {
     oddsAsOf: cached ? cached.updatedAt : null,
     oddsProvider: cached ? cached.provider : null,
     marketBoard: !!(board && board.ok),
+    // The prop store behind `priced`: live when at least one board player
+    // carries a quoted market this week. A page prints the priced count only
+    // under `live`; an empty store is the odds not having been read, not a
+    // market that priced nobody.
+    props: { live: pricedCount > 0, season: sched ? sched.season : null, week,
+             players: pricedCount, asOf: propsAsOf || null },
     players
   };
   _RANK_CACHE = out; _RANK_AT = Date.now();
@@ -6688,9 +6855,25 @@ async function runMarketSnapshot(env) {
   const rows = [];
   for (const r of run.results) for (const x of r.rows || []) rows.push(x);
   const wrote = await snapshotWrite(env, rows, ctx);
+  // The store changed (or may have); the digest every reader takes is
+  // rebuilt here, the one place that pays to read the store.
+  const digest = await runMarketDigest(env, { sched, state }).catch(e => ({ ok: false, error: (e && e.message) || 'failed' }));
   return { ok: !!wrote.ok, ...ctx, providers: run.results.map(r => ({
     provider: r.provider, rows: r.count || 0, skipped: r.skipped || null, error: r.error || null })),
-    ...wrote };
+    ...wrote, digest };
+}
+// The digest for the current week and slate: after every pull, and on its own
+// as the 'market-digest' job (the admin rerun button) when the week has turned
+// and the next pull is hours off.
+async function runMarketDigest(env, pre) {
+  if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
+  const sched = (pre && pre.sched) || await scheduleCacheRead(env);
+  if (!sched) return { ok: false, error: 'no_schedule' };
+  const state = (pre && pre.state) || nflSeasonState(sched, Date.now());
+  const week = state && state.ok && state.week && state.week.type === 'REG' ? state.week.number : null;
+  if (week == null) return { ok: false, error: 'no_week' };
+  const ids = state.ok ? (state.games || []).map(g => g && g.id).filter(Boolean) : [];
+  return marketDigestBuild(env, sched.season, week, ids);
 }
 
 // -- kickers and defenses, scored -------------------------------------------
@@ -7312,11 +7495,15 @@ function buildBoards(ctx, opts) {
     const gamesOut = a ? Number(a.gamesOut) || 0 : 0;
     const wr = curWeek != null ? weekReport(k) : null;
     const wrOut = !!(wr && (wr.status === 'Out' || wr.status === 'Doubtful'));
-    // Games he can play across the season: the availability list, or the
-    // whole schedule. His per-game line is the season line over THIS.
-    const playable = Math.max(1, AVAILABILITY_GAMES - gamesOut);
     // The FULL season line: the committed row is pro-rated for a listed
-    // player (§48), so it is un-rated here and divided by the games he plays.
+    // player (§48), so it is un-rated here. His per-game line is that 17-game
+    // line over 17, whatever he is listed to miss: the games he sits come off
+    // the window below (outWeeks), not out of the divisor. Until 11 Oct 2026
+    // the full line was divided by the games he could still play, which paid
+    // a listed player his whole season in fewer games: a quarterback the feed
+    // ruled out for Week 5 (a live entry counts Weeks 1-5) was divided by 12
+    // and ranked first for the rest of the season at 17/12 of his line, and
+    // every preseason reserve placement was inflated by 17/13 the same way.
     const af = a ? _availF(gamesOut) : 1;
     const full = af > 0 && af < 1 ? Object.fromEntries(Object.entries(p.projectedStats || {}).map(([kk, v]) => [kk, Number.isFinite(v) ? v / af : v])) : (p.projectedStats || {});
     if (af <= 0) continue;                         // out for the year: nothing to rank
@@ -7370,7 +7557,7 @@ function buildBoards(ctx, opts) {
       games++;
       if (env.opponentDefRank) { oppAllowedSum += env.opponentDefRank; oppN++; }
       // CONSENSUS: flat per-game share of the season line. No market in it.
-      const c = weeklyStats(full, p.position, playable, { factor: 1, allowedFactor: 1 });
+      const c = weeklyStats(full, p.position, AVAILABILITY_GAMES, { factor: 1, allowedFactor: 1 });
       // VEGAS: a prop for this week if there is one, else the environment.
       let v = null, basis = env.basis, conf = 'LOW';
       const props = (w === curWeek && ctx.weekMarkets) ? ctx.weekMarkets[_oddsNorm(p.name)] : null;
@@ -7379,7 +7566,7 @@ function buildBoards(ctx, opts) {
         const mk = marketPropsFrom(props);
         vp = vegasProjection(mk.props, p.position, rules, { asOf: mk.asOf, injuryStatus: wr ? wr.status : a ? a.status : null });
         if (vp.ok) {
-          v = { ...weeklyStats(full, p.position, playable, env), ...vp.stats };   // priced stats replace the environment's
+          v = { ...weeklyStats(full, p.position, AVAILABILITY_GAMES, env), ...vp.stats };   // priced stats replace the environment's
           // ...and so does the touchdown price, which used to reach the block
           // beside the line and never the line itself. A priced TD COUNT still
           // wins: a count carries the two-score games a binary cannot.
@@ -7398,7 +7585,7 @@ function buildBoards(ctx, opts) {
           // game total split across an offense. So the environment is the
           // baseline and the quoted pieces are laid on top of it. It is named
           // for what it is: game lines, with props where there are props.
-          v = applyMarketTd({ ...weeklyStats(full, p.position, playable, env), ...(vp.stats || {}) }, p.position, vp.td);
+          v = applyMarketTd({ ...weeklyStats(full, p.position, AVAILABILITY_GAMES, env), ...(vp.stats || {}) }, p.position, vp.td);
           basis = 'gamelines+props';
           conf = 'MEDIUM'; thinWeeks++;
           if (a && a.status && VEGAS_OUT_RE.test(String(a.status))) conf = 'LOW';
@@ -7420,7 +7607,7 @@ function buildBoards(ctx, opts) {
         marketOut = { week: w, ...absent };
       }
       if (!v) {
-        v = weeklyStats(full, p.position, playable, env);
+        v = weeklyStats(full, p.position, AVAILABILITY_GAMES, env);
         if (basis === 'gamelines') { conf = 'MEDIUM'; postedWeeks++; }
         else if (basis === 'ratings') { conf = 'LOW'; fittedWeeks++; }
         else { conf = 'LOW'; }
@@ -7480,8 +7667,12 @@ function buildBoards(ctx, opts) {
       name: p.name, position: p.position === 'DEF' ? 'DST' : p.position, pos: p.position, team, key: k,
       games, byes, weeks: weekRows,
       // The season list first (it carries the games), else this week's report.
-      injury: a ? { status: a.status, gamesOut, note: a.note || '', ...(wr ? { thisWeek: wr.status } : {}) }
-        : wr ? { status: wr.status, gamesOut: 0, note: wr.note || '', thisWeek: wr.status } : null,
+      // `weeksOut` is the games he sits INSIDE this horizon, which is what a
+      // reader of this board wants to hear; `gamesOut` is the season-list
+      // count, from Week 1 for a live entry, and read as "the next N games"
+      // it said five of a man ruled out for one.
+      injury: a ? { status: a.status, gamesOut, weeksOut: weekRows.filter(w => w.out).length, note: a.note || '', ...(wr ? { thisWeek: wr.status } : {}) }
+        : wr ? { status: wr.status, gamesOut: 0, weeksOut: weekRows.filter(w => w.out).length, note: wr.note || '', thisWeek: wr.status } : null,
       roleTrend: role, form,
       scheduleDifficulty: oppN ? { avgOpponentDefRank: _oddsRound(oppAllowedSum / oppN),
         label: (oppAllowedSum / oppN) <= 11 ? 'Hard' : (oppAllowedSum / oppN) >= 22 ? 'Easy' : 'Average' } : null,
@@ -10199,14 +10390,16 @@ function playerLd(p, row, url) {
 // intel page rather than to the waiting-list gate.
 //
 // Out of season nothing is rewritten and the shell's own pair stands.
-const PC_BOARD = { QB: 'qb', RB: 'rb', WR: 'wr', TE: 'te', K: 'k', DEF: 'dst' };
+// The one rankings page's own position keys (11 Oct 2026; the per-position
+// pages the button used to open are gone, and 301 here).
+const PC_BOARD = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', K: 'K', DEF: 'DST' };
 function playerCta(p) {
   const e = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   const board = PC_BOARD[p.p];
   return '<div class="pc-cta">'
     + '<a class="pc-btn" href="/in-season/player/' + e(p.slug) + '">This week\u2019s intel</a>'
     + (board
-        ? '<a class="pc-btn alt" href="/weekly-' + board + '-rankings">Every '
+        ? '<a class="pc-btn alt" href="/rankings#pos=' + board + '">Every '
           + e((PC_POS_WORD[p.p] || p.p).toLowerCase()) + ' this week</a>'
         : '')
     + '</div>';
@@ -10238,128 +10431,6 @@ function playersIndexHtml(idx) {
   }
   return out;
 }
-// ── the rankings board, PRE-RENDERED ───────────────────────────────────────
-// Sixteen pages (/weekly-*-rankings and /season-long-*-rankings) ship as an
-// empty <div class="rk-board"> that /it-ranks.js fills from /api/boards. That
-// is the right architecture for a reader and the wrong one for everybody else:
-// the crawlers robots.txt invites by name do not run JavaScript, so the board
-// this site is actually FOR — two priced columns on the same player and the
-// argument between them — reached them as a masthead, a disclaimer and a
-// footer, with not one player's name in between.
-//
-// So the top of the board is rendered here, into the host, from the same
-// boardsPayload the API answers with. It is not a second board: same function,
-// same memo, same five-minute window.
-//
-// NO ROUTE TABLE. The horizon and the position are read off the page's own
-// data-rk-* attributes — the ones /it-ranks.js reads — so a seventeenth
-// rankings page is pre-rendered the day it is added and a page whose horizon
-// is edited cannot leave a stale copy of that horizon here.
-//
-// PPR, because that is what /it-ranks.js falls back to when the reader has
-// chosen nothing (remembered()). A reader who HAS chosen re-renders at their
-// own preset on hydration, which is the point of the buttons.
-const RK_PRERENDER_ROWS = 60;
-async function ranksPrerender(env, html) {
-  const m = /<div class="rk-board"[\s\S]{0,600}?>/.exec(html);
-  if (!m) return null;
-  const attr = (k) => { const a = new RegExp('data-rk-' + k + '="([^"]*)"').exec(m[0]); return a ? a[1] : ''; };
-  const horizon = attr('horizon') === 'ros' ? 'ros' : 'week';
-  const pos = (attr('pos') || 'ALL').toUpperCase();
-  let payload = null;
-  try {
-    payload = boardStillToPlay(await boardsPayload(env, {
-      horizon, position: pos, preset: 'ppr', through: null }));
-  } catch (e) { return null; }
-  if (!payload || !payload.ok || !payload.players || !payload.players.length) return null;
-  return { host: m[0], horizon, pos, label: attr('label'), payload };
-}
-
-function rkPreHtml(pre) {
-  const e = (x) => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const n1 = (v) => (v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1));
-  const signed = (v) => (v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : '') + (Math.round(v * 10) / 10).toFixed(1));
-  const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  const week = pre.horizon === 'week';
-  // FLEX pools RB/WR/TE into one order, so its rank field is the pooled one —
-  // the same choice /it-ranks.js makes in rankOf().
-  const rankOf = (p, side) => (p[side] ? (pre.pos === 'FLEX' ? p[side].flexRank : p[side].rank) : null);
-  const rows = pre.payload.players.slice(0, RK_PRERENDER_ROWS).map((p) => {
-    const w0 = p.weeks && p.weeks[0];
-    const opp = week
-      ? '<td class="rk-opp">' + (!w0 || w0.bye ? '<span class="is-status">BYE</span>'
-          : e((w0.home ? 'vs ' : 'at ') + w0.opponent) + (w0.out ? ' <span class="is-status">OUT</span>' : '')) + '</td>'
-      : '<td class="num rk-opp">' + (p.games == null ? '—' : p.games) + '</td>';
-    const d = p.marketDelta || {};
-    const cls = d.points == null ? 'flat' : d.points > 0.05 ? 'up' : d.points < -0.05 ? 'down' : 'flat';
-    const slots = d.rank == null ? '' : (d.rank > 0 ? '+' : '') + d.rank + ' slots';
-    const cr = rankOf(p, 'consensus'), vr = rankOf(p, 'vegas');
-    return '<tr id="p-' + e(slug(p.name)) + '">' +
-      '<td class="num rk-rank">' + (cr == null ? '—' : e(p.position) + cr) + '</td>' +
-      '<td class="rk-who"><a href="/player/' + e(slug(p.name)) + '"><b>' + e(p.name) + '</b></a>' +
-        (pre.pos === 'ALL' || pre.pos === 'FLEX' ? '<small>' + e(p.position) + '</small>' : '') + '</td>' +
-      '<td class="rk-team">' + e(p.team) + '</td>' + opp +
-      '<td class="rk-fan rk-pts">' + n1(p.consensus ? p.consensus.points : null) + '</td>' +
-      '<td class="rk-fan rk-rnk">' + (cr == null ? '—' : e(p.position) + cr) + '</td>' +
-      '<td class="rk-mkt rk-pts">' + n1(p.vegas ? p.vegas.points : null) +
-        '<div class="rk-basis">' + e(p.vegas ? p.vegas.basis : '') + '</div></td>' +
-      '<td class="rk-mkt rk-rnk">' + (vr == null ? '—' : e(p.position) + vr) + '</td>' +
-      '<td class="rk-gap ' + cls + '"><b>' + signed(d.points) + '</b><span>' +
-        e(d.classification || '') + '</span>' + (slots ? '<span class="rk-slots">' + e(slots) + '</span>' : '') + '</td>' +
-      '</tr>';
-  }).join('');
-  const hz = pre.payload.horizon || {};
-  const weeks = hz.weeks || [];
-  const when = weeks.length
-    ? ' (week' + (weeks.length > 1 ? 's ' + weeks[0] + '–' + weeks[weeks.length - 1] : ' ' + weeks[0]) + ')'
-    : '';
-  // The caption says what this table is and what it is NOT: the top of the
-  // board at one scoring, served with the page. Saying "the first 60" where a
-  // reader can see 60 rows is the same promise the stamp line makes after
-  // hydration, and it keeps the pre-render from reading as the whole board.
-  return '<div data-rk-prerender>' +
-    '<p class="is-note">Scored at <b>PPR</b> &middot; ' + e(pre.label || hz.label || '') + when +
-    ' &middot; the top ' + Math.min(RK_PRERENDER_ROWS, pre.payload.players.length) +
-    ' of ' + pre.payload.players.length + ', served with the page. ' +
-    'The rest of the board, the scoring buttons and the filter come with its script.</p>' +
-    '<div class="is-scroll"><table class="is-table rk-vs">' +
-    '<thead><tr><th colspan="4"></th>' +
-    '<th class="rk-grp fan" colspan="2" scope="colgroup">Fantasy Consensus</th>' +
-    '<th class="rk-grp mkt" colspan="2" scope="colgroup">Betting Odds</th>' +
-    '<th></th></tr>' +
-    '<tr><th scope="col">#</th><th scope="col">Player</th><th scope="col">Team</th>' +
-    '<th scope="col">' + (week ? 'Opponent' : 'Games') + '</th>' +
-    '<th scope="col" class="rk-fan num">Proj</th><th scope="col" class="rk-fan num">Rank</th>' +
-    '<th scope="col" class="rk-mkt num">Proj</th><th scope="col" class="rk-mkt num">Rank</th>' +
-    '<th scope="col" class="num">Gap</th></tr></thead>' +
-    '<tbody>' + rows + '</tbody></table></div></div>';
-}
-
-// The same rows as structured data. The page already carries a WebPage and a
-// BreadcrumbList from tools/build-seo.mjs; this adds the one thing that file
-// cannot know, because it is computed per request: what is actually ON the
-// board right now.
-function rkPreLd(pre, url) {
-  const items = pre.payload.players.slice(0, RK_PRERENDER_ROWS).map((p, i) => ({
-    '@type': 'ListItem',
-    position: i + 1,
-    name: p.name + ' (' + p.position + ', ' + p.team + ')',
-  }));
-  return '<script type="application/ld+json">' + JSON.stringify({
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    '@id': url + '#board',
-    name: (pre.label || '') + ' fantasy football rankings'
-      + (pre.pos === 'ALL' ? '' : ', ' + pre.pos),
-    description: 'The fantasy consensus and the betting market on the same player, '
-      + 'and the gap between them. Scored at PPR.',
-    itemListOrder: 'https://schema.org/ItemListOrderDescending',
-    numberOfItems: items.length,
-    itemListElement: items,
-    isPartOf: { '@id': 'https://irontuna.com/#website' },
-  }).replace(/</g, '\\u003c') + '</' + 'script>';
-}
-
 // ── data freshness ─────────────────────────────────────────────────────────
 // Every packet carries where each input came from and how old it is, graded
 // against the KIND's own requirement: a Sunday 12:15 piece needs an injury
@@ -14241,6 +14312,7 @@ const JOB_FNS = {
   'odds-refresh':         env => runOddsRefresh(env),
   'availability-refresh': env => runAvailabilityRefresh(env),
   'market-snapshot':      env => runMarketSnapshot(env),
+  'market-digest':        env => runMarketDigest(env),
   'usage-refresh':        env => runUsageRefresh(env),
   'usage-prior-refresh':  env => runPriorUsageRefresh(env),
   'depth-charts':         env => runDepthChartRefresh(env),
@@ -14466,6 +14538,7 @@ async function healthPayload(env, opts) {
     jobBoard(env, now)
   ]);
   const props = await propsHealth(env, sched ? sched.season : null, week).catch(() => null);
+  const digest = await marketDigestRead(env).catch(() => null);
   const snapMeta = m => m ? { season: m.season, week: m.week, builtAt: m.builtAt, rows: (m.rows || []).length } : null;
   const updates = {
     schedule: sched ? { updatedAt: sched.updatedAt, provider: sched.provider, season: sched.season, games: sched.games.length } : null,
@@ -14475,6 +14548,10 @@ async function healthPayload(env, opts) {
     // answers whether THIS week's props are reaching the board, and says which
     // link is broken when they are not.
     props: props && props.ok ? props : null,
+    // What the request path actually reads for this week's markets. Built by
+    // the pull; a week behind the clock means readers are back on the store.
+    marketDigest: digest ? { builtAt: digest.builtAt, season: digest.season, week: digest.week, subjects: Object.keys(digest.markets || {}).length,
+                             priorSubjects: (digest.priorSubjects || []).length, games: (digest.gameIds || []).length, current: week == null || Number(digest.week) === Number(week) } : null,
     usage: usage ? { updatedAt: usage.updatedAt, season: usage.season, throughWeek: usage.throughWeek, players: Object.keys(usage.players || {}).length } : null,
     // Last season's copy of the same overlay, which /stats serves behind its
     // season buttons. Missing is not a fault -- the daily job builds it -- but
@@ -18379,6 +18456,25 @@ export default {
           },
         });
     }
+    // ── the retired rankings pages → the one rankings page ──────────────────
+    // /weekly-<pos>-rankings and /season-long-<pos>-rankings, with their two
+    // hubs, were eighteen pages for one board at two horizons. Since 11 Oct
+    // 2026 there is one rankings page sorted by horizon (Ken), so the old
+    // addresses 301 to it with the horizon and the position in the hash,
+    // which /rankings reads on load. Permanent, because the pages are gone
+    // from the repo; cacheable, because the mapping never changes. The pooled
+    // "overall" board has no position on the one page, so it lands on the
+    // horizon alone. Matched before the gate below: the gate sees /rankings.
+    {
+      const __rk = /^\/(weekly|season-long)-(?:(qb|rb|wr|te|flex|k|dst|overall)-)?rankings\/?$/.exec(url.pathname);
+      if (__rk) {
+        const __hz = __rk[1] === 'weekly' ? 'week' : 'ros';
+        const __pos = __rk[2] && __rk[2] !== 'overall' ? '&pos=' + __rk[2].toUpperCase() : '';
+        return secure(new Response(null, { status: 301, headers: {
+          location: url.origin + '/rankings#horizon=' + __hz + __pos,
+          'cache-control': 'public, max-age=86400' } }));
+      }
+    }
     let __assetReq = request;
     // "/" serves the news-style front page (front.html); the classic SPA hub moved to /hub.
     // The SPA format routes (and /hub) all rewrite to "/" so the asset layer serves index.html.
@@ -18591,25 +18687,6 @@ export default {
           __r.headers.delete('content-length');
           return secure(__r);
         }
-      }
-
-      // The rankings board, pre-rendered into its own host. See ranksPrerender:
-      // the body is only read for the eighteen pages that carry a board, and the
-      // board it builds is read off the page's own data-rk-* attributes. The
-      // position segment is any word, not four letters: /weekly-overall-rankings
-      // (10 Oct 2026, the pooled board on its own page) is seven.
-      if (/^\/(weekly|season-long)-([a-z]+-)?rankings$/.test(__seoKey)) {
-        let __h = await resp.text();
-        const __pre = await ranksPrerender(env, __h);
-        if (__pre) {
-          const __body = rkPreHtml(__pre), __ld = rkPreLd(__pre, 'https://irontuna.com' + __seoKey);
-          __h = __h.replace(__pre.host, () => __pre.host + __body)
-                   .replace('</head>', () => __ld + '\n</head>');
-        }
-        const __r = new Response(__h, resp);
-        __r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-        __r.headers.delete('content-length');
-        return secure(__r);
       }
 
       const r = new Response(resp.body, resp);

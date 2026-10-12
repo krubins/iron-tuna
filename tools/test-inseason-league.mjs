@@ -468,6 +468,11 @@ console.log('\nthe form and the importer');
     ok('typed rosters go to the reader as text', /function readText\(\)[\s\S]{0,400}send\(\{\s*text:/.test(rg));
     ok('and a screenshot pasted into the textarea is still read as one',
       /textEl\.addEventListener\('paste'[\s\S]{0,300}read\(imgs\)/.test(rg));
+    // A phone has no Ctrl+V, so the box also reads the clipboard on a click.
+    ok('a link reads the clipboard itself into the same reader',
+      /data-paste/.test(rg) && /cb\.read\(\)\.then[\s\S]{0,500}Promise\.all\(blobs\)\.then\(read\)/.test(rg));
+    ok('and names the shortcut where the browser has no clipboard reader',
+      /if \(!\(cb && cb\.read\)\)[\s\S]{0,120}hint/.test(rg));
     ok('the worker takes text with no image at all',
       /const text = String\(body\.text[\s\S]{0,200}!images\.length && !text\.trim\(\)/.test(worker));
     // The by-hand form in §01 prints its own roster textarea further down the

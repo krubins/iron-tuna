@@ -1,5 +1,9 @@
 # Iron Tuna — Project Handoff
 
+**The boards no longer pay a listed player his season in fewer games (2026-10-11).** `buildBoards` un-rates a pro-rated row to the full 17-game line and then divided it by the games the availability list said he could still play, so every listed player's per-game line was inflated by 17 over his playable games. A live "Out" entry counts from Week 1 (kickoff to ESPN's return date, which on a plain Out is the next game), so a quarterback ruled out for one game in Week 5 read as "out Weeks 1-5", was divided by 12, and ranked QB1 for the rest of the season at 17/12 of his line; a second one three weeks into a thumb injury ranked QB3-4 the same way, and every preseason reserve placement was overpaid by 17/13 (Jacobs, on the exempt list for six, by 17/11). The per-game line is now the full line over 17 and the games he sits come off the window only (`tools/test-boards.mjs`, the gamma case). Two things rode along: `availabilityMerge` compares the LAST week each window covers when a hand entry in `tools/availability.json` starts after Week 1, so a mid-season hand entry (Mayfield, Weeks 4-7) is no longer overridden by the feed's placeholder return date (max(5, 4) handed the window to the feed; `feed` now rides on the served entry for the report), and each board row's `injury` carries `weeksOut`, the games he sits inside that horizon, which `it-reads.js` reads for "listed Out for the next N games" instead of the season-list count. Still true: a live entry's `gamesOut` is kickoff-based, so the season-total factor it applies (`_availFactor`, `_availRowFactor`) treats the weeks a mid-season casualty already played as missed; the boards are unaffected because they un-rate the row, but any reader of the season total for such a player sees it low until a hand entry or a reinstatement replaces the live one.
+
+**There is one rankings page, dressed like the homepage (2026-10-11).** `/rankings` opens white and centred (the headline, one sentence, the filter field as its one pill, two entry points, a hairline), then a row of four horizon tabs (This Week, Next 3 Weeks, Playoffs, Rest of Season; the worker's `week`, `next3`, `playoffs`, `ros`), then the homepage's illustrated position tiles as the position control (plus a Flex tile), then two hairline rows for whose numbers and at what scoring, the table, and the navy KPI band. The "Rest of Season update" box and its `/api/ros-update` fetch came off the page. The section ribbon (`tools/build-ranks.mjs`) lists one "Rankings" destination whose menu drops every position onto `/rankings#pos=RB`; the page reads `#horizon=` and `#pos=` on load and on hashchange. The homepage tiles, the search box's tool entries, the hub cards on Stats, Previews, The Line, Hidden Value and Value Coach, the Fantasy lane links, the Washington notice and llms.txt all point at the one page now. The sixteen `/weekly-*` and `/season-long-*` position pages and their two hubs are gone from the repo: `_worker.js` 301s each address onto `/rankings#horizon=…&pos=…`, the player card's board button opens the same page, and the worker's pre-render for those pages, their board script `it-ranks.js` and the generator's page scaffolding came out with them. `site.css` still carries the `.rk-vs`, `.rk-chips` and `.rk-board` rules those pages wore; they are dead and can go on the next stylesheet pass.
+
 **The design system changed on 2026-10-08.** Paper-white ground, one navy band (header ribbon, KPI band, footer), one teal accent (#0b4f6c), green only for a positive market edge, amber only for a disclosure label, and one self-hosted family (Geist, `/fonts`). The homepage at `/` is a ledger-style front (hero with the search field, six position tiles, the newest desk pieces, two lane tiles for DFS and season long, three How-it-works cards, the KPI band) and takes the shared chrome from `tools/build-chrome.mjs` like every other page. The brief, the generic-default removal list and the post-build critique are in `docs/design/brief.md`. Token NAMES in `site.css` were kept and their VALUES moved: `--gold`/`--goldink` are the amber label now, `--mast` is the navy, `--mast-accent` the mint. The cover rotation, the hero photograph, the lead story and the lane cards came off the homepage with it; tools/test-homepage.mjs asserts the new composition.
 
 **The league-platform connectors were removed on 2026-09-18.** Sleeper, Yahoo, CBS and the ESPN placeholder are gone, and with them the OAuth flow, the sealed provider tokens, the scheduled refresh and the CBS browser extension: none of them ever carried a reader's league in production. What stays is the half that works and that main is still building on — the league model, the player crosswalk, `POST /api/leagues/manual`, every personalized module and My Week. A league is the reader's own entry now: typed, pasted, or read off a roster-grid screenshot. See §89, and `docs/saved-league.md` for the long record.
@@ -6769,7 +6773,7 @@ Every player carries three numbers, and the distinction is the product:
 
 | Board | What it is |
 |---|---|
-| **Consensus** | The committed projection spread over the games he can play. Odds-blind, flat across weeks. A pro-rated row (§48) is un-rated first and divided by the games he actually plays. |
+| **Consensus** | The committed projection spread per game. Odds-blind, flat across weeks. A pro-rated row (§48) is un-rated first and divided by 17; the games he is listed to miss come off the window, not out of the divisor (until 11 Oct 2026 the full line was divided by the games he could still play, which overpaid every listed player per game). |
 | **Vegas** | The market, in strictly descending order of evidence: a priced player prop for the week (`props`); the posted game line's implied scoring environment applied to his line (`gamelines`); the fitted team ratings for a fixture no book has posted (`ratings`, graded LOW because it is a projection *of* the market). `basis` says which, on every row. |
 | **Iron Tuna** | The blend, weighted by what the Vegas side knows (`IT_BLEND`: 0.75 / 0.6 / 0.45 by confidence), plus a bounded role nudge once three games of usage exist. |
 
@@ -13755,7 +13759,265 @@ each of those two horizons; and a go / no-go recommendation.
   session; a symlink to `/opt/node-tools/node_modules/playwright-core`
   inside an (ignored) `node_modules/` lets the browser gates run.
 
-## 130. October 10: the trade engine measures every slot against the wire
+## 131. October 11: the Trade Evaluator's gauge, made easier to follow
+
+**The report.** A screenshot of the gauge under "Don't do it." with the ask
+"make this clearer, simpler, easier to follow". What was hard: three
+different per-week figures with no visible link between them (the verdict's
+6.4, the call's weighted 8.3, the rows' 11.9 and 6.4); every row repeating
+its figure in prose ("−11.9 pts / week for you" beside "+11.9 a week against
+−11.9 for you"); and one situation cell carrying an instruction, the weights
+and the roster fit in a single run of text, with "Fills a need" in bold under
+a No go.
+
+- **Every figure names its horizon.** `verdictOf` appends the reader's
+  horizon to its figure (`OVER`: "over the rest of the season", "over the
+  next 3 weeks", "this week", "in the fantasy playoffs"), so the verdict's
+  number is visibly the rest-of-season row's number. "Helps X" became
+  "improves X's".
+- **The call's sentence carries one figure.** `gaugeWhy` says "A clear
+  loss: −8.3 pts a week for you." and nothing about the weighting; the
+  weights live in the situation row alone. The label is "For you".
+- **Four rows, figures not prose.** Rows are labelled by horizon ("Next 3
+  weeks", "Rest of season" or "Fantasy playoffs"), the reader's figure is
+  "−11.9 for you", and the words cell lists every other side as "Name
+  +x.x" with the team helped most in bold; a lead word only when the figures
+  alone would not say it ("Nobody gains.", "About even.", "Helps you most.",
+  and "Helps X most." in a deal with more than one other side). The
+  situation row keeps the status word, the weights ("Counts the next 3 weeks
+  35% and rest of season 65%") and the source. The fit is its own row,
+  "Lineup fit", with a figure of its own: Fills a need, Opens a hole, No
+  change, or Not known (no roster entered).
+- **Tests.** `test-trade-finder-page.mjs` 165 → 166, rewritten to the four
+  rows; the `IT_SHOT` gauge copy is now `#tf-results` whole, because the
+  element shot of `#tf-gauge` was clipped by the sticky masthead.
+
+## 130. October 10: the D1 read allowance, spent a third time; the market digest
+
+**The report.** "On the trade evaluator tool, I am typing in a player's name,
+but it is not auto populating." On a phone. The type-ahead was fine (its own
+phone bug, the list opening under the keyboard, is PR #414); the box had no
+players because `/api/boards` was answering `503 no_schedule`, and so was
+`/api/season`, on most requests and not all. A read of the live database from
+this session named the cause again: `D1_ERROR: Your account has exceeded D1's
+free tier daily row read limit`. The schedule row (odds_overlay 4) was there
+and 13 hours old; the hourly refresh had been failing for as long, for the
+same reason. The requests that still answered 200 came from isolates holding a
+schedule memo; every isolate whose memo expired read D1, was refused, and
+served `no_schedule` until midnight UTC.
+
+**What spent it.** Not one query but a cadence. Three reads over
+`odds_snapshots` ran on the request path and in cron, each bounded by an
+index and each repeated on a timer: the week's history (`_marketHistoryWeekRead`,
+up to 40,000 rows) under a five-minute memo per isolate; the prior weeks'
+subjects (`marketSubjectsBefore`) under ten; the slate's game lines
+(`marketHistoryGames`) with no memo of its own. Every warm isolate paid them
+again every five minutes, every cold isolate (a visitor or crawler landing on a
+new colo) paid them on arrival, and the quarter-hour cron paid them on every
+tick in its own isolate, where the memo had always expired. One warm isolate
+re-reading a 20,000-row week every five minutes is 5.8M rows a day on its own;
+the allowance is 5M. Section 120's fix (the GROUP BY on every pull) was real,
+and left this standing. Not polling: nothing on the site polls a D1-backed
+route, and the admin traffic page, which makes nine passes over `page_views`
+per load, only loads on demand.
+
+**Measured, 00:16 UTC October 11, once the allowance came back** (D1's
+`meta.rows_read` on each query, run from the session): the week-5 history
+read scans 18,432 rows; the prior-weeks (3 and 4) subject read scans 40,442;
+the slate's game lines about 130 (30 games, through `ix_snap_subject`); one
+player card (`marketHistoryAll`) 624; the whole store is only ~85,000 rows
+(ids 1 to 85,220); Tuna Market's 24-hour window 196; `page_views` holds 922
+rows for the last seven days, so the admin page's nine passes over 90 days
+are on the order of 100,000 per load. Both week reads use `ix_snap_week`
+(EXPLAIN QUERY PLAN), so the cost is the repetition, not a missing index: one
+warm isolate pays 18,432 every five minutes and 40,442 every ten, 464,000 an
+hour, 11M a day; the quarter-hour cron, whose memo has always expired by the
+next tick, pays about 59,000 a tick, 5.6M a day on its own, visitors or not.
+The job log agrees: the last successful run before the refusal was 07:01 UTC
+on October 10, seven hours into the allowance day, and no job logged a row
+again until 22:00 UTC. With the digest the pull pays 18,432 per run (ten to
+fifteen a day) and the prior set 40,442 once a week: about 250,000 a day.
+
+**The change: the pull builds a digest, everything else reads it.**
+`odds_snapshots` changes only when `runMarketSnapshot` writes it (eight to
+fifteen times a day), so that is the one place that reads it. After every
+pull, `runMarketDigest` → `marketDigestBuild` reads the week's history, the
+prior weeks' subject set and the slate's game lines once, and stores the
+result (`{ v, builtAt, season, week, markets, priorKey, priorSubjects,
+gameIds, games }`) in `market_digest`, chunked at 1.5 MB per row because D1
+caps a row at 2 MB, written as one batch so a reader never sees half of it.
+
+- **Readers.** `marketHistoryWeek`, `marketSubjectsBefore` and
+  `marketHistoryGames` take the digest first (`marketDigestRead`, a two- or
+  three-row read memoized five minutes per isolate) and fall back to the store
+  exactly as before only for what it does not hold: a requested past week
+  (`/api/market?week=`), a game outside the digested slate, or the hours
+  between the week turning on Tuesday and the next pull.
+- **The prior-week set** is reused from the stored digest while its weeks are
+  unchanged, so that read costs once a week rather than once a pull.
+- **The job.** `market-digest` is in `JOB_FNS` for the admin rerun button; it
+  is not scheduled on its own, because a run costs the three reads and the
+  pull already runs it. The health board reports `updates.marketDigest`
+  (built when, for which week, how many subjects and games, and `current`,
+  false when the clock has moved past the digested week).
+- **The bill.** Request isolates and cron ticks now read a few rows per five
+  minutes instead of tens of thousands. The pull reads the week once per run:
+  at 15 runs on a Sunday and a 40,000-row week that is 600,000 rows, inside
+  the allowance with room for the rest of the site.
+
+**Not changed.** `marketHistoryAll` on the player card reads one subject
+through `ix_snap_subject`, a few hundred to two thousand rows per card; a
+crawler walking every card is the next thing to look at if the allowance is
+spent again. The admin traffic route is unchanged. Workers Paid is still the
+right move: it makes the free allowance a non-event and the store's growth
+stops being a daily risk.
+
+**Tests.** `tools/test-market.mjs` gains the digest: a store with two pulls
+across three weeks and two games is digested; the three readers answer from
+it with zero snapshot rows scanned and the same answers the store gives; a
+past week, a game outside the slate, and a store with no digest fall back to
+the store; the digest survives being chunked across rows; the prior-week set
+is reused when its weeks are unchanged and rebuilt when they are not.
+
+---
+
+## 131. October 10: the front page prices off this week's props, and the zero that was not a figure
+
+Ken: *"Why are 0 priced off of the market line?"* The band read "345 Players
+ranked this week" beside a mint "0 Priced off a market line".
+
+**What the zero was.** The count came off `priced` on `/api/rankings`, which
+under contract 1 meant the SEASON overlay (`odds_overlay` row 1, written by
+the 7 AM `odds-refresh`) had moved the man's line. `oddsCacheRead` ignores a
+row older than `ODDS_MAX_AGE_MS` (14 days), so a fortnight of the daily pull
+failing takes the count from ~280 to 0 with no signal in between, and
+`paintKpi` printed the 0 in mint as if the market had priced nobody. Run
+offline against today's nflverse file the pull itself succeeds (93 priced
+games, 373 players matched), so the failure is the one §68p already named: the
+worker is on the legacy Bundled usage model and the cron invocation is being
+killed mid-job. The missing "(Week N)" beside the ranked count said the
+schedule row was gone the same way.
+
+**Two separate pipelines, and the front page was on the wrong one.** PropLine
+(`TMS_PROVIDER=propline`, free current-odds tier, §98) polls hourly and writes
+`odds_snapshots`, which `marketHistoryWeek` reads and the week boards, Vegas
+Edge, DFS and The Line price from. None of that reached the season overlay, so
+the homepage could count a man priced off a team scoring factor while the week
+board priced him off his own prop, or vice versa.
+
+**What changed.**
+- `rankingsPayload` is **contract 2**: `priced` means a book quoted a market on
+  this man this week, off the same read and the same join (normalized name,
+  ambiguous names get nothing) `buildMarketRecords` uses. Each row carries
+  `propMarkets`; the payload carries `props: { live, season, week, players,
+  asOf }`, `live` when at least one board player is quoted. `marketBoard` and
+  `statsMarket` still describe the season overlay. `_propsQuoted` is the
+  helper.
+- `front.html` reads `props.live`: the cell is "Priced off a prop this week",
+  it is dropped (null) when the store is empty, and the position tiles print
+  "N ranked" without a priced count in the same state. The band never prints
+  a 0 it cannot stand behind.
+- `tools/test-homepage.mjs` carries `props` on the rankings fixture and a
+  "board with no market behind it" scenario (154 → 155).
+
+**The real cause, and §68p corrected.** The dashboard's Usage page showed
+"Requests today 7,513 / 100,000" and an Upgrade button: the account was on
+the Workers FREE plan, not a legacy Bundled model. Free gives 10 ms of CPU per
+request and per cron invocation and cannot be raised, which is why `limits`
+was refused in September and why every pull that parses a file died with no
+exception. The ten days to October 10 read 737,990 ms of CPU over 69,620
+invocations, about 10.6 ms each: a worker pinned at the ceiling. Ken upgraded
+to Workers Paid on 2026-10-10 (30 s default, 10M requests and 30M CPU ms
+included; this site runs about 210k requests and 2.2M CPU ms a month) and
+`"limits": { "cpu_ms": 300000 }` is in `wrangler.jsonc` again.
+
+**What to watch after the deploy.** `props` on `GET /api/health` must read
+`live` within a poll cycle; `empty` means the `PROPLINE_API_KEY` secret is not
+set on the worker. The schedule row refills on the hourly tick and the season
+overlay at 7 AM ET; `/api/admin/odds-status?key=&refresh=1` and
+`/api/admin/season-status?key=&refresh=1` seed both without waiting. The Odds
+API stays unconfigured; PropLine covers the props and is the feed the boards
+already read.
+
+## 132. October 11: the Trade Finder argues each side before it offers a trade
+
+Ken: *"The trade finder is proposing stupid trades that no one would ever
+accept. Before presenting any trade, do a full analysis from each side's
+perspective on why that team would want the trade. Unless your analysis shows
+from that party's perspective that they would want the deal, don't recommend
+it."*
+
+**What was being offered.** The search (§61a) kept every swap where both
+lineups gained `minGain` a week on their own horizon, and the slider at *In my
+favor* ranked the survivors by the reader's gain alone. On the test fixture
+that put this first: the reader's fourth back and a bench receiver for the
+Mirror's best player and a starting back. The Mirror's lineup "gained" 0.63 a
+week, because the receiver it lost was replaced by its fourth receiver and
+the back it got started. It also sent the best player in the deal and five
+points a week more projection than came back, and no manager does that for a
+rounding error. The lineup floor was necessary and not sufficient; the bench
+weights (0.25 / 0.15 / 0.08, then nothing) were the hole, since a deep team's
+fourth starter-grade back was worth nothing to the engine and therefore free
+to send.
+
+**The case (`judgeSide` in `it-trade.js`).** One side of a trade, argued from
+that manager's chair, returning `{ accept, why, against, ... }` with the
+reasons as sentences the page prints. A side is refused when:
+
+- the lineup does not gain the floor on its own horizon (unchanged);
+- it sends the best player in the deal (by points a week on *its* clock) and
+  the lineup gains less than twice the floor for it;
+- it sends more projection than it gets back by more than the floor and more
+  than twice what the lineup gains;
+- it must open a roster spot for a player worth no more than the one it would
+  cut to make room (the cut line is the least valuable player on the roster
+  after the trade, one per spot opened);
+- the trade opens a hole at a position it had filled;
+- its gain is under two points a week and under thirty percent of the other
+  side's;
+- it is scored on this week or the next three, and the deal costs it more over
+  the season (`opts.season`, default `ros`) than twice what it earns now. A
+  bubble team buys now; it does not give the season away for a rental.
+
+A thin bench afterward is noted in `against`, not disqualifying. `findTrades`
+runs both cases on every swap that clears the floor, drops the trade if either
+side refuses, and returns `refused` beside `considered`. It also drops
+**padding**: a package carrying a pair neither side would start swapped for
+each other, or two near-equal players at one position swapped straight across
+(under twice the floor on both clocks). Such a pair is worth a fraction of a
+point of bench weight, enough to rank the padded package above the clean one,
+so the clean one is what gets offered. `evaluateTrade` carries `A.case` and
+`B.case` and an `accept`; `opts.otherGain` (a number or `{ a, b }`) lets a
+caller scoring one team of a bigger deal pass in what the others gain.
+`opts.label(h)` supplies the words for a horizon in the reasons.
+
+**The page.** Under each side's lineup lines, *Why you would do it* / *Why
+they would do it* lists that side's reasons; a trade the reader typed can come
+back *Why they would say no* with the objections first, and the verdict then
+reads "Both lineups gain, but expect a no." with the first objection, and the
+alternatives search runs. The Finder loads the `ros` board alongside the
+horizons in play so the season check has points; the Evaluator judges in two
+passes so each side's case knows the most any other side gains. The results
+note and empty state say how many swaps improved both lineups on paper and
+were set aside. The notes-to-model summary hands over each side's case so the
+read cannot argue a trade the other manager would refuse. A paragraph under
+*How these trades are judged* states the rules.
+
+**Tests.** `tools/test-trade-finder.mjs` (168): the fixture's old top tilted
+trade is refused by the Mirror for all three reasons, and the reader's case
+for it is printed; the clean one-for-one is accepted by both with no
+objection; a throw-in under the cut line is refused; a bubble team is told
+what a rental costs over the season; at tilt 0 and 1 every trade found
+carries two accepted cases, nobody sends the best player for under twice the
+floor, nobody is paid under thirty percent without a clear win of their own,
+`refused` is reported, and the lineup lines are the case's lines; no package
+carries a lateral same-position swap; `judgeSide` stands alone and agrees
+with `evaluateTrade`. `tools/test-trade-finder-page.mjs` (170, browser, not
+in CI): every side card carries an accepted case headed for the right
+manager, the first reason is the lineup on that team's horizon, the note says
+why swaps were set aside, and at full tilt no partner is paid a fraction of
+the reader's gain.
+## 133. October 10: the trade engine measures every slot against the wire
 
 **The brief.** The Finder offered the reader three trades, every one their
 best receiver for a lesser receiver plus a throw-in, and called each a gain

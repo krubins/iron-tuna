@@ -35,34 +35,70 @@
 <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <style>
-/* ── the trade tools, on the October system ───────────────────────────────
-   2026-10-10: this page was swept onto site.css with the rest of the section
-   and still read as a stack of tinted rounded panels with white cards inside
-   them, glow rings on the chosen tab and the reader's team, a colour bar
-   down the left of every result, a dashed emoji button and 800-weight
-   labels. None of that is the homepage's system. The rules below are the
-   homepage's: paper white, hairline rules and whitespace do the grouping,
-   the only enclosed surfaces are the team boxes (a form) and the reader's
-   own box (the tinted plate with the 3px navy rule), squared controls at
-   4px, sentence-case labels at 13 or 14px, and one 28px key figure per cell
-   set in ink. The class names did not change: tools/test-trade-finder-page.mjs
-   drives the page by them. */
+/* ── the trade tools, in the homepage's composition ─────────────────────────
+   2026-10-10 swept this page onto site.css's materials (paper, hairlines,
+   squared controls) and it still read as a form document: a left-aligned
+   eyebrow and headline in a narrow column, a text tab bar, three numbered
+   panels of boxes and a wall of method prose. Ken, 2026-10-11: make it look
+   like the landing page. So the page now wears what front.html wears, by
+   way of `body.ln-front` in site.css (the block /fantasy and /dfs took the
+   same day): the white centred hero with the one headline, one sentence,
+   the search field and text-link entry points; section heads at 28px with
+   the one link on the right; the two tools as illustrated tiles in the
+   season-long lane's own palette (the "Trade Tools" tile on the homepage is
+   where a reader came from); the steps as sections on hairlines with the
+   team boxes as the homepage's outlined cards; and the method as the
+   How-it-works row, a tagline over three cards. Every id and class the page
+   script and tools/test-trade-finder-page.mjs drive is unchanged; what moved
+   is the markup around them and the rules below. */
 body{overflow-x:hidden}
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
-.wrap.wide{max-width:1080px}
+/* The UA sheet's [hidden] is (0,1,0), the same as any class, and loses to an
+   author sheet at a tie: `.tf-gauge{display:grid}` would show an emptied
+   gauge. front.html, /fantasy and /dfs carry the same one-line fix. */
+[hidden]{display:none !important}
 
-/* The page head, in the hero's own type: one headline, one sentence. */
-.art-head{padding-top:var(--space-6)}
-.eyebrow{font-size:var(--fs-14);color:var(--muted);margin:0 0 var(--space-3)}
-h1{font-size:clamp(34px,4.2vw,56px);font-weight:700;line-height:1.05;letter-spacing:-.03em;margin:0 0 var(--space-4);max-width:20ch}
-h2{font-size:var(--fs-28);margin:var(--space-6) 0 var(--space-3);letter-spacing:-.01em}
-.lede{font-size:var(--fs-19);color:var(--sec);margin:0 0 var(--space-6);max-width:56ch;line-height:1.5}
-p{color:var(--sec);margin:0 0 var(--space-4)}
+/* ── 1 · the hero ─────────────────────────────────────────────────────────
+   site.css draws it (body.ln-front .hm-hero and its children). The rule is
+   the hero's last line and the first section sits 48px under it, the air the
+   homepage gives the position tiles when the market band is hidden. */
+.hm-rule+.ln-state+.hm-sec,.hm-rule+.hm-sec{margin-top:var(--sp-48)}
+/* The league strip rides between the rule and the first section. */
+.ln-state{padding-top:var(--sp-16)}
+.ln-state:has(> [hidden]:only-child){display:none}
 
-/* Buttons: squared, 44px, one primary per view. The secondary is white with
-   the control border, as the system's .btn-secondary. */
+/* ── 2 · the two tools, as tiles ──────────────────────────────────────────
+   The tab list is two buttons; each is one of the homepage's lane tiles, the
+   illustration in the season-long palette, the name and one line over the
+   dark fade at the foot. The chosen tool carries the 3px teal bar under its
+   tile, which is how the header marks the current page; the other tile
+   stands back at 62% until it is hovered. Nothing glows and nothing is
+   boxed. */
+.tf-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-24);margin:0;padding:0;border:0}
+.tf-tabs button{appearance:none;display:block;width:100%;margin:0;padding:0 0 var(--sp-12);border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;color:#fff;font:inherit;text-align:left;cursor:pointer}
+.tf-tile{position:relative;display:block;aspect-ratio:2/1;border-radius:10px;overflow:hidden;background:var(--t1);transition:opacity .15s ease}
+.tf-tile svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.tf-tile-cap{position:absolute;left:0;right:0;bottom:0;padding:var(--sp-48) var(--sp-24) var(--sp-24);background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.72))}
+.tf-tile-cap b{display:block;font-size:var(--fs-28);font-weight:600;line-height:1.15;letter-spacing:-.01em;color:#fff}
+.tf-tile-cap span{display:block;font-size:var(--fs-16);color:rgba(255,255,255,.86);margin-top:4px;line-height:1.4}
+.tf-tabs button[aria-selected="false"] .tf-tile{opacity:.62}
+.tf-tabs button:hover .tf-tile{opacity:1}
+.tf-tabs button:hover .tf-tile-cap b{text-decoration:underline}
+.tf-tabs button[aria-selected="true"]{border-bottom-color:var(--teal)}
+.tf-tabs button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+@media(max-width:600px){
+  .tf-tabs{gap:var(--sp-12)}
+  .tf-tile{aspect-ratio:1/1}
+  .tf-tile-cap{padding:var(--sp-48) var(--sp-16) var(--sp-16)}
+  .tf-tile-cap b{font-size:var(--fs-19);line-height:1.2}
+  .tf-tile-cap span{font-size:var(--fs-13);margin-top:2px}
+  .tf-tile-bars{display:none}
+}
+
+/* The primary button and its secondary: squared, 44px, one primary per view,
+   as site.css's .btn-primary and .btn-secondary. */
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;background:var(--teal);color:#fff;font:inherit;font-size:var(--fs-16);font-weight:600;border-radius:var(--radius-sm);padding:0 var(--space-5);border:1px solid var(--teal);cursor:pointer;line-height:1.2;white-space:nowrap}
 .btn:hover{background:var(--teal-hover);border-color:var(--teal-hover);color:#fff;text-decoration:none}
 .btn.alt{background:#fff;color:var(--text);border-color:var(--line2)}
@@ -71,20 +107,21 @@ p{color:var(--sec);margin:0 0 var(--space-4)}
 .btn[disabled]{opacity:.45;cursor:default;filter:none}
 .cta-row{display:flex;gap:var(--space-3);flex-wrap:wrap;align-items:center;margin:var(--space-5) 0 0}
 
-/* ── the two tools ──────────────────────────────────────────────────────────
-   A tab row on a hairline, as the header marks the current page: the chosen
-   tool carries a 3px bar at the foot of its tab, nothing is boxed and nothing
-   glows. The description stays under each name at 14px. */
-.tf-tabs{display:flex;gap:0 var(--space-6);flex-wrap:wrap;margin:0;border-bottom:1px solid var(--line)}
-.tf-tabs button{appearance:none;font:inherit;cursor:pointer;flex:0 1 auto;max-width:34ch;text-align:left;border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;color:var(--text);padding:var(--space-3) 0 var(--space-4);margin-bottom:-1px;display:flex;flex-direction:column;gap:3px}
-.tf-tabs button b{font-size:var(--fs-19);font-weight:600;line-height:1.2;color:var(--muted)}
-.tf-tabs button span{font-size:var(--fs-14);color:var(--muted);font-weight:400;line-height:1.4}
-.tf-tabs button:hover b{color:var(--text)}
-.tf-tabs button[aria-selected="true"]{border-bottom-color:var(--teal)}
-.tf-tabs button[aria-selected="true"] b,.tf-tabs button[aria-selected="true"] span{color:var(--text)}
-.tf-tabs button:focus-visible{outline:3px solid var(--focus);outline-offset:-3px}
-#tf-flow{display:flex;flex-direction:column;margin-top:0}
-#tf-flow .tf-step{margin:0}
+/* ── 3 · the synced league ────────────────────────────────────────────────
+   One of the homepage's outlined cards, because a live sentence has to sit
+   somewhere: shown only once the reader's league has answered. */
+#tf-synced .hm-input h3{margin:0 0 var(--sp-8);font-size:var(--fs-23);font-weight:600;letter-spacing:-.01em;line-height:1.2}
+#tf-synced .hm-input>p{margin:0;font-size:var(--fs-16);color:var(--ink-2);line-height:1.5;max-width:72ch}
+#tf-synced .cta-row{margin-top:var(--sp-16)}
+#tfMatches h3{font-size:var(--fs-19);font-weight:600;margin:var(--sp-24) 0 var(--sp-8)}
+
+/* ── 4 · the steps ────────────────────────────────────────────────────────
+   Each step is a section on a hairline, headed the way the homepage heads a
+   section: the name at 28px on the left and the one control that belongs to
+   the head (the team count, which the script moves to whichever step comes
+   first) on the right. The instruction is one sentence under the head in
+   the secondary ink, then the boxes. */
+#tf-flow{display:flex;flex-direction:column}
 #tf-flow[data-tool="evaluator"] #tf-deal{order:1}
 #tf-flow[data-tool="evaluator"] #tf-rosters{order:2}
 #tf-flow[data-tool="evaluator"] #tf-context{order:3}
@@ -92,24 +129,22 @@ p{color:var(--sec);margin:0 0 var(--space-4)}
 #tf-flow[data-tool="finder"] #tf-rosters{order:1}
 #tf-flow[data-tool="finder"] #tf-context{order:2}
 #tf-flow[data-tool="evaluator"] #tf-find,#tf-flow[data-tool="finder"] #tf-eval{display:none}
-
-/* ── the steps ──────────────────────────────────────────────────────────────
-   Each step is a section under a hairline, not a panel: a 23px heading, the
-   instruction in 16px secondary, then the boxes. */
-.tf-step{border:0;border-top:1px solid var(--line);border-radius:0;padding:var(--space-6) 0 var(--space-5);background:transparent;margin:0}
-/* The first step under the tab row sits on the row's own hairline. With the
-   synced-league box shown above the flow, that box takes the place and the
-   first step gets its rule back. */
-.tf-step:first-child,#tf-flow .tf-step:first-child,#tf-synced{border-top:0}
-#tf-synced:not([hidden])~#tf-flow .tf-step:first-child{border-top:1px solid var(--line)}
-.tf-step h3{margin:0 0 var(--space-2);font-size:var(--fs-23);font-weight:600;letter-spacing:-.01em;line-height:1.2}
-.tf-step h3 .opt{font-weight:400;color:var(--muted);font-size:var(--fs-16);letter-spacing:0}
-.tf-step p.sub{margin:0 0 var(--space-4);font-size:var(--fs-16);color:var(--sec);max-width:72ch;line-height:1.5}
+.tf-step{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:var(--sp-24);align-items:baseline;margin:var(--sp-48) 0 0;padding:var(--sp-32) 0 0;border-top:1px solid var(--line);background:transparent;border-radius:0}
+.tf-step>*{grid-column:1/-1;min-width:0}
+.tf-step>h3{grid-column:1;margin:0 0 var(--sp-12);font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.15}
+.tf-step>h3 .opt{font-weight:400;color:var(--ink-3);font-size:var(--fs-16);letter-spacing:0}
+.tf-step>#tf-count-row{grid-column:2;grid-row:1;justify-self:end;margin:0 0 var(--sp-12)}
+.tf-step p.sub{margin:0 0 var(--sp-16);font-size:var(--fs-16);color:var(--ink-2);max-width:72ch;line-height:1.5}
 .tf-row{display:flex;gap:var(--space-3) var(--space-5);flex-wrap:wrap;align-items:center;margin:var(--space-3) 0}
 .tf-lab{font-size:var(--fs-14);color:var(--text);font-weight:600;margin-right:2px}
 .tf-pair{display:inline-flex;align-items:center;gap:var(--space-2)}
-.tf-status{font-size:var(--fs-14);color:var(--muted);margin:var(--space-2) 0 0;min-height:1.2em}
+.tf-status{font-size:var(--fs-14);color:var(--muted);margin:0 0 var(--space-2);min-height:1.2em}
+.tf-status:empty{display:none}
 .tf-status.err{color:var(--danger)}
+@media(max-width:640px){
+  .tf-step{grid-template-columns:1fr;margin-top:var(--sp-32);padding-top:var(--sp-24)}
+  .tf-step>#tf-count-row{grid-column:1;grid-row:auto;justify-self:start}
+}
 
 /* Segmented controls: squared, the chosen segment ink-filled, as site.css
    draws .is-seg. */
@@ -127,24 +162,41 @@ select.tf-sel{font:inherit;font-size:var(--fs-16);min-height:40px;padding:0 var(
 .tf-slider{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
 .tf-slider input[type=range]{width:220px;accent-color:var(--teal)}
 .tf-slider .end{font-size:var(--fs-14);color:var(--muted);font-weight:600}
+/* Your focus (2026-10-11): one slider with four stops rather than four
+   segments, because the question is one dial, from the nearest week to the
+   whole season, not four unrelated choices. The stop labels sit under the
+   thumb: the grid is 1fr 2fr 2fr 1fr so the two middle labels centre on 1/3
+   and 2/3 of the track, where the thumb lands, and the end labels hug the
+   ends. The labels are buttons too, so a tap picks a stop without dragging. */
+.tf-focus{flex:1 1 280px;max-width:540px}
+.tf-focus input[type=range]{display:block;width:100%;margin:0;min-height:40px;accent-color:var(--teal)}
+.tf-focus-stops{display:grid;grid-template-columns:1fr 2fr 2fr 1fr;margin-top:2px}
+.tf-focus-stops button{appearance:none;border:0;background:transparent;padding:4px 0;font:inherit;font-size:var(--fs-13);font-weight:600;line-height:1.25;color:var(--muted);cursor:pointer;text-align:center}
+.tf-focus-stops button:first-child{text-align:left}
+.tf-focus-stops button:last-child{text-align:right}
+.tf-focus-stops button:hover{color:var(--text)}
+.tf-focus-stops button[aria-pressed="true"]{color:var(--teal);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+.tf-focus-stops button:focus-visible{outline:3px solid var(--focus);outline-offset:1px;border-radius:2px}
+.tf-focus-note{font-size:var(--fs-14);color:var(--muted);margin:4px 0 0;min-height:1.2em}
 textarea.tf-paste{width:100%;min-height:200px;padding:var(--space-3);border-radius:var(--radius-input);border:1px solid var(--line2);background:#fff;color:var(--text);font:inherit;font-size:var(--fs-16);line-height:1.5;resize:vertical}
-textarea.tf-factors{min-height:110px}
+/* The notes box is a paragraph's width, not the page's. */
+textarea.tf-factors{min-height:110px;max-width:880px;display:block}
 textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,.tf-slots input:focus,select.tf-sel:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-tint)}
 .tf-more{margin-top:var(--space-5);border-top:1px solid var(--line);padding-top:var(--space-4)}
 .tf-more summary{cursor:pointer;color:var(--teal);font-weight:600;font-size:var(--fs-16)}
 .tf-more[open] summary{margin-bottom:var(--space-3)}
-#tf-settings{border-top:1px solid var(--line);padding-top:var(--space-4)}
 
-/* ── the team boxes ─────────────────────────────────────────────────────────
-   The form: one outlined box per team, white, a hairline border, 10px. The
-   reader's own team is the tinted plate with the 3px navy rule, which is how
-   every board in the section marks its one enclosed surface; no ring. */
-.tf-teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:var(--space-4);margin-top:var(--space-4)}
-.tf-team{border:1px solid var(--line);border-top:3px solid var(--line);border-radius:var(--radius-md);padding:var(--space-4);background:#fff;position:relative}
+/* ── 5 · the team boxes ───────────────────────────────────────────────────
+   The homepage's outlined card (white, a hairline, 10px, 24px inside) once
+   per team. The reader's own team is the tinted plate with the 3px navy
+   rule, which is how every board in the section marks its one enclosed
+   surface; no ring. */
+.tf-teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--sp-24);margin-top:var(--sp-8)}
+.tf-team{border:1px solid var(--line);border-top:3px solid var(--line);border-radius:10px;padding:var(--sp-24);background:var(--card);position:relative;min-width:0}
 .tf-team.mine{border-color:var(--panel);border-top-color:var(--mast);background:var(--panel)}
 .tf-team.over{border-color:var(--teal);background:var(--teal-tint)}
 .tf-team-h{display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-2)}
-.tf-team input.nm{width:100%;font:inherit;font-weight:600;font-size:var(--fs-16);border:1px solid transparent;border-radius:var(--radius-input);padding:4px 6px;margin:-4px -6px 6px;background:transparent;color:var(--text)}
+.tf-team input.nm{width:100%;font:inherit;font-weight:600;font-size:var(--fs-19);letter-spacing:-.005em;border:1px solid transparent;border-radius:var(--radius-input);padding:4px 6px;margin:-4px -6px 6px;background:transparent;color:var(--text)}
 .tf-team .tf-team-h input.nm{flex:1 1 auto;width:auto;min-width:0;margin:-4px 0 0 -6px}
 .tf-team input.nm:hover{border-color:var(--line2);background:#fff}
 .tf-mine-pick{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-13);font-weight:600;color:var(--text);white-space:nowrap;cursor:pointer}
@@ -182,21 +234,24 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
 .tf-shot:hover{background:var(--panel)}
 .tf-team.mine .tf-shot:hover{background:var(--elev)}
 .tf-shot input{display:none}
-.tf-send-h{font-weight:600;font-size:var(--fs-16);margin-bottom:var(--space-2)}
+button.tf-shot{font-family:inherit;line-height:inherit}
+.tf-shots{display:flex;flex-wrap:wrap;gap:0 var(--space-2)}
+.tf-send-h{font-weight:600;font-size:var(--fs-19);letter-spacing:-.005em;margin-bottom:var(--space-2)}
 .tf-send-h span{font-weight:400;font-size:var(--fs-14);color:var(--muted)}
 .tf-send-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin:4px 0}
 .tf-to{font-size:var(--fs-13);color:var(--muted)}
 .tf-to select{font:inherit;font-size:var(--fs-13);padding:3px 6px;border:1px solid var(--line2);border-radius:var(--radius-input);background:#fff;color:var(--text)}
 .tf-none{font-size:var(--fs-14);color:var(--muted)}
 
-/* ── the results ────────────────────────────────────────────────────────────
-   A hairline, then the figure row (a 13px label over the key figure, cells
-   divided by hairlines, as the homepage's market row), the verdict as a
-   heading and a sentence, and each trade as a ledger entry: a hairline above,
-   the two sides as columns with a hairline between. The gain is the one 28px
-   figure and it is set in ink either way: the verdict's words carry the
-   meaning, and green on this site is reserved for a positive market edge. */
-#tf-results{border-top:1px solid var(--line);margin-top:var(--space-6);padding-top:var(--space-5)}
+/* ── 6 · the results ──────────────────────────────────────────────────────
+   A section on a hairline: the figure row (a 13px label over the key
+   figure, cells divided by hairlines, as the homepage's market row), the
+   verdict as a heading and a sentence, and each trade as a ledger entry,
+   the two sides as columns with a hairline between. The gain is the one
+   28px figure and it is set in ink either way: the verdict's words carry
+   the meaning, and green on this site is reserved for a positive market
+   edge. */
+#tf-results{border-top:1px solid var(--line);margin-top:var(--sp-48);padding-top:var(--sp-32)}
 .tf-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--space-4) var(--space-5);border:0;border-radius:0;padding:0;background:transparent;margin:0 0 var(--space-6)}
 .tf-bar > span{display:block;min-width:0;border-left:1px solid var(--line);padding-left:var(--space-4)}
 .tf-bar > span:first-child{border-left:0;padding-left:0}
@@ -205,15 +260,16 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
 .tf-bar .v .s{font-size:var(--fs-14);color:var(--muted);font-weight:400;letter-spacing:0}
 .tf-verdict{border:0;border-radius:0;padding:0;background:transparent;margin:0 0 var(--space-5)}
 .tf-verdict h3{margin:0 0 var(--space-2);font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.15}
-.tf-verdict p{margin:0;font-size:var(--fs-16);max-width:72ch}
+.tf-verdict p{margin:0;font-size:var(--fs-16);color:var(--ink-2);max-width:72ch;line-height:1.5}
 /* ── the gauge ──────────────────────────────────────────────────────────────
    Under the verdict, two columns on a hairline. Left: the call (Go / No go)
    as the one 34px figure, a sentence, and the meter: a track in the elevated
    grey, the fill running from the centre to the needle (teal for the
    reader's gain, the danger brown for a loss, as site.css fills .is-meter
    and .is-meter.tight), hairline ticks at the ±0.75 pts/week zone edges, the
-   needle in ink. Right: three ledger rows, short term, long term, the
-   reader's situation, each a 13px label, a 19px figure and a sentence. */
+   needle in ink. Right: four ledger rows, the next three weeks, the rest of
+   the season, the reader's situation and the lineup fit, each a 13px label,
+   a 19px figure and a short line of words. */
 .tf-gauge{display:grid;grid-template-columns:minmax(260px,1fr) minmax(0,1.5fr);gap:var(--space-5) var(--space-7);border-top:1px solid var(--line);padding:var(--space-5) 0;margin:0 0 var(--space-2)}
 .tf-gauge .k{font-size:var(--fs-13);font-weight:400;color:var(--muted);display:block;line-height:1.4;margin-bottom:2px}
 .tf-call .v{font-size:var(--fs-34);font-weight:600;letter-spacing:-.02em;line-height:1.1;color:var(--text)}
@@ -228,7 +284,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
 .tf-meter .ends{display:flex;justify-content:space-between;font-size:var(--fs-13);color:var(--muted);margin-top:8px}
 .tf-meter .ends span:nth-child(2){text-align:center}
 .tf-meter .ends span:last-child{text-align:right}
-.tf-gauge-rows .row{display:grid;grid-template-columns:minmax(150px,.9fr) minmax(0,.7fr) minmax(0,1.7fr);gap:var(--space-3);padding:var(--space-3) 0;border-top:1px solid var(--line);align-items:baseline}
+.tf-gauge-rows .row{display:grid;grid-template-columns:minmax(120px,.7fr) minmax(0,.8fr) minmax(0,1.8fr);gap:var(--space-3);padding:var(--space-3) 0;border-top:1px solid var(--line);align-items:baseline}
 .tf-gauge-rows .row:first-child{border-top:0;padding-top:0}
 .tf-gauge-rows .row .v{font-size:var(--fs-19);font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.2}
 .tf-gauge-rows .row .v small{font-size:var(--fs-13);font-weight:400;color:var(--muted)}
@@ -255,25 +311,33 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
 .tf-side .give b{color:var(--text)}
 .tf-side .lines{font-size:var(--fs-14);color:var(--muted);margin-top:var(--space-2);line-height:1.5}
 .tf-side .lines.bare{color:var(--sec);font-style:normal}
+.tf-case{margin-top:var(--space-3);font-size:var(--fs-14);line-height:1.5;color:var(--sec)}
+.tf-case .h{font-weight:600;color:var(--text);margin-bottom:2px}
+.tf-case ul{margin:0;padding-left:1.1em}
+.tf-case li{margin:0 0 2px}
+.tf-case .but{margin:var(--space-2) 0 0;color:var(--muted)}
 .tf-alt{font-size:var(--fs-23);font-weight:600;letter-spacing:-.01em;margin:var(--space-6) 0 var(--space-3)}
 .tf-empty{color:var(--muted);font-size:var(--fs-16);border:0;border-top:1px solid var(--line);border-radius:0;padding:var(--space-5) 0 0;margin-top:0;line-height:1.5}
 .tf-note{font-size:var(--fs-14);color:var(--muted);margin:var(--space-4) 0 0;line-height:1.5;max-width:72ch}
 /* The model's read of the notes: under the numbers, labelled as an estimate
    with the amber disclosure label, no colour bar. */
 .tf-take{border:0;border-top:1px solid var(--line);border-radius:0;padding:var(--space-5) 0 0;background:transparent;margin-top:var(--space-5)}
-.tf-take p{max-width:72ch}
 .tf-take h3{margin:0 0 var(--space-3);font-size:var(--fs-19);font-weight:600}
-.tf-take p{margin:0 0 var(--space-3);font-size:var(--fs-16);color:var(--sec)}
+.tf-take p{margin:0 0 var(--space-3);font-size:var(--fs-16);color:var(--sec);max-width:72ch}
 .tf-take .tf-take-note,.tf-take .tf-take-wait{font-size:var(--fs-13);color:var(--muted)}
 .tf-take .is-tag{margin:0 0 var(--space-2)}
 
-/* The method, as prose under a hairline. */
-/* The rule runs the column; the prose stops at 72ch. */
-.method{border-top:1px solid var(--line);margin-top:var(--space-8);padding-top:var(--space-5)}
-.method p{max-width:72ch}
-.method h3{font-size:var(--fs-23);font-weight:600;letter-spacing:-.01em;margin:0 0 var(--space-3)}
-.method p{font-size:var(--fs-16);color:var(--sec);line-height:1.55;margin:0 0 var(--space-3)}
-.method b{color:var(--text)}
+/* ── 7 · the method, as How it works ──────────────────────────────────────
+   The homepage's last section: a 28px head, a 19px tagline, three outlined
+   cards (what a roster is worth, what the Evaluator scores, what the Finder
+   tries), and the rest of the method as prose in two columns under a
+   hairline, the lead of each paragraph in ink. */
+.method .hm-tagline{margin:0 0 var(--sp-24);font-size:var(--fs-19);color:var(--ink-2);max-width:60ch}
+.method .hm-input p{font-size:var(--fs-16)}
+.method-more{margin-top:var(--sp-32);padding-top:var(--sp-24);border-top:1px solid var(--line);columns:2;column-gap:var(--sp-48)}
+.method-more p{break-inside:avoid;margin:0 0 var(--sp-16);font-size:var(--fs-16);color:var(--ink-2);line-height:1.55}
+.method-more b,.method .hm-input b{color:var(--ink)}
+@media(max-width:860px){.method-more{columns:1}}
 
 @media(max-width:640px){
   .tf-sides,.tf-sides.multi{grid-template-columns:1fr;gap:var(--space-4)}
@@ -284,14 +348,13 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
   .tf-bar{grid-template-columns:1fr 1fr;gap:var(--space-4)}
   .tf-bar > span{border-left:0;padding-left:0}
   .tf-slider input[type=range]{width:160px}
-  .tf-tabs{gap:0 var(--space-5)}
-  .tf-tabs button{flex:1 1 100%;max-width:none;padding-bottom:var(--space-3)}
-  .tf-step{padding:var(--space-5) 0 var(--space-4)}
+  .tf-teams{gap:var(--sp-16)}
+  .tf-team{padding:var(--sp-16)}
 }
 </style>
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/trade-finder","name":"Trade Tools: Trade Evaluator and Trade Finder","description":"Judge a trade or find one. The Trade Evaluator scores every team in a proposed deal at your scoring, with the rosters optional. The Trade Finder takes two to four rosters, typed or screenshotted, and returns the trades that improve both lineups, each on its own horizon: this week, the next three, the rest of the season, or the fantasy playoffs.","url":"https://irontuna.com/trade-finder","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/trade-finder"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Trade Tools: Trade Evaluator and Trade Finder"}]}]}</script>
 </head>
-<body>
+<body class="ln-front">
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site"><!--chrome:line--><p class="site-line" aria-hidden="true"></p><!--/chrome:line--><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
@@ -317,28 +380,73 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
   </nav>
 <!--/chrome:tabbar-->
 </header>
-<main id="main" class="wrap wide">
-<div class="art-head">
-<div class="eyebrow">In-season &middot; Trade Tools</div>
-<h1 class="art-h1">Judge a trade, or find one</h1>
-<p class="lede">Two tools, one board. The Trade Evaluator takes a deal you have in hand and scores it for every team in it. The Trade Finder takes the rosters and returns the trades the other manager can also say yes to.</p>
-</div>
+<main id="main" class="wrap">
 
-<div class="tf-tabs" id="tf-tool" role="tablist" aria-label="Trade tools">
-  <button type="button" role="tab" data-tool="evaluator" id="tf-tab-evaluator" aria-selected="true" aria-controls="tf-flow"><b>Trade Evaluator</b><span>Judge a trade on the table. List the players; the rosters are optional.</span></button>
-  <button type="button" role="tab" data-tool="finder" id="tf-tab-finder" aria-selected="false" aria-controls="tf-flow"><b>Trade Finder</b><span>Fill in two to four rosters and Iron Tuna finds the trades both sides say yes to.</span></button>
-</div>
+<!-- ── 1 · the hero ─────────────────────────────────────────────────────────
+     front.html's, for this page: the one h1, one sentence, the search field
+     (the site's front door, with the shared typeahead off /player-search.js),
+     the entry points as text links, and the hairline. -->
+<section class="hm-hero" aria-labelledby="heroHead">
+  <h1 id="heroHead">Judge a trade, or find one.</h1>
+  <p class="hm-lede">The Trade Evaluator scores a deal on the table for every team in it. The Trade Finder takes the rosters and returns the trades the other manager can also say yes to. Both priced off the betting market, at your league&rsquo;s scoring.</p>
+  <form class="search-field hm-find" role="search" autocomplete="off" action="/player" method="get">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+    <input id="tfFind" name="q" type="search" placeholder="Rankings, waivers, DFS or a player" aria-label="Find rankings, waiver prices, DFS lineups or a player"
+           role="combobox" aria-expanded="false" aria-autocomplete="list" data-player-search="trade-finder" data-search-tools>
+  </form>
+  <ul class="hm-entry">
+    <li><a href="/rankings">Rankings &rarr;</a></li>
+    <li><a href="/faab">Waiver prices &rarr;</a></li>
+    <li><a href="/fantasy">Season long &rarr;</a></li>
+  </ul>
+  <hr class="hm-rule">
+</section>
 
-<div class="its-strip-sync" id="tfSync" hidden></div>
-<div class="tf-step" id="tf-synced" hidden>
-  <h3>Your league is synced</h3>
-  <p class="sub" id="tfSyncSub">Load your league and every team box below fills itself: type a team&rsquo;s name and its roster comes with it. The desk&rsquo;s own matches show here too.</p>
-  <div class="cta-row"><button class="btn" id="tf-load-league" type="button">Load my league&rsquo;s rosters</button><span class="tf-status" id="tf-load-status"></span></div>
-  <div id="tfMatches"></div>
-</div>
+<div class="ln-state"><div class="its-strip-sync" id="tfSync" hidden></div></div>
 
+<!-- ── 2 · the two tools ────────────────────────────────────────────────────
+     The tab list, as two of the homepage's lane tiles in the season-long
+     palette (the "Trade Tools" tile on the homepage is where a reader came
+     from). The chosen tool carries the 3px bar under its tile. The ids, the
+     roles and the data-tool attributes are what the page script and
+     tools/test-trade-finder-page.mjs drive. -->
+<section class="hm-sec" id="tools" aria-labelledby="toolsHead">
+  <div class="hm-sec-head">
+    <h2 id="toolsHead">Two tools, one board</h2>
+    <a href="#method">How the trades are judged &rarr;</a>
+  </div>
+  <div class="tf-tabs" id="tf-tool" role="tablist" aria-label="Trade tools">
+    <button type="button" role="tab" data-tool="evaluator" id="tf-tab-evaluator" aria-selected="true" aria-controls="tf-flow" style="--t1:#4a3a1c">
+      <span class="tf-tile">
+        <svg viewBox="0 0 400 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true" focusable="false"><rect width="400" height="200" fill="#4a3a1c"/><g transform="rotate(-7 300 70)"><path d="M232 70h136" stroke="#f3e2bf" stroke-width="7" stroke-linecap="round"/><path d="M232 70l-18 48M232 70l18 48" stroke="#f3e2bf" stroke-width="3" opacity=".8"/><path d="M368 70l-18 48M368 70l18 48" stroke="#f3e2bf" stroke-width="3" opacity=".8"/><rect x="204" y="118" width="56" height="8" rx="4" fill="#f3e2bf"/><rect x="340" y="118" width="56" height="8" rx="4" fill="#f3e2bf"/><rect x="220" y="92" width="24" height="26" rx="4" fill="#f2c14e"/><rect x="350" y="98" width="16" height="20" rx="3" fill="#f3e2bf" opacity=".7"/><rect x="370" y="104" width="16" height="14" rx="3" fill="#f3e2bf" opacity=".7"/></g><rect x="296" y="70" width="8" height="90" rx="3" fill="#f3e2bf"/><rect x="270" y="156" width="60" height="10" rx="4" fill="#f3e2bf"/><g class="tf-tile-bars" fill="#f3e2bf" opacity=".55"><rect x="40" y="128" width="84" height="12" rx="3"/><rect x="40" y="148" width="64" height="12" rx="3"/><rect x="40" y="168" width="74" height="12" rx="3"/></g></svg>
+        <span class="tf-tile-cap"><b>Trade Evaluator</b><span>Judge a trade on the table. List the players; the rosters are optional.</span></span>
+      </span>
+    </button>
+    <button type="button" role="tab" data-tool="finder" id="tf-tab-finder" aria-selected="false" aria-controls="tf-flow" style="--t1:#4a3a1c">
+      <span class="tf-tile">
+        <svg viewBox="0 0 400 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true" focusable="false"><rect width="400" height="200" fill="#4a3a1c"/><g fill="#f3e2bf"><rect x="196" y="34" width="64" height="14" rx="4" opacity=".55"/><rect x="196" y="58" width="64" height="14" rx="4" opacity=".7"/><rect x="196" y="82" width="64" height="14" rx="4" fill="#f2c14e"/><rect x="196" y="106" width="64" height="14" rx="4" opacity=".7"/><rect x="196" y="130" width="64" height="14" rx="4" opacity=".55"/><rect x="326" y="34" width="64" height="14" rx="4" opacity=".55"/><rect x="326" y="58" width="64" height="14" rx="4" fill="#f2c14e"/><rect x="326" y="82" width="64" height="14" rx="4" opacity=".7"/><rect x="326" y="106" width="64" height="14" rx="4" opacity=".7"/><rect x="326" y="130" width="64" height="14" rx="4" opacity=".55"/></g><path d="M272 74h42l-12-12M314 74l-12 12" fill="none" stroke="#f2c14e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M314 104h-42l12-12M272 104l12 12" fill="none" stroke="#f2c14e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><g class="tf-tile-bars" fill="#f3e2bf" opacity=".55"><rect x="40" y="128" width="84" height="12" rx="3"/><rect x="40" y="148" width="64" height="12" rx="3"/><rect x="40" y="168" width="74" height="12" rx="3"/></g></svg>
+        <span class="tf-tile-cap"><b>Trade Finder</b><span>Fill in two to four rosters and Iron Tuna finds the trades both sides say yes to.</span></span>
+      </span>
+    </button>
+  </div>
+</section>
+
+<!-- ── 3 · the synced league ────────────────────────────────────────────────
+     One outlined card, shown once the reader's league has answered. -->
+<section class="hm-sec" id="tf-synced" hidden aria-labelledby="tfSyncHead">
+  <div class="hm-input">
+    <h3 id="tfSyncHead">Your league is synced</h3>
+    <p id="tfSyncSub">Load your league and every team box below fills itself: type a team&rsquo;s name and its roster comes with it. The desk&rsquo;s own matches show here too.</p>
+    <div class="cta-row"><button class="btn" id="tf-load-league" type="button">Load my league&rsquo;s rosters</button><span class="tf-status" id="tf-load-status"></span></div>
+    <div id="tfMatches"></div>
+  </div>
+</section>
+
+<!-- ── 4 · the steps ────────────────────────────────────────────────────────
+     Sections on hairlines. The script orders them by tool and moves the
+     team-count control into whichever step comes first. -->
 <div id="tf-flow" role="tabpanel" data-tool="evaluator">
-<div class="tf-step" id="tf-deal">
+<section class="tf-step" id="tf-deal">
   <h3 id="tf-deal-h">1. The players in the trade</h3>
   <div class="tf-row" id="tf-count-row"><label class="tf-pair"><span class="tf-lab" id="tf-count-lab">Teams in the trade</span><select class="tf-sel" id="tf-count" aria-label="How many teams">
     <option value="2">2 teams</option><option value="3">3 teams</option><option value="4">4 teams</option>
@@ -346,16 +454,16 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
   <p class="sub" id="tf-deal-sub">Who sends whom. Type a name and it fills in. With three or four teams, say where each player goes.</p>
   <p class="tf-status" id="tf-deal-status"></p>
   <div class="tf-teams" id="tf-sends"></div>
-</div>
+</section>
 
-<div class="tf-step" id="tf-rosters">
+<section class="tf-step" id="tf-rosters">
   <h3 id="tf-rosters-h">2. The teams&rsquo; rosters <span class="opt">(optional)</span></h3>
   <p class="sub" id="tf-rosters-sub">Add each team&rsquo;s full roster and the trade is judged on the lineup it changes rather than on the players alone. Type the names, paste a list, or paste or drop a screenshot of the roster page.</p>
   <p class="tf-status" id="tf-read-status"></p>
   <div class="tf-teams" id="tf-teams"></div>
-</div>
+</section>
 
-<div class="tf-step" id="tf-context">
+<section class="tf-step" id="tf-context">
   <h3 id="tf-context-h">3. Anything else to weigh?</h3>
   <p class="sub">Team records, standings, injuries, byes, who is chasing a playoff spot, who has clinched. Name a team (or say &ldquo;I&rdquo; or &ldquo;my team&rdquo; for yours) with its record or situation and its horizon adjusts: a clinched team is scored on the fantasy playoffs, a team that needs wins now on the next three weeks. Each team box shows how it was read.</p>
   <textarea class="tf-paste tf-factors" id="tf-factors" spellcheck="true" aria-label="Additional factors" placeholder="Example: My team is 7-2 and has nearly clinched. The Hammers are 3-6 and need wins now. Their RB1 is questionable this week."></textarea>
@@ -392,10 +500,15 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
       </div>
     </div>
     <p class="tf-status" id="tf-league-note"></p>
-    <p class="sub">A team chasing a playoff spot needs the next three weeks; a team that has clinched needs weeks 15&ndash;17. Score each side on its own clock. A team your notes describe uses the horizon its situation implies; these two set the rest.</p>
-    <div class="tf-row"><span class="tf-lab">Your horizon</span>
-      <div class="tf-seg" id="tf-hA" role="group" aria-label="Your horizon">
-        <button type="button" data-h="week">This week</button><button type="button" data-h="next3">Next 3 weeks</button><button type="button" data-h="ros">Rest of season</button><button type="button" data-h="playoffs">Fantasy playoffs</button>
+    <p class="sub">A team chasing a playoff spot needs the next three weeks; a team that has clinched needs weeks 15&ndash;17. Score each side on its own clock. A team your notes describe uses the horizon its situation implies; your focus sets your clock, and the control below it sets everyone else&rsquo;s.</p>
+    <div class="tf-row"><span class="tf-lab" id="tf-focus-lab">Your focus</span>
+      <div class="tf-focus" id="tf-hA">
+        <input type="range" id="tf-focus-range" min="0" max="3" step="1" value="3" list="tf-focus-ticks" aria-labelledby="tf-focus-lab" aria-valuetext="Rest of the season">
+        <datalist id="tf-focus-ticks"><option value="0"></option><option value="1"></option><option value="2"></option><option value="3"></option></datalist>
+        <div class="tf-focus-stops" role="group" aria-label="Your focus">
+          <button type="button" data-h="week">This week</button><button type="button" data-h="next3">Get me to the playoffs</button><button type="button" data-h="playoffs">Playoffs</button><button type="button" data-h="ros">Rest of the season</button>
+        </div>
+        <p class="tf-focus-note" id="tf-focus-note"></p>
       </div>
     </div>
     <div class="tf-row"><span class="tf-lab">Other teams&rsquo; horizon</span>
@@ -412,7 +525,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
       </div>
     </div>
   </details>
-</div>
+</section>
 </div><!-- /#tf-flow -->
 
 <div id="tf-results" hidden>
@@ -424,17 +537,38 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
   <p class="tf-note" id="tf-results-note"></p>
 </div>
 
-<div class="method">
-  <h3>How these trades are judged</h3>
-  <p><b>A roster is worth what it starts.</b> Every player is projected at your scoring from the same board the rankings use, and each team&rsquo;s lineup is filled the way your league fills it: the named slots first, then flex and superflex from whoever is left. The bench counts a little, as insurance, and a backup quarterback in a one-QB league counts for almost nothing. Kickers and defenses are left out.</p>
-  <p><b>The Trade Evaluator scores every team in the deal.</b> For a two-, three- or four-team trade, each team&rsquo;s lineup is filled before and after, counting what it sends and what it receives. A team that gains three quarters of a point a week or more is called a gain, one that loses as much a loss, and anything between is about even. When the deal is not a yes for everyone and the rosters are in, the evaluator shows the closest trades among the same teams that are.</p>
-  <p><b>The gauge is your side of it.</b> Under the verdict, every team in the deal is scored twice more on the same clock: the next three weeks (short term) and the rest of the season (long term; the fantasy playoffs when you have clinched). Each row says which team the trade helps most on that horizon. Your situation decides which of the two counts more: a team that needs wins now is weighed 70/30 toward the next three weeks, a team playing the whole season 35/65 the other way, a team built for the playoffs 25/75. The needle is that weighted gain per week, from three points lost on the left to three gained on the right, and the call is Go at three quarters of a point or better, No go at as much lost, and the roster fit settles the ground between: a trade that raises your weakest starter is a narrow Go, one that opens a hole is a narrow No go.</p>
-  <p><b>Rosters are optional in the Evaluator.</b> List only the players and each side is scored on those players alone: what it gets against what it sends, at your scoring, on its horizon. That answers whether the names are fair. Add the rosters and the score becomes the change to the lineup each team actually starts, which is the better answer whenever a two-for-one opens or closes a starting slot, and the card says which of the two it is showing.</p>
-  <p><b>The Trade Finder.</b> Fill in two to four rosters and the engine tries every one-, two- and three-player swap between your team and each of the others, keeping only swaps where both lineups improve by at least three quarters of a point a week. The balance slider orders what survives: at <em>Even</em> by the smaller of the two gains, at <em>In my favor</em> by yours alone. It cannot surface a trade the other manager should refuse.</p>
-  <p><b>Horizons are per team.</b> A gain is measured on the weeks that team is playing for &mdash; this week, the next three, the rest of the season, or the fantasy playoffs &mdash; and stated per week so a three-week horizon and a twelve-week one are on the same scale. Your notes set a team&rsquo;s horizon when they describe it: &ldquo;clinched&rdquo; or a record of .700 or better means the fantasy playoffs; &ldquo;needs wins,&rdquo; &ldquo;on the bubble&rdquo; or .400 or worse means the next three weeks; &ldquo;must win this week&rdquo; means this week; &ldquo;eliminated&rdquo; or &ldquo;rebuilding&rdquo; means the rest of the season.</p>
-  <p><b>Your notes.</b> Beyond setting horizons, the factors you type are read by a language model after the numbers are in. It explains whether they should change the call; it never changes a projection, and the scores stand on their own.</p>
-  <p><b>What it does not know.</b> It cannot see your league&rsquo;s roster limits, its trade deadline, who is on injured reserve, or which manager is unreachable. A team that receives more players than it sends needs roster spots; the card says so, and scores the side as dropping its weakest player to make room. It cannot see your waiver wire either, so it stands in the best free agent at each position by rank on the board (in a twelve-team league, about the 36th back or receiver and the 15th quarterback or tight end) and counts every player for what he scores over that free agent. A slot a trade empties is filled off the wire, a player a trade adds has to beat it, and a two-for-one that sends your best player for a starter and a throw-in scores as the loss it is. Screenshots are read by a model into names only, and every name is then matched to the board here in your browser, so nothing it read can become a projection on its own.</p>
-</div>
+<!-- ── 5 · the method, as How it works ──────────────────────────────────────
+     The homepage's closing section: a head, a tagline, three cards, and the
+     rest of the method as prose. -->
+<section class="hm-sec method" id="method" aria-labelledby="methodHead">
+  <div class="hm-sec-head">
+    <h2 id="methodHead">How these trades are judged</h2>
+    <a href="/faq#faq-start">How the number is made &rarr;</a>
+  </div>
+  <p class="hm-tagline">A trade is a change to two lineups, not a swap of two names.</p>
+  <div class="hm-how-grid">
+    <div class="hm-input">
+      <h3>A roster is worth what it starts</h3>
+      <p>Every player is projected at your scoring from the same board the rankings use, and each team&rsquo;s lineup is filled the way your league fills it: the named slots first, then flex and superflex from whoever is left. The bench counts a little, as insurance, and a backup quarterback in a one-QB league counts for almost nothing. Kickers and defenses are left out.</p>
+    </div>
+    <div class="hm-input">
+      <h3>The Evaluator scores every team in the deal</h3>
+      <p>For a two-, three- or four-team trade, each team&rsquo;s lineup is filled before and after, counting what it sends and what it receives. A team that gains three quarters of a point a week or more is called a gain, one that loses as much a loss, and anything between is about even. When the deal is not a yes for everyone and the rosters are in, the evaluator shows the closest trades among the same teams that are.</p>
+    </div>
+    <div class="hm-input">
+      <h3>The Finder tries every swap</h3>
+      <p>Fill in two to four rosters and the engine tries every one-, two- and three-player swap between your team and each of the others, keeping only swaps where both lineups improve by at least three quarters of a point a week. The balance slider orders what survives: at <em>Even</em> by the smaller of the two gains, at <em>In my favor</em> by yours alone. It cannot surface a trade the other manager should refuse.</p>
+    </div>
+  </div>
+  <div class="method-more">
+    <p><b>Each side has to want it.</b> A lineup gain is necessary, not sufficient: a manager asked to send the best player in the deal, or forty points more of projection than comes back, for half a point a week says no, whatever the lineup math says. So before a trade is shown, each side is argued from that manager&rsquo;s chair: the lineup gain on their own horizon; who gets the best player in the deal; projected points sent against received; whether a throw-in they must open a roster spot for would only be the next cut; the depth left at each position; for a team scored on the next few weeks, what the deal costs over the season; and whether their gain is a fraction of yours. A side that sends the best player needs at least a point and a half a week for it. A side that sends more projection than it gets needs a lineup gain of at least half the difference. A side gaining under two points a week needs at least thirty percent of what the other side gains. A trade is offered only when both cases hold, and the case is printed under each side so you can make it to the other manager in their words. The Evaluator runs the same test on the trade you typed and says when the other side would refuse, and why.</p>
+    <p><b>The gauge is your side of it.</b> Under the verdict, every team in the deal is scored twice more on the same clock: the next three weeks and the rest of the season (the fantasy playoffs when you have clinched). Each row shows every team&rsquo;s gain on that horizon and marks the team the trade helps most. Your situation decides which of the two counts more: a team that needs wins now is weighed 70/30 toward the next three weeks, a team playing the whole season 35/65 the other way, a team built for the playoffs 25/75. The needle is that weighted gain per week, from three points lost on the left to three gained on the right, and the call is Go at three quarters of a point or better, No go at as much lost, and the lineup fit settles the ground between: a trade that raises your weakest starter is a narrow Go, one that opens a hole is a narrow No go.</p>
+    <p><b>Rosters are optional in the Evaluator.</b> List only the players and each side is scored on those players alone: what it gets against what it sends, at your scoring, on its horizon. That answers whether the names are fair. Add the rosters and the score becomes the change to the lineup each team actually starts, which is the better answer whenever a two-for-one opens or closes a starting slot, and the card says which of the two it is showing.</p>
+    <p><b>Horizons are per team.</b> A gain is measured on the weeks that team is playing for: this week, the next three, the rest of the season, or the fantasy playoffs, and stated per week so a three-week horizon and a twelve-week one are on the same scale. Your notes set a team&rsquo;s horizon when they describe it: &ldquo;clinched&rdquo; or a record of .700 or better means the fantasy playoffs; &ldquo;needs wins,&rdquo; &ldquo;on the bubble&rdquo; or .400 or worse means the next three weeks; &ldquo;must win this week&rdquo; means this week; &ldquo;eliminated&rdquo; or &ldquo;rebuilding&rdquo; means the rest of the season.</p>
+    <p><b>Your notes.</b> Beyond setting horizons, the factors you type are read by a language model after the numbers are in. It explains whether they should change the call; it never changes a projection, and the scores stand on their own.</p>
+    <p><b>What it does not know.</b> It cannot see your league&rsquo;s roster limits, its trade deadline, who is on injured reserve, or which manager is unreachable. A team that receives more players than it sends needs roster spots; the card says so, and scores the side as dropping its weakest player to make room. It cannot see your waiver wire either, so it stands in the best free agent at each position by rank on the board (in a twelve-team league, about the 36th back or receiver and the 15th quarterback or tight end) and counts every player for what he scores over that free agent. A slot a trade empties is filled off the wire, a player a trade adds has to beat it, and a two-for-one that sends your best player for a starter and a throw-in scores as the loss it is. Screenshots are read by a model into names only, and every name is then matched to the board here in your browser, so nothing it read can become a projection on its own.</p>
+  </div>
+</section>
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
@@ -462,11 +596,27 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
 <script src="/it-league.js"></script>
 <script src="/it-sync.js"></script>
 <script src="/it-trade.js"></script>
+<!-- The hero search field takes the shared typeahead; deferred and guarded, as on front.html. -->
+<script src="/player-search.js" defer></script>
 <script>
 (function () {
   'use strict';
   var KEY = 'it_trade_v2';
   var HORIZONS = { week: 'This week', next3: 'Next 3 weeks', ros: 'Rest of season', playoffs: 'Fantasy playoffs' };
+  // The focus slider's stops, left to right, and what each one says. The
+  // stops are named for the reader's question ("get me to the playoffs"),
+  // while HORIZONS keeps the engine's names, which the results, the team
+  // boxes and the other teams' control still use. The order is a dial from
+  // the nearest week outward: this week, the three that decide a playoff
+  // spot, the playoff weeks themselves, then everything left.
+  var FOCUS = ['week', 'next3', 'playoffs', 'ros'];
+  var FOCUS_LABEL = { week: 'This week', next3: 'Get me to the playoffs', playoffs: 'Playoffs', ros: 'Rest of the season' };
+  var FOCUS_NOTE = {
+    week: 'Scored on this week alone: win now, whatever it costs later.',
+    next3: 'Scored on the next three weeks, the games that decide whether you get in.',
+    playoffs: 'Scored on the fantasy playoff weeks: you are in, so build for them.',
+    ros: 'Scored on every week left in the season.'
+  };
   var L = window.ITLeague || null, TR = window.ITTrade;
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
@@ -513,7 +663,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
   function paintSettings() {
     setPressed($('tf-scoring'), 'data-preset', preset);
     setPressed($('tf-board'), 'data-board', board);
-    setPressed($('tf-hA'), 'data-h', hA); setPressed($('tf-hB'), 'data-h', hB);
+    paintFocus(); setPressed($('tf-hB'), 'data-h', hB);
     setPressed($('tf-size'), 'data-size', String(size));
     $('tf-tilt').value = String(Math.round(tilt * 100));
     tiltNote();
@@ -521,6 +671,14 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     $('tf-league-note').innerHTML = (L && L.has)
       ? 'Saved league: <b>' + esc(L.label()) + '</b>' + (L.scoringLabel ? ' &middot; ' + esc(L.scoringLabel()) : '') + '. <a href="/auctiondraft?screen=cheat">Change it</a>.'
       : 'No saved league. Presets only &mdash; <a href="/auctiondraft?screen=cheat">set your league up</a> and every player is scored at your exact settings.';
+  }
+  function paintFocus() {
+    if (FOCUS.indexOf(hA) < 0) hA = 'ros';   // a saved key the slider has no stop for
+    var r = $('tf-focus-range');
+    r.value = String(FOCUS.indexOf(hA));
+    r.setAttribute('aria-valuetext', FOCUS_LABEL[hA]);
+    setPressed($('tf-hA'), 'data-h', hA);
+    $('tf-focus-note').textContent = FOCUS_NOTE[hA];
   }
   function tiltNote() {
     $('tf-tilt-note').textContent = tilt < 0.15 ? 'ranked by the smaller gain' : tilt > 0.85 ? 'ranked by your gain; theirs still has to be real' : 'leaning your way';
@@ -730,7 +888,8 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
               + '<datalist id="' + dl + '">' + optionsFor(sug) + '</datalist>'
               + '<button type="button" class="btn alt small" data-drop="' + i + ':' + k + '">drop</button></div>';
           }).join('') + '</div>' : '')
-        + '<label class="tf-shot"><input type="file" accept="image/*" multiple data-shot="' + i + '">Add a roster screenshot</label>'
+        + '<div class="tf-shots"><label class="tf-shot"><input type="file" accept="image/*" multiple data-shot="' + i + '">Add a roster screenshot</label>'
+        + '<button type="button" class="tf-shot" data-paste="' + i + '" title="Read a screenshot off the clipboard">Paste a screenshot</button></div>'
         + '<div class="tf-hz" data-hz="' + i + '"></div>'
         + '<div class="cnt">' + tradeable + ' tradeable' + (t.players.length !== tradeable ? ' (kickers and defenses ignored)' : '') + '</div>'
         + '</div>';
@@ -801,6 +960,29 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
       return '<li data-k="' + k + '"' + (k === 0 ? ' class="on"' : '') + '>' + esc(p.name) + '<i>' + esc(p.pos + (p.team ? ' · ' + p.team : '') + where) + '</i></li>';
     }).join('');
     ul.hidden = false;
+    keepSugInView(input);
+  }
+  // On a phone the on-screen keyboard takes the bottom half of the screen,
+  // and the list drops below the box: a box in the bottom half of what the
+  // keyboard leaves opens its list straight under the keyboard, and the
+  // reader types and sees nothing. The visual viewport is what the keyboard
+  // leaves (the layout viewport does not shrink for it), so when the list,
+  // or the room a list will need, runs past it, the page scrolls just enough
+  // to fit it, and no further than the box at the top, under the sticky
+  // masthead. The keyboard arrives after focus, so a visual-viewport resize
+  // while a box has focus checks again. The phone tab bar is fixed at the
+  // foot and counts as covered when it is on screen.
+  function keepSugInView(input) {
+    if (document.activeElement !== input) return;
+    var vv = window.visualViewport, vTop = vv ? vv.offsetTop : 0, vBottom = vTop + (vv ? vv.height : window.innerHeight);
+    var head = document.querySelector('header.site'), tab = document.querySelector('.tabbar');
+    var top = vTop + (head ? head.getBoundingClientRect().height : 0);
+    var tabR = tab && tab.offsetParent !== null ? tab.getBoundingClientRect() : null;
+    if (tabR && tabR.top < vBottom && tabR.height) vBottom = tabR.top;
+    var r = input.getBoundingClientRect(), ul = sugList(input);
+    var need = ul && !ul.hidden ? ul.offsetHeight + 4 : 180;
+    var by = Math.min(r.top - top - 8, r.bottom + need - vBottom);
+    if (by > 1) window.scrollBy(0, by);
   }
   function moveSug(input, d) {
     var list = input._sug || []; if (!list.length) return;
@@ -856,12 +1038,21 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     var input = ev.target; if (!input.classList || !input.classList.contains('tf-type')) return;
     setTimeout(function () { var ul = sugList(input); if (ul) ul.hidden = true; }, 120);
   }
+  function onFocus(ev) {
+    var input = ev.target; if (!input.classList || !input.classList.contains('tf-type')) return;
+    keepSugInView(input);
+  }
   ['tf-teams', 'tf-sends'].forEach(function (id) {
     var host = $(id);
     host.addEventListener('input', onType);
     host.addEventListener('keydown', onKey);
     host.addEventListener('mousedown', onSugDown);
+    host.addEventListener('focusin', onFocus);
     host.addEventListener('focusout', onBlur);
+  });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', function () {
+    var a = document.activeElement;
+    if (a && a.classList && a.classList.contains('tf-type')) keepSugInView(a);
   });
 
   // A list pasted into a roster box is a roster: every line is read, the
@@ -931,6 +1122,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
       render();
     }
     else if ((v = b.getAttribute('data-drop'))) { var d = v.split(':'); teams[+d[0]].unresolved.splice(+d[1], 1); render(); }
+    else if ((v = b.getAttribute('data-paste')) != null) pasteFromClipboard(+v);
   });
   $('tf-teams').addEventListener('change', function (ev) {
     var el = ev.target, v;
@@ -1092,6 +1284,29 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     var b = e.target.closest('.tf-team');
     if (b && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) readImages(e.dataTransfer.files, +b.getAttribute('data-i'));
   });
+  // The Paste button reads the clipboard itself, where the browser lets a page
+  // do that (Chrome and Edge ask once; Safari and Firefox put up their own
+  // Paste callout to confirm). Ctrl+V already worked, but nothing on the card
+  // said so, and a phone has no Ctrl+V at all: its Paste menu only appears
+  // over a text field and hands that field the words, not the image, so a
+  // reader on a phone had to save the screenshot and pick it from the gallery
+  // (2026-10-10). Where the browser offers no reader, or the reader is refused,
+  // the box is focused and the shortcut named, so the next Ctrl+V lands in
+  // this box through the document listener below.
+  function pasteFromClipboard(at) {
+    lastBox = at;
+    var hint = 'Press Ctrl+V (\u2318V on a Mac) with this box selected to paste a screenshot.';
+    var input = $('tf-teams').querySelector('.tf-type[data-roster="' + at + '"]'); if (input) input.focus();
+    if (!(navigator.clipboard && navigator.clipboard.read)) { status($('tf-read-status'), 'This browser does not let a button read the clipboard. ' + hint, true); return; }
+    navigator.clipboard.read().then(function (items) {
+      var blobs = [];
+      [].forEach.call(items || [], function (it) {
+        [].forEach.call(it.types || [], function (t) { if (/^image\//.test(t)) blobs.push(it.getType(t)); });
+      });
+      if (!blobs.length) { status($('tf-read-status'), 'There is no image on the clipboard. Copy the screenshot first, then press the button again.', true); return; }
+      return Promise.all(blobs).then(function (files) { readImages(files, at); });
+    }).catch(function () { status($('tf-read-status'), 'The browser did not hand over the clipboard. ' + hint, true); });
+  }
   // A screenshot on the clipboard goes to the team box the reader last worked
   // in, or the first empty one. Only pastes carrying image files are taken.
   document.addEventListener('paste', function (e) {
@@ -1110,7 +1325,11 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
   // ── settings events ──────────────────────────────────────────────────────
   $('tf-scoring').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b || b.disabled) return; preset = b.getAttribute('data-preset'); writeState({ preset: preset }); paintSettings(); });
   $('tf-board').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); writeState({ board: board }); paintSettings(); });
-  $('tf-hA').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; hA = b.getAttribute('data-h'); writeState({ hA: hA }); paintSettings(); paintHz(); loadHorizon(hA).catch(function () {}); });
+  // The slider and the stop labels under it are one control: dragging or
+  // arrowing the thumb picks a stop, and so does tapping a label.
+  function setFocus(h) { if (!FOCUS_LABEL[h]) return; hA = h; writeState({ hA: hA }); paintSettings(); paintHz(); loadHorizon(hA).catch(function () {}); }
+  $('tf-focus-range').addEventListener('input', function () { setFocus(FOCUS[+this.value]); });
+  $('tf-hA').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; setFocus(b.getAttribute('data-h')); });
   $('tf-hB').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; hB = b.getAttribute('data-h'); writeState({ hB: hB }); paintSettings(); paintHz(); loadHorizon(hB).catch(function () {}); });
   $('tf-size').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; size = +b.getAttribute('data-size'); writeState({ size: size }); paintSettings(); });
   $('tf-tilt').addEventListener('input', function () { tilt = (+this.value) / 100; writeState({ tilt: tilt }); tiltNote(); });
@@ -1250,7 +1469,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     var list = active();
     if (list.filter(function (t, i) { return rosterEntered(i); }).length < 2) { status($('tf-find-status'), 'Fill in at least two rosters first.', true); return; }
     status($('tf-find-status'), 'Scoring the lineups…');
-    Promise.all(horizonsInPlay().map(loadHorizon)).then(function () {
+    Promise.all(uniq(horizonsInPlay().concat(['ros'])).map(loadHorizon)).then(function () {
       var mi = Number(mine);
       var res = search(list, mi, 12);
       status($('tf-find-status'), '');
@@ -1262,7 +1481,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
   function search(list, mi, limit) {
     return TR.findTrades(list, {
       slots: slots, points: points, weeks: weeksOf,
-      horizon: horizonFor, pool: boardPool(), leagueSize: leagueSize(),
+      horizon: horizonFor, pool: boardPool(), leagueSize: leagueSize(), season: 'ros', label: horizonLabel,
       mine: mi, tilt: tilt, maxSize: size, minGain: 0.75, limit: limit
     });
   }
@@ -1273,14 +1492,19 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
   // everyone else, and its lineup before and after on its own horizon. So
   // each team is scored as one side of evaluateTrade with an empty partner.
   // `h` forces a horizon; left out, the team is scored on its own.
-  function sideOf(i, give, get, h) {
+  // `otherGain` is the most any other team in the deal gains, so the case
+  // for this team can say whether it is being asked to pay the other side
+  // ten times over.
+  function sideOf(i, give, get, h, otherGain) {
     var hz = h || horizonFor(i);
     var ev = TR.evaluateTrade([teams[i], { name: '', players: [] }], {
       a: 0, b: 1, giveA: give, giveB: get, slots: slots, points: points, weeks: weeksOf,
-      horizon: function () { return hz; }, minGain: 0.75, pool: boardPool(), leagueSize: leagueSize()
+      horizon: function () { return hz; }, minGain: 0.75, pool: boardPool(), leagueSize: leagueSize(), season: 'ros', label: horizonLabel,
+      otherGain: { a: isFinite(otherGain) ? otherGain : 0, b: 0 }
     });
     var s = ev.A; s.i = i; s.give = give; s.get = get; s.entered = rosterEntered(i); return s;
   }
+  function horizonLabel(h) { return (HORIZONS[h] || h).toLowerCase(); }
   // The gauge's two clocks: the next three weeks for every team, and the rest
   // of the season, or the fantasy playoffs when the reader has clinched,
   // because a clinched team's long term is weeks 15-17 and nothing before.
@@ -1294,15 +1518,21 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     if (senders + Object.keys(receivers).length < 2) { status($('tf-find-status'), 'A trade needs players going to another team.', true); return; }
     status($('tf-find-status'), 'Scoring the lineups…');
     var mi0 = Number(mine);
-    Promise.all(uniq(horizonsInPlay().concat(['next3', longHorizon(mi0)])).map(loadHorizon)).then(function () {
-      var sides = active().map(function (t, i) {
+    Promise.all(uniq(horizonsInPlay().concat(['next3', 'ros', longHorizon(mi0)])).map(loadHorizon)).then(function () {
+      var parts = active().map(function (t, i) {
         var give = deal[i].map(function (x) { return players[x.id]; }).filter(Boolean);
         var get = [];
         active().forEach(function (o, j) { if (j !== i) deal[j].forEach(function (x) { if (Number(x.to) === i && players[x.id]) get.push(players[x.id]); }); });
-        return sideOf(i, give, get);
+        return { i: i, give: give, get: get };
       }).filter(function (s) { return s.give.length || s.get.length; });
+      // Gains first, then each side judged against the most any other side gains.
+      var gains = parts.map(function (s) { return sideOf(s.i, s.give, s.get).gain; });
+      var sides = parts.map(function (s, k) {
+        var other = Math.max.apply(null, gains.filter(function (g, j) { return j !== k; }).concat([0]));
+        return sideOf(s.i, s.give, s.get, null, other);
+      });
       var mi = Number(mine);
-      var all = sides.every(function (s) { return s.call === 'gain'; });
+      var all = sides.every(function (s) { return s.call === 'gain' && (!s.entered || !s.case || s.case.accept); });
       // Not a yes for everyone? Then the useful answer is the nearest trades
       // among the same teams that are. That search needs the rosters: with
       // none entered, the only players to search are the ones in the deal.
@@ -1321,7 +1551,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     return list.map(function (p) { return '<b>' + esc(p.name) + '</b> <span style="color:var(--muted)">' + esc(p.pos) + (h ? ' &middot; ' + n1(points(p, h) / weeksOf(h)) + '/wk' : '') + '</span>'; }).join(', ');
   }
   function signed(v) { return (v < 0 ? '−' : '+') + n1(Math.abs(v)); }
-  function sideCard(who, name, give, get, gain, h, lines, needsSpot, bare) {
+  function sideCard(who, name, give, get, gain, h, lines, needsSpot, bare, kase) {
     var starts = lines.startsNow.map(function (s) { return esc(s.p.name) + ' at ' + esc(s.slot); });
     var stops = lines.stopsStarting.map(function (s) { return esc(s.p.name); });
     var cut = (lines.cut || []).map(function (s) { return esc(s.p.name); });
@@ -1335,7 +1565,18 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     return '<div class="tf-side"><div class="who">' + who + ' &middot; ' + esc(name) + '</div>'
       + '<div class="gain' + (gain < 0 ? ' neg' : '') + '">' + signed(gain) + ' <small>pts / week &middot; ' + esc(HORIZONS[h] || h) + '</small></div>'
       + '<div class="give">Sends ' + chips(give, h) + '<br>Gets ' + chips(get, h) + '</div>'
-      + '<div class="lines' + (bare ? ' bare' : '') + '">' + detail + '</div></div>';
+      + '<div class="lines' + (bare ? ' bare' : '') + '">' + detail + '</div>'
+      + (kase && !bare ? caseBlock(who, kase) : '') + '</div>';
+  }
+  // The case: why this manager would want the deal, in that manager's own
+  // terms, and what they would hold against it. A found trade only reaches
+  // the page with both cases accepted; a trade the reader typed can come back
+  // refused, and then the objections are the answer.
+  function caseBlock(who, c) {
+    var h = c.accept ? (who === 'You' ? 'Why you would do it' : 'Why they would do it') : (who === 'You' ? 'Why you would not' : 'Why they would say no');
+    var items = (c.accept ? c.why : c.against.concat(c.why)).map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('');
+    var notes = c.accept && c.against.length ? '<p class="but">' + c.against.map(esc).join(' ') + '</p>' : '';
+    return '<div class="tf-case' + (c.accept ? '' : ' no') + '" data-accept="' + (c.accept ? 'yes' : 'no') + '"><div class="h">' + h + '</div><ul>' + items + '</ul>' + notes + '</div>';
   }
   function scoringName() { return preset === 'custom' && L && L.label ? L.label() : preset === 'half' ? 'Half PPR' : preset === 'standard' ? 'Standard' : 'PPR'; }
   function paintBar(name, perWeek, h, judged, bare) {
@@ -1349,10 +1590,10 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     var A = T[t.a], B = T[t.b];
     var youAreA = t.a === mi;
     var spot = function (give, get) { return Math.max(0, get.length - give.length); };
-    var first = youAreA ? sideCard('You', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, spot(t.giveA, t.giveB))
-                        : sideCard('You', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, spot(t.giveB, t.giveA));
-    var second = youAreA ? sideCard('Them', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, spot(t.giveB, t.giveA))
-                         : sideCard('Them', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, spot(t.giveA, t.giveB));
+    var first = youAreA ? sideCard('You', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, spot(t.giveA, t.giveB), false, t.caseA)
+                        : sideCard('You', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, spot(t.giveB, t.giveA), false, t.caseB);
+    var second = youAreA ? sideCard('Them', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, spot(t.giveB, t.giveA), false, t.caseB)
+                         : sideCard('Them', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, spot(t.giveA, t.giveB), false, t.caseA);
     var label = (youAreA ? t.giveA : t.giveB).map(function (p) { return p.name; }).join(' + ') + ' for ' + (youAreA ? t.giveB : t.giveA).map(function (p) { return p.name; }).join(' + ');
     return '<div class="tf-trade"><h3>' + (i + 1) + '. ' + esc(label) + '<span class="with">with ' + esc(youAreA ? B.name : A.name) + '</span></h3><div class="tf-sides">' + first + second + '</div></div>';
   }
@@ -1369,11 +1610,11 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     $('tf-verdict').innerHTML = '';
     $('tf-gauge').hidden = true; $('tf-gauge').innerHTML = '';
     if (!res.trades.length) {
-      $('tf-trades').innerHTML = '<div class="tf-empty">No trade between your team and ' + (count === 2 ? esc(T[1 - mi].name) : 'these teams') + ' improves both lineups by at least three quarters of a point a week. That is a real answer: the rosters are already sorted, or the two horizons want the same players. Try a different horizon, or allow bigger packages in the settings.</div>';
+      $('tf-trades').innerHTML = '<div class="tf-empty">No trade between your team and ' + (count === 2 ? esc(T[1 - mi].name) : 'these teams') + ' improves both lineups by at least three quarters of a point a week and gives both managers a reason to say yes' + (res.refused ? ' (' + res.refused + ' improved both lineups on paper, and every one asked a manager to give up the best player, or far more projection than came back, for a bump)' : '') + '. That is a real answer: the rosters are already sorted, or the two horizons want the same players. Try a different horizon, or allow bigger packages in the settings.</div>';
     } else {
       $('tf-trades').innerHTML = res.trades.map(function (t, i) { return foundCard(t, i, T, mi); }).join('');
     }
-    $('tf-results-note').innerHTML = res.considered + ' swap' + (res.considered === 1 ? '' : 's') + ' improved both sides out of everything tried; the ' + res.trades.length + ' above are the strongest, no more than four with one partner. ' + scoredNote();
+    $('tf-results-note').innerHTML = res.considered + ' swap' + (res.considered === 1 ? '' : 's') + ' improved both lineups and gave both managers a reason to say yes' + (res.refused ? ' (another ' + res.refused + ' improved both lineups on paper and were set aside: one side was being asked to send the best player in the deal, or far more projection than came back, for a small bump)' : '') + '; the ' + res.trades.length + ' above are the strongest, no more than four with one partner. Under each side is the case that manager would make for it. ' + scoredNote();
     host.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   // ── the gauge: is it worth it for the reader ─────────────────────────────
@@ -1438,29 +1679,37 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     g.you = { i: mi, h: h, w: w, score: score, pos: 50 + 50 * Math.max(-1, Math.min(1, score / SPAN)), go: !!go, clear: clear, fit: fit, short: ys, long: yl, read: noteRead()[mi] || null };
     return g;
   }
+  // The call's sentence carries one figure, the weighted gain, and the
+  // situation row says how it was weighted; the two never repeat each other.
   function gaugeWhy(g, sides) {
-    var y = g.you, pts = n1(Math.abs(y.score)) + ' pts a week';
-    var w = Math.round(y.w[0] * 100) + '/' + Math.round(y.w[1] * 100);
+    var y = g.you, pts = signed(y.score) + ' pts a week for you';
     var s;
-    if (y.clear && y.go) s = 'A clear gain on your clock: +' + pts + ', weighted ' + w + ' between the next three weeks and ' + HORIZONS[g.long.h].toLowerCase() + '.';
-    else if (y.clear) s = 'A clear loss on your clock: −' + pts + ', weighted ' + w + ' between the next three weeks and ' + HORIZONS[g.long.h].toLowerCase() + '.';
-    else if (y.go) s = 'A small edge, ' + (y.score < 0 ? '−' : '+') + pts + ' on your clock' + (y.fit && y.fit.delta >= 0.75 ? ', and it raises your weakest starter.' : '. Worth doing if you like the names.');
-    else s = 'Not enough in it for you: ' + (y.score < 0 ? '−' : '+') + pts + ' on your clock' + (y.fit && y.fit.delta <= -0.75 ? ', and it opens a hole in your lineup.' : '.');
+    if (y.clear && y.go) s = 'A clear gain: ' + pts + '.';
+    else if (y.clear) s = 'A clear loss: ' + pts + '.';
+    else if (y.go) s = 'A small edge: ' + pts + (y.fit && y.fit.delta >= 0.75 ? ', and it raises your weakest starter.' : '. Worth doing if you like the names.');
+    else s = 'Not enough in it: ' + pts + (y.fit && y.fit.delta <= -0.75 ? ', and it opens a hole in your lineup.' : '.');
     var refuse = sides.filter(function (x) { return x.i !== y.i && x.call === 'loss'; });
     if (y.go && refuse.length) s += ' Expect a no from ' + refuse.map(function (x) { return x.name; }).join(' and ') + '.';
     return s;
   }
-  function termRow(label, t, mi) {
+  // A horizon row: the reader's figure, then every other team's, the team
+  // the trade helps most in bold. A lead word only where the figures alone
+  // would not say it: nobody clearing the floor, or the reader on top.
+  function termRow(t, mi) {
     var you = t.sides.filter(function (s) { return s.i === mi; })[0];
-    var top = t.top, others = t.sides.filter(function (s) { return s !== top; });
-    var who = top.i === mi ? 'you' : top.name;
-    var w;
-    if (top.gain < 0.75 && t.sides.every(function (s) { return Math.abs(s.gain) < 0.75; })) w = 'About even for everyone: no lineup moves by as much as three quarters of a point a week.';
-    else if (top.gain < 0.75) w = 'Nobody gains here: ' + t.sides.map(function (s) { return (s.i === mi ? 'you ' : esc(s.name) + ' ') + signed(s.gain); }).join(', ') + '.';
-    else w = 'Helps <b>' + esc(who) + '</b> most, ' + signed(top.gain) + ' a week' + (others.length ? ' against ' + others.map(function (s) { return signed(s.gain) + ' for ' + (s.i === mi ? 'you' : esc(s.name)); }).join(', ') : '') + '.';
-    return '<div class="row"><span class="k">' + label + ' &middot; ' + esc(HORIZONS[t.h]) + '</span>'
-      + '<span class="v">' + (you ? signed(you.gain) + ' <small>pts / week for you</small>' : '<small>You are not in this trade</small>') + '</span>'
-      + '<span class="w">' + w + '</span></div>';
+    var top = t.top, clears = top.gain >= 0.75;
+    var others = t.sides.filter(function (s) { return s.i !== mi; }).sort(function (a, b) { return b.gain - a.gain; });
+    var list = others.map(function (s) {
+      var f = esc(s.name) + ' ' + signed(s.gain);
+      return s === top && clears ? '<b>' + f + '</b>' : f;
+    }).join(', ');
+    var lead = t.sides.every(function (s) { return Math.abs(s.gain) < 0.75; }) ? 'About even. '
+      : !clears ? 'Nobody gains. '
+      : top.i === mi ? 'Helps you most. '
+      : others.length > 1 ? 'Helps <b>' + esc(top.name) + '</b> most. ' : '';
+    return '<div class="row"><span class="k">' + esc(HORIZONS[t.h]) + '</span>'
+      + '<span class="v">' + (you ? signed(you.gain) + ' <small>for you</small>' : '<small>Not you</small>') + '</span>'
+      + '<span class="w">' + lead + list + '.</span></div>';
   }
   function renderGauge(g, sides, mi) {
     var host = $('tf-gauge');
@@ -1469,7 +1718,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
       var pos = Math.round(y.pos * 10) / 10, lo = Math.min(50, pos), wd = Math.abs(pos - 50);
       var call = y.go ? 'Go' : 'No go', qual = y.clear ? '' : '<small>narrow</small>';
       var aria = call + (y.clear ? '' : ', narrow') + ': ' + signed(y.score) + ' points a week on your clock, on a scale from −' + SPAN + ' to +' + SPAN + '.';
-      html += '<div class="tf-call"><span class="k">Worth it for you?</span><div class="v" data-call="' + (y.go ? 'go' : 'no') + '">' + call + qual + '</div>'
+      html += '<div class="tf-call"><span class="k">For you</span><div class="v" data-call="' + (y.go ? 'go' : 'no') + '">' + call + qual + '</div>'
         + '<p class="s">' + esc(gaugeWhy(g, sides)) + '</p>'
         + '<div class="tf-meter' + (y.go ? '' : ' no') + '" role="img" aria-label="' + esc(aria) + '"><div class="track">'
         + '<i class="fill" style="left:' + lo + '%;width:' + wd + '%"></i>'
@@ -1477,30 +1726,38 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
         + '<b class="pin" style="left:' + pos + '%" data-pos="' + pos + '"></b></div>'
         + '<div class="ends"><span>Walk away</span><span>About even</span><span>Send it</span></div></div></div>';
     } else {
-      html += '<div class="tf-call"><span class="k">Worth it for you?</span><div class="v" data-call="none">Not your call</div><p class="s">Your team is not in this trade, so there is nothing for you to send or take. The rows say whom it helps.</p></div>';
+      html += '<div class="tf-call"><span class="k">For you</span><div class="v" data-call="none">Not your call</div><p class="s">Your team is not in this trade, so there is nothing for you to send or take. The rows say whom it helps.</p></div>';
     }
-    var sit = '';
+    var rows = termRow(g.short, mi) + termRow(g.long, mi);
     if (y) {
-      var fit = y.fit, slotName = function (r) { return r.slot === 'FLEX' ? 'flex' : r.slot === 'SFLEX' ? 'superflex' : r.slot; };
-      sit = '<div class="row"><span class="k">Your situation</span><span class="v">' + esc(STATUS[y.h] || HORIZONS[y.h]) + '</span><span class="w">'
-        + (y.read ? 'From your notes: &ldquo;' + esc(y.read.why) + '&rdquo;. ' : 'From the settings; say how your season is going in step 3 and this adjusts. ')
-        + 'The next three weeks count ' + Math.round(y.w[0] * 100) + '% and ' + esc(HORIZONS[g.long.h].toLowerCase()) + ' ' + Math.round(y.w[1] * 100) + '%. '
-        + (fit ? (fit.after.empty ? '<b>Opens a hole:</b> ' + esc(slotName(fit.after)) + ' goes unfilled; ' + esc(fit.before.p.name) + ' (' + n1(fit.before.v) + ' a week) was starting there.'
-            : fit.before.empty ? '<b>Fills a need:</b> ' + esc(slotName(fit.before)) + ' was empty; ' + esc(fit.after.p.name) + ' starts there now (' + n1(fit.after.v) + ' a week).'
-            : fit.delta >= 0.75 ? '<b>Fills a need:</b> your weakest starter goes from ' + esc(fit.before.p.name) + ' at ' + esc(slotName(fit.before)) + ' (' + n1(fit.before.v) + ') to ' + esc(fit.after.p.name) + ' (' + n1(fit.after.v) + ') a week.'
-            : fit.delta <= -0.75 ? '<b>Opens a hole:</b> your weakest starter falls from ' + esc(fit.before.p.name) + ' at ' + esc(slotName(fit.before)) + ' (' + n1(fit.before.v) + ') to ' + esc(fit.after.p.name) + ' (' + n1(fit.after.v) + ') a week.'
-            : 'Your weakest starting slot is about where it was.')
-          : 'Add your roster in step 2 to see whether it fills a starting slot or opens one.')
+      // The situation: the status word, the weights it sets, and where it
+      // was read from. The fit: one of four words, then the slot and names.
+      rows += '<div class="row"><span class="k">Your situation</span><span class="v">' + esc(STATUS[y.h] || HORIZONS[y.h]) + '</span><span class="w">'
+        + 'Counts the next 3 weeks ' + Math.round(y.w[0] * 100) + '% and ' + esc(HORIZONS[g.long.h].toLowerCase()) + ' ' + Math.round(y.w[1] * 100) + '%. '
+        + (y.read ? 'From your notes: &ldquo;' + esc(y.read.why) + '&rdquo;.' : 'From the settings; your notes in step 3 can change it.')
         + '</span></div>';
+      var fit = y.fit, slotName = function (r) { return r.slot === 'FLEX' ? 'flex' : r.slot === 'SFLEX' ? 'superflex' : r.slot; };
+      var fv, fw;
+      if (!fit) { fv = 'Not known'; fw = 'Add your roster in step 2 to see whether it fills a starting slot or opens one.'; }
+      else if (fit.after.empty) { fv = 'Opens a hole'; fw = esc(slotName(fit.after)) + ' goes unfilled; ' + esc(fit.before.p.name) + ' (' + n1(fit.before.v) + ' a week) was starting there.'; }
+      else if (fit.before.empty) { fv = 'Fills a need'; fw = esc(slotName(fit.before)) + ' was empty; ' + esc(fit.after.p.name) + ' starts there now (' + n1(fit.after.v) + ' a week).'; }
+      else if (fit.delta >= 0.75) { fv = 'Fills a need'; fw = 'Your weakest starter goes from ' + esc(fit.before.p.name) + ' at ' + esc(slotName(fit.before)) + ' (' + n1(fit.before.v) + ') to ' + esc(fit.after.p.name) + ' (' + n1(fit.after.v) + ') a week.'; }
+      else if (fit.delta <= -0.75) { fv = 'Opens a hole'; fw = 'Your weakest starter falls from ' + esc(fit.before.p.name) + ' at ' + esc(slotName(fit.before)) + ' (' + n1(fit.before.v) + ') to ' + esc(fit.after.p.name) + ' (' + n1(fit.after.v) + ') a week.'; }
+      else { fv = 'No change'; fw = 'Your weakest starting slot is about where it was.'; }
+      rows += '<div class="row"><span class="k">Lineup fit</span><span class="v">' + fv + '</span><span class="w">' + fw + '</span></div>';
     }
-    html += '<div class="tf-gauge-rows">' + termRow('Short term', g.short, mi) + termRow('Long term', g.long, mi) + sit + '</div>';
+    html += '<div class="tf-gauge-rows">' + rows + '</div>';
     host.innerHTML = html;
     host.hidden = false;
   }
   // The headline answers the reader's question in a line: should I send
   // this, and will the others take it.
+  // Every figure names its horizon, so the verdict's number and the rest-of-
+  // season row below it are visibly the same number.
+  var OVER = { week: 'this week', next3: 'over the next 3 weeks', ros: 'over the rest of the season', playoffs: 'in the fantasy playoffs' };
   function verdictOf(sides, mi) {
     var n = function (v) { return n1(Math.abs(v)) + ' pts a week'; };
+    var over = function (s) { return ' ' + (OVER[s.h] || ''); };
     var you = sides.filter(function (s) { return s.i === mi; })[0];
     var others = sides.filter(function (s) { return s.i !== mi; });
     var otherGain = others.filter(function (s) { return s.call === 'gain'; }), otherLoss = others.filter(function (s) { return s.call === 'loss'; });
@@ -1509,10 +1766,14 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
       if (sides.every(function (s) { return s.call === 'gain'; })) return { cls: 'win', h: 'Every team in it wins.', p: 'Your team is not part of this one, but every lineup involved gets better.' };
       return { cls: 'mixed', h: 'Your team is not part of this trade.', p: otherLoss.length ? otherLoss.map(function (s) { return s.name; }).join(' and ') + ' would lose lineup value.' : 'No team involved loses as much as three quarters of a point a week.' };
     }
-    if (you.call === 'gain' && otherGain.length === others.length) return { cls: 'win', h: others.length === 1 ? 'Both sides win. Send it.' : 'Every team wins. Send it.', p: 'Your lineup gains ' + n(you.gain) + (others.length === 1 ? ' and theirs gains ' + n(others[0].gain) : '; ' + others.map(function (s) { return s.name + ' +' + n1(s.gain); }).join(', ')) + ', so everyone has a reason to say yes.' };
-    if (you.call === 'loss') return { cls: 'lose', h: 'Don’t do it.', p: 'It costs your lineup ' + n(you.gain) + (otherGain.length ? ' and helps ' + otherGain.map(function (s) { return s.name; }).join(' and ') + '.' : '.') };
-    if (you.call === 'gain' && otherLoss.length) return { cls: 'mixed', h: 'Good for you, but expect a no.', p: 'You gain ' + n(you.gain) + '; ' + otherLoss.map(function (s) { return s.name + ' loses ' + n(s.gain); }).join(', ') + '. A manager who checks the numbers will turn it down.' };
-    if (you.call === 'gain') return { cls: 'mixed', h: 'Good for you, about even for ' + (others.length === 1 ? 'them' : 'the others') + '.', p: 'You gain ' + n(you.gain) + '; ' + them + ' barely move' + (others.length === 1 ? 's' : '') + '. They may take it if they like the names.' };
+    // Every lineup gains, but a manager asked to send the best player, or far
+    // more projection than comes back, for a small bump still says no.
+    var refuse = others.filter(function (s) { return s.entered && s.case && !s.case.accept; });
+    if (you.call === 'gain' && otherGain.length === others.length && refuse.length) return { cls: 'mixed', h: 'Both lineups gain, but expect a no.', p: refuse.map(function (s) { return s.name + ': ' + s.case.against[0]; }).join(' ') + ' Ask what would make it work, or try the trades below.' };
+    if (you.call === 'gain' && otherGain.length === others.length) return { cls: 'win', h: others.length === 1 ? 'Both sides win. Send it.' : 'Every team wins. Send it.', p: 'Your lineup gains ' + n(you.gain) + over(you) + (others.length === 1 ? ' and theirs gains ' + n(others[0].gain) : '; ' + others.map(function (s) { return s.name + ' +' + n1(s.gain); }).join(', ')) + ', so everyone has a reason to say yes.' };
+    if (you.call === 'loss') return { cls: 'lose', h: 'Don’t do it.', p: 'It costs your lineup ' + n(you.gain) + over(you) + (otherGain.length ? ' and improves ' + otherGain.map(function (s) { return s.name + '’s'; }).join(' and ') + '.' : '.') };
+    if (you.call === 'gain' && otherLoss.length) return { cls: 'mixed', h: 'Good for you, but expect a no.', p: 'You gain ' + n(you.gain) + over(you) + '; ' + otherLoss.map(function (s) { return s.name + ' loses ' + n(s.gain); }).join(', ') + '. A manager who checks the numbers will turn it down.' };
+    if (you.call === 'gain') return { cls: 'mixed', h: 'Good for you, about even for ' + (others.length === 1 ? 'them' : 'the others') + '.', p: 'You gain ' + n(you.gain) + over(you) + '; ' + them + ' barely move' + (others.length === 1 ? 's' : '') + '. They may take it if they like the names.' };
     if (otherGain.length) return { cls: 'mixed', h: 'It helps ' + (others.length === 1 ? 'them' : 'the others') + ' more than you.', p: 'Your lineup barely moves; ' + otherGain.map(function (s) { return s.name + ' gains ' + n(s.gain); }).join(', ') + '. Ask for more.' };
     return { cls: 'mixed', h: 'A wash.', p: 'No lineup moves by as much as three quarters of a point a week.' };
   }
@@ -1530,13 +1791,13 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     var ordered = sides.slice().sort(function (a, b) { return (b.i === mi) - (a.i === mi) || a.i - b.i; });
     var html = '<div class="tf-trade tf-proposed"><h3>' + esc(title) + '<span class="with">' + esc(sides.map(function (s) { return s.name; }).join(', ')) + '</span></h3><div class="tf-sides' + (sides.length > 2 ? ' multi' : '') + '">'
       + ordered.map(function (s) {
-          return sideCard(s.i === mi ? 'You' : 'Them', s.name, s.give, s.get, s.gain, s.h, s.lines, Math.max(0, s.get.length - s.give.length), !s.entered);
+          return sideCard(s.i === mi ? 'You' : 'Them', s.name, s.give, s.get, s.gain, s.h, s.lines, Math.max(0, s.get.length - s.give.length), !s.entered, s.case);
         }).join('')
       + '</div></div>';
     if (alt) {
       html += '<h3 class="tf-alt">Trades among these teams that work for both sides</h3>'
         + (alt.trades.length ? alt.trades.map(function (t, i) { return foundCard(t, i, alt.teams, mi); }).join('')
-          : '<div class="tf-empty">No two-team swap among these rosters improves both lineups right now. Try a different horizon in the settings.</div>');
+          : '<div class="tf-empty">No two-team swap among these rosters improves both lineups and gives both managers a reason to say yes right now. Try a different horizon in the settings.</div>');
     }
     $('tf-trades').innerHTML = html;
     $('tf-results-note').innerHTML = (entered ? '' : 'A side with no roster entered is scored on the players alone: what it gets against what it sends. Add the rosters in step 2 and each side is scored on the lineup it actually starts, and the evaluator also looks for trades among these teams that work for everyone. ')
@@ -1565,6 +1826,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
         out.push('- ' + s.name + ' sends ' + (s.give.map(function (p) { return p.name + ' (' + p.pos + ')'; }).join(', ') || 'nothing')
           + ', receives ' + (s.get.map(function (p) { return p.name + ' (' + p.pos + ')'; }).join(', ') || 'nothing')
           + ': lineup ' + signed(s.gain) + ' pts/week (' + s.call + (s.entered ? '' : '; no roster entered, scored on the players alone') + ').');
+        if (s.entered && s.case) out.push('  ' + s.name + (s.case.accept ? ' would take it: ' : ' would refuse: ') + (s.case.accept ? s.case.why : s.case.against).join(' '));
       });
       out.push('Engine verdict: ' + verdictOf(res, mi).h);
       if (gauge) {
@@ -1585,6 +1847,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
         var A = res.teams[t.a], B = res.teams[t.b];
         out.push((k + 1) + '. ' + A.name + ' sends ' + t.giveA.map(function (p) { return p.name; }).join(' + ') + ' (' + signed(t.gainA) + '/wk); '
           + B.name + ' sends ' + t.giveB.map(function (p) { return p.name; }).join(' + ') + ' (' + signed(t.gainB) + '/wk).');
+        if (t.caseA && t.caseB) out.push('   Why ' + A.name + ': ' + t.caseA.why.join(' ') + ' Why ' + B.name + ': ' + t.caseB.why.join(' '));
       });
     }
     return out.join('\n');
