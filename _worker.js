@@ -10363,13 +10363,28 @@ async function playerBoardRow(env, p) {
            rank: at + 1, of };
 }
 
-function playerSeo(env, p, row) {
+function playerSeo(env, p, row, week) {
   const url = 'https://irontuna.com/player/' + p.slug;
   const club = _PLAYER_IDX && _PLAYER_IDX.clubs[p.t];
   const word = PC_POS_WORD[p.p] || p.p;
   // The club line the card prints, said as a sentence rather than as a row.
   const who = p.p === 'DEF' ? (club || p.n) + ' team defense'
             : p.n + ', ' + (club ? club + ' ' : '') + word.toLowerCase();
+  // In season the address serves the weekly-intel shell (see the asset
+  // rewrite), so the head describes the week and carries no draft numbers:
+  // the board row is a full-season August price, the thing that page replaced.
+  if (week) {
+    const Who = who.charAt(0).toUpperCase() + who.slice(1);
+    return {
+      player: p, row: null, url, week: true,
+      // Byte-for-byte the title player-intel.html's render() writes.
+      title: p.n + ' \u2014 weekly intel | Iron Tuna',
+      desc: Who + '. This week\u2019s Iron Tuna, consensus and Vegas projections, the Market Delta, '
+        + 'current props and line movement, usage and injury status, at your league\u2019s scoring.',
+      ogt: p.n + ' \u2014 this week',
+      ogd: 'Iron Tuna, consensus and Vegas on ' + p.n + ' this week, with the props and the line movement behind the gap.',
+    };
+  }
   const nums = row
     ? ' Iron Tuna projects ' + row.pts.toFixed(1) + ' fantasy points and prices him at $'
       + row.v + ' in a 12-team, $200 auction, ' + p.p + row.rank + ' of ' + row.of
@@ -10421,7 +10436,7 @@ function playerHeader(p, row) {
 // software. The breadcrumb stops at the site: /player is the lookup box, it is
 // noindex, and naming it as this page's parent would advertise a crawl the
 // next line refuses.
-function playerLd(p, row, url) {
+function playerLd(p, row, url, week) {
   const club = _PLAYER_IDX && _PLAYER_IDX.clubs[p.t];
   const subject = p.p === 'DEF'
     ? { '@type': 'SportsTeam', name: club || p.n, sport: 'American Football' }
@@ -10432,7 +10447,7 @@ function playerLd(p, row, url) {
     '@type': 'WebPage',
     '@id': url,
     url,
-    name: p.n + ' — fantasy projection and auction value',
+    name: p.n + (week ? ' — weekly fantasy intel' : ' — fantasy projection and auction value'),
     inLanguage: 'en-US',
     isAccessibleForFree: true,
     isPartOf: { '@id': 'https://irontuna.com/#website' },
@@ -10447,38 +10462,6 @@ function playerLd(p, row, url) {
     mainEntity: subject,
     ...(row ? { mainEntityOfPage: { '@id': url } } : {}),
   }).replace(/</g, '\\u003c') + '</' + 'script>';
-}
-
-// The card's two buttons, WHILE THE SEASON IS OPEN.
-//
-// The shell ships an offseason pair — "Price him in your league" and "Open the
-// Auction Manager", both pointing into the draft rooms. That was right when the
-// only way onto this page was from a draft board. It is not right now that
-// every in-season board links here: tools/test-chrome.mjs already bans the
-// draft rooms from the site's chrome on the grounds that "in week 2 they are
-// the site telling a visitor it is still July", and a reader who arrives from
-// the weekly rankings would have walked straight into exactly that.
-//
-// So in season the card leads with the page that answers the question that
-// brought them — this week's intel for this player — and offers his position's
-// board as the way back out. /in-season/player/<slug> is gated on the same
-// POST_DRAFT_OPEN, so the link is only ever written when it resolves to the
-// intel page rather than to the waiting-list gate.
-//
-// Out of season nothing is rewritten and the shell's own pair stands.
-// The one rankings page's own position keys (11 Oct 2026; the per-position
-// pages the button used to open are gone, and 301 here).
-const PC_BOARD = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', K: 'K', DEF: 'DST' };
-function playerCta(p) {
-  const e = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-  const board = PC_BOARD[p.p];
-  return '<div class="pc-cta">'
-    + '<a class="pc-btn" href="/in-season/player/' + e(p.slug) + '">This week\u2019s intel</a>'
-    + (board
-        ? '<a class="pc-btn alt" href="/rankings#pos=' + board + '">Every '
-          + e((PC_POS_WORD[p.p] || p.p).toLowerCase()) + ' this week</a>'
-        : '')
-    + '</div>';
 }
 
 // ── /players ───────────────────────────────────────────────────────────────
@@ -18581,6 +18564,16 @@ export default {
       // from /player-search.js and /it-league.js. Same shape as /lead above and
       // for the same reason: ~400 players is not ~400 files. Extensionless
       // target, or the assets layer answers with a 307 back to this same path.
+      //
+      // IN SEASON a named player is the week, not the draft (13 Oct 2026). The
+      // card is a draft-room page: a full-season projection frozen in August,
+      // an auction dollar figure, a board slot and preseason ADP. Every in-season
+      // board links a name here, so the front page's Week 6 rankings sent a
+      // reader who clicked their QB1 to his auction price. While the section is
+      // open /player/<slug> serves the weekly-intel shell at the same address,
+      // which keeps every link, the sitemap and the index pointing at one page.
+      // The bare /player stays the lookup box, and out of season nothing changes.
+      else if (/^\/player\/[A-Za-z0-9._-]+\/?$/.test(url.pathname) && (POST_DRAFT_OPEN(env) || postDraftPreview(env, url, request))) __assetReq = new Request(new URL('/player-intel', url).toString(), request);
       else if (/^\/player(\/[A-Za-z0-9._-]*)?\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/player', url).toString(), request);
       else if (/^\/(auctiondraft|snakedraft|bestball|hub)(\/|$)/.test(url.pathname)) __assetReq = new Request(new URL('/', url).toString(), request);
       // /in-season/<page> is an ALIAS, not the canonical URL. This comment used to
@@ -18687,7 +18680,10 @@ export default {
           // An unknown slug keeps the shell's own noindex and its own copy: the
           // page still answers, with its lookup box and its "no player by that
           // name", and nothing advertises it for a crawl.
-          if (__p) __m = playerSeo(env, __p, await playerBoardRow(env, __p));
+          // In season the same test the asset rewrite used, so the head always
+          // describes the shell that was actually served.
+          const __wk = POST_DRAFT_OPEN(env) || postDraftPreview(env, url, request);
+          if (__p) __m = __wk ? playerSeo(env, __p, null, true) : playerSeo(env, __p, await playerBoardRow(env, __p));
         }
       }
       if (__m) {
@@ -18713,7 +18709,19 @@ export default {
         // A player URL becomes indexable and gets a card the same way, and
         // for the same reason: the shell is noindex as it ships and stays that
         // way at /player itself and at any slug the index does not know.
-        if (__m.player) {
+        if (__m.player && __m.week) {
+          // The weekly-intel shell: indexable at this address, its name and club
+          // line pre-rendered for the crawlers that run no script, and the rest
+          // left to the page, which fetches this week's board on load.
+          const __ph = playerHeader(__m.player, null);
+          __html = __html
+            .replace('<meta name="robots" content="noindex,follow">',
+              '<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">')
+            .replace('<h1 id="piName">Player</h1>', () => '<h1 id="piName">' + __ph.name + '</h1>')
+            .replace('<div class="pi-meta" id="piMeta"></div>',
+              () => '<div class="pi-meta" id="piMeta">' + __ph.clubLine + '</div>')
+            .replace('</head>', () => playerLd(__m.player, null, __m.url, true) + '\n</head>');
+        } else if (__m.player) {
           const __ph = playerHeader(__m.player, __m.row);
           __html = __html
             .replace('<meta name="robots" content="noindex,follow">',
@@ -18732,13 +18740,10 @@ export default {
             .replace('<div class="pc-nums" id="pcNums"></div>',
               () => '<div class="pc-nums" id="pcNums">' + __ph.nums + '</div>')
             .replace('</head>', () => playerLd(__m.player, __m.row, __m.url) + '\n</head>');
-          // In season the two buttons change; out of season the shell's own
-          // pair is left exactly as it ships.
-          if (POST_DRAFT_OPEN(env)) {
-            const __cta = playerCta(__m.player);
-            __html = __html.replace(
-              /<div class="pc-cta">[\s\S]*?<\/div>/, () => __cta);
-          }
+          // The card is only ever served out of season now, so its own
+          // draft-room buttons stand. (Until 13 Oct 2026 the worker swapped in
+          // a "This week's intel" pair here; in season the address IS that
+          // page, so there is no card left to put the buttons on.)
         }
         if (__m.analyst) {
           __html = __html

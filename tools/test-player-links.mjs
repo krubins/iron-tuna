@@ -445,50 +445,35 @@ console.log('\nthe boards link the card');
   }
 }
 
-// ── the in-season page is still reachable ──────────────────────────────────
-// Moving the boards off /in-season/player/<slug> would have orphaned it: no
-// page on the site would have linked it, and it is noindex, so nothing would
-// have found it at all. The card links it back, and in season it is the card's
-// FIRST button — because a reader arriving from the weekly rankings wants this
-// week, and the two buttons the shell ships are both draft-room promotions.
-console.log('\nthe card leads back to the week');
+// ── in season, the name IS the week ────────────────────────────────────────
+// Until 13 Oct 2026 every board linked the draft card and the worker bolted a
+// "This week's intel" button onto it, so a reader who clicked their QB1 on the
+// Week 6 rankings landed on his August auction price and had to click again.
+// Now /player/<slug> serves the weekly-intel shell while the section is open:
+// one address, so every board link, the sitemap and the index stay as they are.
+console.log('\nin season the name opens the week');
 {
   const worker = read('_worker.js');
-  ok('the worker builds the in-season pair', /function playerCta\(p\) \{/.test(worker));
-  const cta = worker.slice(worker.indexOf('function playerCta(p) {'));
-  ok('its first button is this week’s intel for this player',
-     cta.indexOf("/in-season/player/") > 0
-     && cta.indexOf("/in-season/player/") < cta.indexOf("/rankings#pos="));
-  // The one rankings page, opened on his position (11 Oct 2026; the
-  // per-position pages it used to open are gone and 301 there).
-  ok('its second is the rankings page on his position', /\/rankings#pos=' \+ board \+ '"/.test(cta));
-  // Only while the season is open. /in-season/player/<slug> is gated on the
-  // same flag, so writing the link when it is off would point at the
-  // waiting-list gate.
-  ok('and it is written only while the season is open',
-     /if \(POST_DRAFT_OPEN\(env\)\) \{[\s\S]{0,200}playerCta/.test(worker));
-
-  // The block the worker replaces has to still be in the shell, verbatim. A
-  // replace() that matches nothing returns its input, so a renamed class here
-  // would leave the draft-room buttons on every in-season arrival with no
-  // error anywhere.
-  const shell = read('player.html');
-  ok('the shell still carries the block the worker replaces',
-     /<div class="pc-cta">[\s\S]*?<\/div>/.test(shell));
-  ok('and out of season it still ships the auction pair',
-     /pc-cta[\s\S]{0,400}auctiondraft\?screen=cheat/.test(shell));
-
-  // Every position on the card maps to a board, or the second button vanishes
-  // for the positions it cannot name.
-  const map = (worker.match(/const PC_BOARD = \{[\s\S]*?\};/) || [''])[0];
-  for (const pos of ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']) {
-    ok(`a ${pos} card knows its board`, new RegExp(pos + ": '").test(map));
-  }
-  // ...and each of those is a position the page's own tiles offer.
+  ok('the rewrite serves the intel shell at /player/<slug> while the season is open',
+     /\/\^\\\/player\\\/\[A-Za-z0-9\._-\]\+\\\/\?\$\/\.test\(url\.pathname\) && \(POST_DRAFT_OPEN\(env\) \|\| postDraftPreview\(env, url, request\)\)\) __assetReq = new Request\(new URL\('\/player-intel'/.test(worker));
+  ok('the old button pair is gone with the card it sat on', !/function playerCta\(/.test(worker));
+  const intel = read('player-intel.html');
+  ok('the intel page offers his position\u2019s board as the way out', /\/rankings#pos=' \+ pos/.test(intel));
+  // A player off the week's board must not be a dead end: both misses point
+  // back to the lookup box.
+  ok('a player off the board is offered the search box',
+     /var FIND = '[^']*href="\/player"/.test(intel)
+     && /No player by that name on the board\.' \+ FIND/.test(intel)
+     && /not on the in-season board yet\.' \+ FIND/.test(intel));
+  // The rankings page's own keys, which the way-out link writes.
   const tiles = [...read('rankings.html').matchAll(/class="rk-tile" data-pos="([A-Z]+)"/g)].map((m) => m[1]);
   for (const b of ['QB', 'RB', 'WR', 'TE', 'K', 'DST']) {
     ok(`/rankings#pos=${b} is a tile on the page`, tiles.includes(b));
   }
+  // Out of season the card still ships its own pair.
+  const shell = read('player.html');
+  ok('out of season the card still ships the auction pair',
+     /pc-cta[\s\S]{0,400}auctiondraft\?screen=cheat/.test(shell));
 }
 
 
