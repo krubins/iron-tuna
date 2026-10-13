@@ -640,9 +640,9 @@ console.log('\n/player/<slug>');
   const src = read('_worker.js');
   const lift = (a, b) => { const i = src.indexOf(a); return i < 0 ? null : src.slice(i, src.indexOf(b, i) + b.length); };
   const idxFn = lift('async function playerIndex(env, url) {', '\n}');
-  const seo = lift('function playerSeo(env, p, row) {', '\n}');
+  const seo = lift('function playerSeo(env, p, row, week) {', '\n}');
   const hdr = lift('function playerHeader(p, row) {', '\n}');
-  const ld = lift('function playerLd(p, row, url) {', '\n}');
+  const ld = lift('function playerLd(p, row, url, week) {', '\n}');
   const fold = lift('function _pcFold(s) {', '\n}');
   ok('the worker still carries the per-player head', !!idxFn && !!seo && !!hdr && !!ld);
 
@@ -782,6 +782,24 @@ console.log('\n/player/<slug>');
   ok('a player is marked up as a Person', parsed && parsed.mainEntity['@type'] === 'Person');
   ok('and it hangs off the one organization', parsed
     && parsed.publisher['@id'] === 'https://irontuna.com/#organization');
+
+  // IN SEASON the address serves the weekly-intel shell (13 Oct 2026), so the
+  // head must describe the week and carry none of the August draft numbers.
+  const wk = fns.playerSeo({}, one, null, true);
+  ok('in season the head is the week, at the same address',
+    wk.week === true && wk.url === m.url && wk.desc.includes(one.n));
+  ok('in season the head carries no auction price or season total',
+    !/\$|auction|full season/i.test(wk.title + wk.desc + wk.ogt + wk.ogd));
+  const intelSrc = read('player-intel.html');
+  ok('in season the edge title is the title the intel page sets',
+    intelSrc.includes("p.name + ' — weekly intel | Iron Tuna'") && wk.title === one.n + ' \u2014 weekly intel | Iron Tuna');
+  // The worker pre-renders into these two hosts and lifts the shell's noindex;
+  // a replace() that matches nothing fails silently, so the hosts are pinned.
+  ok('the intel shell still carries the hosts the worker fills',
+    intelSrc.includes('<h1 id="piName">Player</h1>') && intelSrc.includes('<div class="pi-meta" id="piMeta"></div>')
+    && intelSrc.includes('<meta name="robots" content="noindex,follow">'));
+  ok('and the intel page reads the slug off /player/<slug>',
+    /\(\?:in-season\\\/\)\?player/.test(intelSrc));
 }
 
 // ── /players ─────────────────────────────────────────────────────────────────

@@ -117,7 +117,7 @@ p{color:var(--sec);margin:0 0 16px}
   <h2>Usage</h2>
   <div id="piUsage" class="pi-note"></div>
 </div>
-<p class="is-note" style="margin-top:28px"><a href="/rankings">&larr; Back to the rankings</a> &middot; <a href="/vegas-edge">Vegas Edge</a></p>
+<p class="is-note" style="margin-top:28px"><a href="/rankings" id="piBack">&larr; Back to the rankings</a> &middot; <a href="/vegas-edge">Vegas Edge</a></p>
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
@@ -154,7 +154,10 @@ p{color:var(--sec);margin:0 0 16px}
   var LABEL = { passYd: 'Passing yards', passTD: 'Passing TDs', passInt: 'Interceptions', rushYd: 'Rushing yards', rushTD: 'Rushing TDs', rushAtt: 'Carries', recYd: 'Receiving yards', rec: 'Receptions', recTD: 'Receiving TDs', anytimeTD: 'Anytime TD' };
   var HZ = { week: 'This week', next3: 'Next 3 weeks', ros: 'Rest of season', playoffs: 'Fantasy playoffs: weeks 15–17' };
   function wanted() {
-    var m = location.pathname.match(/^\/in-season\/player\/([A-Za-z0-9._-]+)\/?$/);
+    // /player/<slug> is this page while the season is open (the worker serves
+    // it there in place of the draft card); /in-season/player/<slug> is the
+    // older address and still answers.
+    var m = location.pathname.match(/^\/(?:in-season\/)?player\/([A-Za-z0-9._-]+)\/?$/);
     var qs = new URLSearchParams(location.search);
     return { slug: m ? decodeURIComponent(m[1]) : (qs.get('p') || ''), pos: (qs.get('pos') || '').toUpperCase(), name: qs.get('name') || '' };
   }
@@ -177,6 +180,9 @@ p{color:var(--sec);margin:0 0 16px}
     $('piName').textContent = p.name;
     $('piMeta').innerHTML = '<b>' + e(pos) + ' · ' + e(p.team) + '</b>' + (w && w.opponent ? ' · ' + e((w.home ? 'vs ' : 'at ') + w.opponent) + (w.kickoff ? ', ' + e(window.ITSeason ? ITSeason.kickoff(w.kickoff) : '') : '') : '') +
       (w && w.injury ? ' · <span class="rk-inj" style="color:var(--danger);font-weight:800">' + e(w.injury.status) + (w.injury.gamesOut ? ' (' + w.injury.gamesOut + ' games)' : '') + '</span>' : '');
+    // Back out to his position's board, the way the card's in-season button
+    // used to (the one rankings page's own keys: DST, not DEF).
+    if (/^(QB|RB|WR|TE|K|DST)$/.test(pos)) { $('piBack').href = '/rankings#pos=' + pos; $('piBack').innerHTML = '&larr; Every ' + e(pos) + ' this week'; }
     var L = window.ITLeague, mine = !!(L && L.has);
     if (w) {
       var pts = function (b) { var m = score(w[b].stats, pos, 1); return m != null ? m : w[b].points; };

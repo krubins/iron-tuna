@@ -137,6 +137,21 @@ for (const [route, file] of ROUTES) {
   ok(`${route} lands on ${file}`, direct.file === file, `got ${direct.file}`);
 }
 
+// In season a named player is the week (13 Oct 2026): /player/<slug> serves
+// the weekly-intel shell, and the bare lookup box does not move.
+console.log('\nin season a player address serves the week');
+for (const [route, file, opts] of [
+  ['/player/josh-allen',  '/player-intel.html', { open: true }],
+  ['/player/josh-allen/', '/player-intel.html', { preview: true }],
+  ['/player',             '/player.html',       { open: true }],
+  ['/player/',            '/player.html',       { open: true }],
+  ['/player/josh-allen',  '/player.html',       {}],
+]) {
+  const r = assetResolve(rewrite(route, opts));
+  ok(`${route} ${opts.open || opts.preview ? 'in season' : 'out of season'} lands on ${file}`,
+     r.status === 200 && r.file === file, `got ${r.status} ${r.file}`);
+}
+
 console.log('\nno route redirects, and none loops');
 for (const [route, file] of ROUTES) {
   const r = browse(route);

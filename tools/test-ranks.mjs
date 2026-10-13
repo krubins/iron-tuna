@@ -75,8 +75,10 @@ console.log('\nthe old pages are gone, and their addresses 301 to the one page')
   ok('the pooled board lands on the horizon alone', /__rk\[2\] !== 'overall'/.test(block));
   ok('before the gate, so a closed section cannot swallow the redirect',
     worker.indexOf('const __rk = ') < worker.indexOf('let __assetReq = request;'));
-  ok('the player card\'s board button opens the one page on his position',
-    /href="\/rankings#pos=' \+ board \+ '"/.test(worker) && !/\/weekly-' \+ board/.test(worker));
+  // The card's in-season button went with the card (13 Oct 2026): in season
+  // /player/<slug> serves the intel page, whose way out is the same link.
+  ok('the player page\'s board link opens the one page on his position',
+    /'\/rankings#pos=' \+ pos/.test(read('player-intel.html')) && !/\/weekly-' \+ (board|pos)/.test(worker));
   ok('and the worker no longer pre-renders a board for pages that do not exist',
     !/ranksPrerender|rkPreHtml|RK_PRERENDER_ROWS/.test(worker));
 }
