@@ -81,7 +81,7 @@ async function rl(env, request, bucket, max, ttlSec) {
 // sitemap while the gate is shut. Spell them out.
 const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
   '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/my-leagues', '/player-intel', '/desk',
-  '/fantasy', '/stats', '/hidden-value', '/previews', '/the-line', '/weekly-wrap', '/value-coach']);
+  '/fantasy', '/stats', '/hidden-value', '/previews', '/the-line', '/weekly-wrap', '/value-coach', '/position']);
 // The HUB is never in that set: it is the page a closed route serves in place of
 // itself, so gating it would be a loop. /post-draft is the name the hub used to
 // carry and 301s here — see the redirect at the top of fetch().

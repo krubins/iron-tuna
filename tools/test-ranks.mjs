@@ -139,8 +139,8 @@ console.log('\nwhat sits under the front page\u2019s hero');
   const nextSec = front.indexOf('<section', heroEnd);
   ok('the hero band is still the first section', heroStart > 0 && heroStart === front.indexOf('<section'));
   ok('the position tiles are the section after it', tilesAt > heroEnd && tilesAt === nextSec, `hero ends ${heroEnd}, tiles at ${tilesAt}, next ${nextSec}`);
-  ok('and every position tile opens the one rankings page on that position',
-     POSITIONS.filter((p) => p !== 'flex').every((p) => front.includes('href="/rankings#pos=' + p.toUpperCase() + '"')));
+  ok('and every position tile opens the position page on that position',
+     POSITIONS.filter((p) => p !== 'flex').every((p) => front.includes('href="/position#pos=' + p.toUpperCase() + '"')));
   ok('no tile links a weekly page', !/href="\/weekly-[a-z]+-rankings"/.test(front));
   // The homepage's own in-page anchor ribbon — the sticky bar of lane tabs and
   // section jumps — came off with the sections it pointed at in the September
