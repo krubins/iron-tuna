@@ -236,9 +236,13 @@ p{color:var(--sec);margin:0 0 16px}
   }
   function boot() {
     var w = wanted(), who = resolve(w);
-    if (!who) { $('piEmpty').textContent = 'No player by that name on the board.'; return; }
+    // A dead end is a reader stranded on a player page with nowhere to go, so
+    // every miss offers the lookup box (13 Oct 2026). /player bare is still the
+    // search page in season; only /player/<slug> became this page.
+    var FIND = ' <a href="/player">Search for another player</a>.';
+    if (!who) { $('piEmpty').innerHTML = 'No player by that name on the board.' + FIND; return; }
     fetch('/api/intel/player?name=' + encodeURIComponent(who.n) + '&pos=' + encodeURIComponent(who.p)).then(function (r) { return r.json(); }).then(function (j) {
-      if (!j || !j.ok) { $('piEmpty').textContent = 'He is not on the in-season board yet.'; return; }
+      if (!j || !j.ok) { $('piEmpty').innerHTML = 'He is not on the in-season board yet.' + FIND; return; }
       render(j);
     }).catch(function () { $('piEmpty').textContent = 'The board did not answer.'; });
   }

@@ -459,6 +459,12 @@ console.log('\nin season the name opens the week');
   ok('the old button pair is gone with the card it sat on', !/function playerCta\(/.test(worker));
   const intel = read('player-intel.html');
   ok('the intel page offers his position\u2019s board as the way out', /\/rankings#pos=' \+ pos/.test(intel));
+  // A player off the week's board must not be a dead end: both misses point
+  // back to the lookup box.
+  ok('a player off the board is offered the search box',
+     /var FIND = '[^']*href="\/player"/.test(intel)
+     && /No player by that name on the board\.' \+ FIND/.test(intel)
+     && /not on the in-season board yet\.' \+ FIND/.test(intel));
   // The rankings page's own keys, which the way-out link writes.
   const tiles = [...read('rankings.html').matchAll(/class="rk-tile" data-pos="([A-Z]+)"/g)].map((m) => m[1]);
   for (const b of ['QB', 'RB', 'WR', 'TE', 'K', 'DST']) {
