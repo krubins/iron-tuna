@@ -190,6 +190,19 @@ const THIN = { ok: true, pieces: [
     week: 5, publishedAt: AGO(0.7), url: '/in-season/desk/week-in-review/5', byline: { name: 'Usage Desk' },
     components: [{ n: 1, headline: 'Week 5 in review has harder lessons too' }, { n: 2, player: 'Dak Prescott', headline: 'Flournoy beat his ranking' }] }
 ]};
+// Two pieces as the desk filed them for Week 5 (2026-10-13): no findings, a
+// headline that names its players by surname only and writes them out in the
+// dek, and a headline and dek that name clubs and no player at all.
+const UNNAMED = { ok: true, pieces: [
+  { kind: 'quarterback-monday', title: 'Quarterback Monday', headline: 'Week 6 quarterback intel: five weeks of data say start Stafford and love Love',
+    dek: 'Matthew Stafford is Iron Tuna QB2 against ARI at home; Jordan Love is Iron Tuna QB6 against DAL at home.',
+    week: 5, publishedAt: AGO(0.2), url: '/in-season/desk/quarterback-monday/5', byline: { name: 'Quarterback Desk' }, components: null },
+  { kind: 'what-sunday-taught-us', title: 'What Sunday Taught Us', headline: 'What Week 5 taught us about Week 6: three roles locked, three fades confirmed',
+    dek: 'Five weeks of data have settled the JAX target hierarchy, the NYJ backfield, and the PHI injury math.',
+    week: 5, publishedAt: AGO(0.3), url: '/in-season/desk/what-sunday-taught-us/5', byline: { name: 'Editorial Desk' }, components: null },
+  { kind: 'rankings-update', title: 'Rankings Update', headline: 'Eleven moves after the injury report',
+    dek: 'No club and no player.', week: 5, publishedAt: AGO(0.4), url: '/in-season/desk/rankings-update/5' }
+]};
 const SEASON = { ok: true, phase: 'regular', phaseLabel: 'Regular season',
   week: { label: 'Week 3', status: 'upcoming', firstKickoff: Date.UTC(2026, 8, 17, 20, 15) }, counts: { inProgress: 0 } };
 
@@ -216,8 +229,8 @@ const server = http.createServer((req, res) => {
       else if (u.pathname === '/api/newsroom') body = CONTENT;
       else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
       else if (u.pathname === '/api/season') body = SEASON;
-    } else if (MODE === 'thin') {
-      if (u.pathname === '/api/newsroom') body = THIN;
+    } else if (MODE === 'thin' || MODE === 'unnamed') {
+      if (u.pathname === '/api/newsroom') body = MODE === 'thin' ? THIN : UNNAMED;
       else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
       else if (u.pathname === '/api/season') body = SEASON;
     }
@@ -307,7 +320,7 @@ const read = page => page.evaluate(() => {
       return { href: link && link.getAttribute('href'), tag: r.tagName, action: pic.classList.contains('is-action'),
         credit: credit && vis(credit) ? { text: text(credit), links: [...credit.querySelectorAll('a')].map(a => a.getAttribute('href')) } : null,
         lead: r.classList.contains('lead'), name: text(r.querySelector('.hm-story-head')), meta: text(r.querySelector('.hm-story-meta')),
-        series: text(r.querySelector('.hm-story-chip')), face: pic.getAttribute('data-face-name'), headPx: px(r.querySelector('.hm-story-head')),
+        series: text(r.querySelector('.hm-story-chip')), face: pic.getAttribute('data-face-name'), team: pic.getAttribute('data-face-team'), headPx: px(r.querySelector('.hm-story-head')),
         picLeft: pb.right <= tb.left + 1, picTop: pb.bottom <= tb.top + 1, top: Math.round(b.top), w: Math.round(b.width), radius: parseFloat(getComputedStyle(r).borderTopLeftRadius), shadow: getComputedStyle(r).boxShadow };
     }),
     // How it works, and the band.
@@ -729,6 +742,29 @@ MODE = 'thin';
   ok('no photograph runs twice in the grid: a finding about the lead\'s player takes a different picture',
      (() => { const shots = r.rows.filter(x => x.action).map(x => x.face); return new Set(shots).size === shots.length; })(), JSON.stringify(r.rows.map(x => [x.face, x.action])));
   ok('four cards in the row under the lead', new Set(r.rows.slice(1).map(x => x.top)).size === 1, JSON.stringify(r.rows.map(x => x.top)));
+  await ctx.close();
+}
+MODE = 'live';
+
+// ── 3f'. pieces whose findings name nobody ─────────────────────────────────
+// Quarterback Monday and What Sunday Taught Us reached the front on bare navy
+// on 2026-10-13: no findings, surnames only in one headline, clubs only in the
+// other. The dek's full names give the first its player; the club the second.
+console.log('\npieces whose findings name nobody');
+MODE = 'unnamed';
+{
+  const { page, ctx } = await open(1440, 900);
+  let r = await read(page);
+  await page.evaluate(() => document.querySelector('#readGrid').scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(400);
+  r = await read(page);
+  ok('a headline of surnames takes its player from the full names in the dek, first named first',
+     r.rows[0].face === 'Matthew Stafford' && r.rows[0].team === null, JSON.stringify([r.rows[0].face, r.rows[0].team]));
+  ok('a piece that names only clubs takes the first club\'s mark',
+     r.rows[1].face === null && r.rows[1].team === 'JAX' && photos.some(u => /teamlogos\/nfl\/500\/jax\.png$/.test(u)),
+     JSON.stringify([r.rows[1].face, r.rows[1].team]));
+  ok('a club\'s mark prints no photo credit', r.rows[1].credit === null, JSON.stringify(r.rows[1].credit));
+  ok('a piece that names neither stays on the navy', r.rows[2].face === null && r.rows[2].team === null, JSON.stringify([r.rows[2].face, r.rows[2].team]));
   await ctx.close();
 }
 MODE = 'live';
