@@ -12879,14 +12879,18 @@ function pieceExpired(row, sched, now) {
 // forward piece whose games have kicked off is left out (pieceExpired above);
 // `expired` counts what was held back so a thin feed can be told apart from
 // a desk that did not publish.
-async function newsroomFeedPayload(env, lens, limit, floor) {
+async function newsroomFeedPayload(env, lens, limit, floor, archive) {
   if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
   await newsroomReady(env);
   try {
-    const want = Math.min(60, limit || 20);
+    // THE ARCHIVE. /position asks for it: one position's five stories can run
+    // short in the live feed (a kicker is rarely news twice in a week), so the
+    // spent pieces follow the live ones, each marked `expired`, and the page
+    // reaches back only as far as it has to. Without it the feed is unchanged.
+    const want = Math.min(archive ? 150 : 60, limit || 20);
     // Over-fetch: the rows the expiry and the lens drop would otherwise leave
     // the feed short of what the page asked for.
-    const q = await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, dfs_headline, dfs_dek, rivalry, game_id, components FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT ?").bind(Math.min(60, want + 24)).all();
+    const q = await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, dfs_headline, dfs_dek, rivalry, game_id, components FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT ?").bind(Math.min(archive ? 200 : 60, want + 24)).all();
     let rows = (q.results || []);
     // ONE ROW PER STORY. A live piece re-produced on its slug has several
     // published versions, and the opener's recap was stored twice by two
@@ -12908,6 +12912,7 @@ async function newsroomFeedPayload(env, lens, limit, floor) {
     // with no spent recaps, the feed is exactly what it was.
     const want0 = Math.max(0, Math.min(6, floor || 0));
     if (rows.length < want0) rows = rows.concat(spent.filter(r => r.kind === 'game-recap').slice(0, want0 - rows.length).map(r => ({ ...r, _spent: true })));
+    if (archive) { const have = new Set(rows.map(r => r.slug)); rows = rows.concat(spent.filter(r => !have.has(r.slug)).map(r => ({ ...r, _spent: true }))); }
     // The kind's CURRENT lens decides, not the row's: a row stored while its
     // kind still had a DFS lens does not put that kind back in the DFS lane.
     if (lens === 'dfs') rows = rows.filter(r => (r.lens === 'both' || r.lens === 'dfs') && !(CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].lens !== 'both'));
@@ -16997,7 +17002,7 @@ export default {
     if (url.pathname === '/api/newsroom') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
-      const out = await newsroomFeedPayload(env, url.searchParams.get('lens') === 'dfs' ? 'dfs' : 'weekly', parseInt(url.searchParams.get('limit') || '20', 10) || 20, parseInt(url.searchParams.get('floor') || '0', 10) || 0);
+      const out = await newsroomFeedPayload(env, url.searchParams.get('lens') === 'dfs' ? 'dfs' : 'weekly', parseInt(url.searchParams.get('limit') || '20', 10) || 20, parseInt(url.searchParams.get('floor') || '0', 10) || 0, url.searchParams.get('archive') === '1');
       return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=120' });
     }
     // The recap strip above the front page's hero. Sixty seconds, because on a

@@ -429,6 +429,11 @@ console.log('\nthe feeds and the front page');
       const topped = await H.newsroomFeedPayload(env, 'weekly', 60, floor);
       const extra = topped.pieces.filter(p => p.expired);
       ok('a floor tops a short feed up with spent game recaps only, marked expired', topped.ok && extra.length >= 1 && extra.length <= floor - live && extra.every(p => p.kind === 'game-recap') && !bare.pieces.some(p => p.expired), live + ' -> ' + topped.pieces.length + ' ' + extra.map(p => p.kind).join());
+      // /position's archive: every spent piece follows the live ones, marked
+      // expired, so a position the live feed has not written about can still be found.
+      const arch = await H.newsroomFeedPayload(env, 'weekly', 150, 0, true);
+      const firstOld = arch.pieces.findIndex(p => p.expired);
+      ok('the archive lists the live feed first, then the spent pieces, each once', arch.ok && firstOld === live && arch.pieces.slice(firstOld).every(p => p.expired) && new Set(arch.pieces.map(p => p.url)).size === arch.pieces.length, live + ' live, ' + arch.pieces.length + ' total, ' + arch.pieces.filter(p => p.expired).map(p => p.kind).join());
     } finally { clock.t = t0; Date.now = d0; }
   }
   ok('the front-page lead and its column carry none of them', (() => { const l = [movedLead.story].concat(movedLead.recent); return !l.some(r => FORWARD.some(k => r.slug.startsWith('desk:' + k + ':1:') || r.slug === 'desk:' + k + ':1') || r.slug.startsWith('desk:tnf-preview:2')); })(), JSON.stringify([movedLead.story].concat(movedLead.recent).map(r => r.slug)));
