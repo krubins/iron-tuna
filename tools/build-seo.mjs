@@ -566,7 +566,15 @@ function buildGraph(file, html) {
   // rest — plus the breadcrumb, which is what turns a bare URL in a result into
   // "Iron Tuna › In-Season › Rankings › This week's rankings".
   const type = APP_PAGES.has(file) ? 'WebApplication' : COLLECTION_PAGES.has(file) ? 'CollectionPage' : 'WebPage';
-  const d = gitDates(file);
+  // Without history, carry the committed dateModified forward, as the guides
+  // do. Dropping it made a shallow run disagree with a full one on every page
+  // here, so whichever kind of checkout last ran the tool, the other one
+  // failed the gate (13 Oct 2026).
+  let d = gitDates(file);
+  if (!d) {
+    const prior = (priorGraph(html) || []).find((n) => n['@type'] === type && n.dateModified);
+    if (prior) d = { modified: prior.dateModified };
+  }
   const parent = PARENT[file];
   return [
     {
@@ -613,10 +621,25 @@ function applySitemap() {
   let out = before;
 
   out = out.replace(/<url>([\s\S]*?)<\/url>/g, (block, inner) => {
-    if (/<lastmod>/.test(inner)) return block;
     const loc = (inner.match(/<loc>([^<]*)<\/loc>/) || [])[1];
     if (!loc) return block;
     const mod = lastmodFor(loc);
+    // A lastmod that is already there used to be left alone forever, so the
+    // front page said 2026-08-21 and the in-season boards 2026-09-03 while git
+    // had them rewritten in October (13 Oct 2026). A crawler budgets its visits
+    // by that date; a stale one tells it the busiest pages on the site are the
+    // quietest. The date only moves forward, only on git's word, and only for
+    // a URL the file already calls daily: those are the boards and the front
+    // page, where a new commit is new content. A guide or the terms page is
+    // touched by every site-wide chrome rebuild, and advertising those as
+    // updated is the noise that teaches a crawler to ignore lastmod. Without
+    // history (CI's shallow checkout) lastmodFor answers null and the committed
+    // date stands, so the gate still holds overnight.
+    const listed = (inner.match(/<lastmod>([^<]*)<\/lastmod>/) || [])[1];
+    if (listed) {
+      const daily = /<changefreq>daily<\/changefreq>/.test(inner);
+      return daily && mod && mod > listed ? block.replace(listed, mod) : block;
+    }
     if (!mod) return block;
     // Sitemap element order is fixed by the schema: loc, lastmod, changefreq, priority.
     return '<url>' + inner.replace(/(<\/loc>)/, `$1<lastmod>${mod}</lastmod>`) + '</url>';
