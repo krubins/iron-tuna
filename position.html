@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18397866361"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-18397866361');
+  gtag('config', 'G-KLBZBZSJ25');
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>This Week by Position: Rankings and News | Iron Tuna</title>
+<meta name="description" content="One position at a time: this week's Iron Tuna rankings down the left, and the five newest stories from the desk about players at that position on the right.">
+<link rel="canonical" href="https://irontuna.com/position">
+<!--seo:meta-->
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+<meta property="og:site_name" content="Iron Tuna">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:site" content="@irontunafantasy">
+<meta name="twitter:title" content="This week, by position">
+<meta name="twitter:description" content="This week's rankings at one position beside the five newest stories about the players in it.">
+<meta name="twitter:image" content="https://irontuna.com/og.png">
+<!--/seo:meta-->
+<meta property="og:title" content="This week, by position">
+<meta property="og:description" content="This week's rankings at one position beside the five newest stories about the players in it.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://irontuna.com/position">
+<meta property="og:image" content="https://irontuna.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/site.css">
+<style>
+body{overflow-x:hidden}
+@media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
+header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
+.nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
+/* ══ one position, this week ═════════════════════════════════════════════════
+   13 Oct 2026 (Ken: a position tile on the homepage opens a page with that
+   position's rankings in a rail on the left and five news stories about
+   players at that position on the right). In the homepage's dress
+   (body.ln-front): white, a short centred head, the position switch as a row
+   of text pills, then two columns on a hairline.
+
+     THE RAIL   this week's board at the position, Iron Tuna points, off the
+                same /api/boards read /rankings makes, scored at the reader's
+                saved league when there is one (it-league.js), PPR otherwise.
+                The top 30; the full sortable board is one link away.
+     THE NEWS   five findings from the desk's published feed (/api/newsroom,
+                never /api/content) whose player is at this position, newest
+                first. A finding is the unit because a piece covers a whole
+                game or a whole week; its findings each name one player. When
+                fewer than five findings qualify, a piece whose headline names
+                a player at the position fills the slot. Nothing invented to
+                fill the column: a short column says so.
+
+   The position rides in the hash (#pos=QB), as on /rankings, read on load
+   and on hashchange. On a phone the news comes first and the rail under it. */
+.ps-head{padding:var(--sp-48) 0 0;text-align:center}
+.ps-head h1{margin:0 auto var(--sp-12);font-size:clamp(34px,4vw,52px);font-weight:700;letter-spacing:-.02em;line-height:1.05;color:var(--ink);text-transform:none}
+.ps-head p{margin:0 auto var(--sp-24);font-size:var(--fs-16);color:var(--ink-2);max-width:60ch;line-height:1.5}
+.ps-switch{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--sp-8);margin:0;padding:0;list-style:none}
+.ps-switch a{display:inline-block;padding:6px 14px;border:1px solid var(--line);border-radius:999px;font-size:var(--fs-14);font-weight:600;color:var(--ink-2);background:var(--card)}
+.ps-switch a:hover{text-decoration:none;color:var(--ink);border-color:var(--ink-3)}
+.ps-switch a[aria-current="page"]{color:#fff;background:var(--teal);border-color:var(--teal)}
+.ps-grid{display:grid;grid-template-columns:minmax(280px,360px) minmax(0,1fr);gap:var(--sp-48);align-items:start;margin-top:var(--sp-32);padding-top:var(--sp-32);border-top:1px solid var(--line)}
+.ps-col-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-12);margin:0 0 var(--sp-12)}
+.ps-col-head h2{margin:0;font-size:var(--fs-23);font-weight:600;letter-spacing:-.01em;text-transform:none}
+.ps-col-head a{font-size:var(--fs-14);font-weight:600;white-space:nowrap}
+.ps-note{margin:0 0 var(--sp-12);font-size:var(--fs-13);color:var(--ink-3)}
+.ps-empty{margin:var(--sp-12) 0;color:var(--ink-3);font-size:var(--fs-14)}
+/* the rail */
+.ps-ranks{margin:0;padding:0;list-style:none;border-top:1px solid var(--line)}
+.ps-ranks li{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto;gap:var(--sp-8);align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)}
+.ps-rk{font-size:var(--fs-14);font-weight:600;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.ps-who{min-width:0}
+.ps-who a{display:block;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ps-who>span{display:block;font-size:var(--fs-13);color:var(--ink-3)}
+.ps-pts{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+.ps-pts small{display:block;font-size:11px;font-weight:500;color:var(--ink-3);text-align:right}
+.ps-tag{display:inline-block;margin-left:4px;padding:0 5px;border-radius:4px;font-size:11px;font-weight:600;color:var(--ink-2);background:var(--teal-tint)}
+/* the news: the homepage's story card, one per row */
+.ps-news{display:grid;gap:var(--sp-16)}
+.ps-story{position:relative;display:flex;min-width:0;border-radius:10px;overflow:hidden;background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(17,20,24,.06),0 4px 14px rgba(17,20,24,.10);transition:box-shadow .15s ease}
+.ps-story:hover{box-shadow:0 2px 4px rgba(17,20,24,.08),0 8px 24px rgba(17,20,24,.14)}
+.ps-story-pic{position:relative;flex:none;width:168px;overflow:hidden;background:linear-gradient(160deg,#0b3a66,var(--mast));color:#fff;display:grid;place-items:center}
+.ps-story-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%}
+.ps-story-pic b{font-size:var(--fs-28);font-weight:700;letter-spacing:-.01em}
+.ps-story-pic.has-img b{visibility:hidden}
+.ps-story-txt{display:flex;flex-direction:column;flex:1;min-width:0;padding:var(--sp-16)}
+.ps-story-kicker{font-size:var(--fs-13);font-weight:600;color:var(--teal);margin-bottom:4px}
+.ps-story-head{display:block;font-size:var(--fs-19);font-weight:600;line-height:1.3;color:var(--ink)}
+.ps-story-head:hover,.ps-story:hover .ps-story-head{color:var(--ink);text-decoration:underline}
+.ps-story-head::after{content:"";position:absolute;inset:0;z-index:1;border-radius:10px}
+.ps-story-dek{margin:6px 0 0;font-size:var(--fs-14);line-height:1.45;color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ps-story-meta{margin-top:auto;padding-top:var(--sp-12);font-size:var(--fs-13);color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:860px){
+  .ps-grid{grid-template-columns:minmax(0,1fr);gap:var(--sp-32)}
+  .ps-rail{order:2}
+  .ps-main{order:1}
+}
+@media(max-width:600px){
+  .ps-head{padding-top:var(--sp-32)}
+  .ps-story-pic{width:96px}
+  .ps-story-head{font-size:var(--fs-16)}
+  .ps-story-dek{-webkit-line-clamp:2}
+  .ps-story-txt{padding:var(--sp-12)}
+}
+</style>
+
+<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/position","name":"This Week by Position: Rankings and News","description":"One position at a time: this week's Iron Tuna rankings down the left, and the five newest stories from the desk about players at that position on the right.","url":"https://irontuna.com/position","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/position"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"Rankings","item":"https://irontuna.com/rankings"},{"@type":"ListItem","position":3,"name":"This Week by Position: Rankings and News"}]}]}</script>
+</head>
+<body class="ln-front">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site"><!--chrome:line--><p class="site-line" aria-hidden="true"></p><!--/chrome:line--><div class="wrap">
+  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
+  <!--chrome:nav-->
+    <nav class="nav" id="sitenav" aria-label="Main">
+      <a href="/fantasy">Fantasy</a>
+      <a href="/dfs">DFS</a>
+      <a href="/in-season/desk">Articles</a>
+      <a href="/faq#faq-start">How It Works</a>
+      <a href="/player">Search</a>
+    </nav>
+    <a class="cta" href="/my-league#settings">Customize My League</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
+      <span class="nav-toggle-bars"><span></span></span>Menu
+    </button>
+    <!--/chrome:nav-->
+</div><!--chrome:tabbar-->
+  <nav class="tabbar" aria-label="Sections">
+    <a href="/fantasy"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h16M12 4v16"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Fantasy</a>
+    <a href="/dfs"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19h16M6 15l4-5 4 3 4-7"/></svg>DFS</a>
+    <a href="/in-season/desk"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 4h14v16H5zM8 9h8M8 13h8M8 17h5"/></svg>Articles</a>
+    <a href="/my-league#settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>My league</a>
+  </nav>
+<!--/chrome:tabbar-->
+</header>
+<!--ranks:ribbon-->
+<nav class="rk-ribbon" aria-label="Rankings and intel">
+  <div class="rk-ribbon-in">
+    <a class="rkr-link rkr-item" href="/stats">Stats</a>
+    <span class="rkr-item rkr-has-menu">
+      <a class="rkr-link" href="/rankings">Rankings</a>
+      <span class="rkr-menu" role="group" aria-label="Rankings by position"><a href="/rankings#pos=QB">Quarterbacks</a><a href="/rankings#pos=RB">Running backs</a><a href="/rankings#pos=WR">Wide receivers</a><a href="/rankings#pos=TE">Tight ends</a><a href="/rankings#pos=FLEX">Flex (RB/WR/TE)</a><a href="/rankings#pos=K">Kickers</a><a href="/rankings#pos=DST">Defense / special teams</a></span>
+    </span>
+    <a class="rkr-link rkr-item" href="/hidden-value">Hidden Value</a>
+    <a class="rkr-link rkr-item" href="/previews">Previews</a>
+    <a class="rkr-link rkr-item" href="/the-line">The Line</a>
+  </div>
+</nav>
+<!--/ranks:ribbon-->
+<main id="main">
+<div class="wrap">
+
+<!-- ── 1 · the head ─────────────────────────────────────────────────────────
+     The position's name, one sentence, and the switch to the other five. -->
+<section class="ps-head" aria-labelledby="psTitle">
+  <h1 id="psTitle">Quarterbacks this week</h1>
+  <p id="psLede">This week&rsquo;s board at the position, beside the newest stories from the desk about the players in it.</p>
+  <ul class="ps-switch" id="psSwitch" aria-label="Position">
+    <li><a href="/position#pos=QB" data-pos="QB">Quarterbacks</a></li>
+    <li><a href="/position#pos=RB" data-pos="RB">Running backs</a></li>
+    <li><a href="/position#pos=WR" data-pos="WR">Wide receivers</a></li>
+    <li><a href="/position#pos=TE" data-pos="TE">Tight ends</a></li>
+    <li><a href="/position#pos=K" data-pos="K">Kickers</a></li>
+    <li><a href="/position#pos=DST" data-pos="DST">Defenses</a></li>
+  </ul>
+</section>
+
+<!-- ── 2 · the rail and the news ────────────────────────────────────────────
+     The rail is the aside: it comes first in the source on a desk read and
+     drops under the news on a phone (order, in the sheet above). -->
+<div class="ps-grid">
+  <aside class="ps-rail" aria-labelledby="psRailHead">
+    <div class="ps-col-head">
+      <h2 id="psRailHead">Rankings</h2>
+      <a id="psFull" href="/rankings#pos=QB">Full board &rarr;</a>
+    </div>
+    <p class="ps-note" id="psRailNote">Iron Tuna points, this week.</p>
+    <ol class="ps-ranks" id="psRanks"></ol>
+    <p class="ps-empty" id="psRailEmpty">Reading the board&hellip;</p>
+  </aside>
+  <section class="ps-main" aria-labelledby="psNewsHead">
+    <div class="ps-col-head">
+      <h2 id="psNewsHead">The latest</h2>
+      <a href="/in-season/desk">All articles &rarr;</a>
+    </div>
+    <div class="ps-news" id="psNews"></div>
+    <p class="ps-empty" id="psNewsEmpty">Reading the desk&hellip;</p>
+  </section>
+</div>
+
+</div>
+</main>
+<footer class="site"><div class="wrap">
+  <!--chrome:foot-->
+  <nav class="foot-nav" aria-label="Footer">
+   <ul>
+    <li><a href="/fantasy">Fantasy</a></li>
+    <li><a href="/dfs">DFS</a></li>
+    <li><a href="/in-season/desk">Articles</a></li>
+    <li><a href="/players">Players</a></li>
+    <li><a href="/faq#faq-start">How It Works</a></li>
+    <li><a href="/data">Data Sources</a></li>
+    <li><a href="/faq">FAQ</a></li>
+    <li><a href="/privacy">Privacy</a></li>
+    <li><a href="/terms">Terms</a></li>
+    <li><a href="/support">Support</a></li>
+   </ul>
+  </nav>
+  <div class="foot-note">
+   <p>Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.</p>
+   <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site — projections, odds, salaries and contract prices alike — is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-MY-RESET</b>.</p>
+   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span><a class="foot-admin" href="/admin" rel="nofollow">Admin</a></p>
+  </div>
+  <!--/chrome:foot-->
+</div></footer>
+<script src="/it-league.js" defer></script>
+<script>
+(function () {
+  var POS = { QB: 'Quarterbacks', RB: 'Running backs', WR: 'Wide receivers', TE: 'Tight ends', K: 'Kickers', DST: 'Defenses' };
+  var RAIL = 30, NEWS = 5;
+  var FACE_ESPN = 'https://a.espncdn.com/i/headshots/nfl/players/full/';
+  var FACE_NFL = 'https://static.www.nfl.com/image/upload/f_auto,q_auto/league/';
+  var pos = 'QB', board = null, boardLabel = 'this week', feed = null, boardFailed = false, feedFailed = false;
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var n1 = function (v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
+  function slug(name) { return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+  // One spelling for a name on both feeds: case, punctuation and the
+  // generational suffix go, so "Kenneth Walker III" on the board and
+  // "Kenneth Walker" in a finding are one man.
+  function norm(name) { return String(name || '').toLowerCase().replace(/[.'’]/g, '').replace(/\b(jr|sr|ii|iii|iv|v)\b/g, '').replace(/[^a-z0-9]+/g, ' ').trim(); }
+  // A position the hash names, or QB. "DEF" is the homepage's data-pos for the
+  // defense tile and /api/boards calls it DST.
+  function fromHash() {
+    var m = /(?:^|[#&])pos=([A-Za-z]+)/.exec(location.hash || ''), k = m ? m[1].toUpperCase() : 'QB';
+    if (k === 'DEF') k = 'DST';
+    return POS[k] ? k : 'QB';
+  }
+
+  // ── the rail ─────────────────────────────────────────────────────────────
+  // Iron Tuna points at the reader's saved league when there is one (the
+  // browser engine /rankings uses), PPR as the API shipped them otherwise.
+  function points(p) {
+    var L = window.ITLeague;
+    if (L && L.has && L.config && L.config.scoring && L.score && p.ironTuna && p.ironTuna.stats) {
+      var v = L.score(p.ironTuna.stats, p.position === 'DST' ? 'DEF' : p.position, L.config.scoring, p.games || 1);
+      if (v != null && isFinite(v)) return v;
+    }
+    return p.ironTuna ? p.ironTuna.points : null;
+  }
+  function scoringWord() {
+    var L = window.ITLeague;
+    return L && L.has && L.config && L.config.scoring ? 'at your league’s scoring' : 'PPR';
+  }
+  function opp(p) {
+    var w = (p.weeks || []).find(function (x) { return !x.bye && !x.out; }), w0 = (p.weeks || [])[0];
+    if (w0 && w0.bye) return 'BYE';
+    if (w0 && w0.out) return 'OUT';
+    return w ? (w.home ? 'vs ' : 'at ') + w.opponent : '';
+  }
+  function paintRail() {
+    $('psFull').href = '/rankings#pos=' + pos;
+    if (boardFailed) { $('psRanks').innerHTML = ''; $('psRailEmpty').hidden = false; $('psRailEmpty').textContent = 'The board did not answer. Nothing is shown rather than a stale ranking.'; return; }
+    if (!board) return;
+    var rows = (board.players || []).filter(function (p) { return p && p.position === pos; })
+      .map(function (p) { return { p: p, pts: points(p) }; })
+      .filter(function (r) { return r.pts != null && isFinite(r.pts); })
+      .sort(function (a, b) { return b.pts - a.pts || (a.p.name < b.p.name ? -1 : 1); })
+      .slice(0, RAIL);
+    $('psRailNote').textContent = 'Iron Tuna points, ' + boardLabel + ', ' + scoringWord() + '.';
+    $('psRanks').innerHTML = rows.map(function (r, i) {
+      var p = r.p, inj = p.injury && p.injury.status ? '<span class="ps-tag">' + esc(p.injury.status) + '</span>' : '';
+      var sub = [p.team, opp(p)].filter(Boolean).join(' · ');
+      return '<li><span class="ps-rk">' + (i + 1) + '</span>'
+        + '<span class="ps-who"><a href="/player/' + slug(p.name) + '">' + esc(p.name) + '</a><span>' + esc(sub) + inj + '</span></span>'
+        + '<span class="ps-pts">' + n1(r.pts) + '<small>pts</small></span></li>';
+    }).join('');
+    $('psRailEmpty').hidden = rows.length > 0;
+    if (!rows.length) $('psRailEmpty').textContent = 'Nobody at this position is on the board ' + boardLabel + '.';
+  }
+
+  // ── the news ─────────────────────────────────────────────────────────────
+  // Findings first: each names one player, so "about a player at this
+  // position" is read off the finding, never guessed. A piece whose headline
+  // writes out a player at the position in full fills any slot left over.
+  function etDay(v) { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(v)); } catch (e) { return ''; } }
+  function day(v) { try { return new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'numeric', day: 'numeric' }).format(new Date(v)).replace(',', ''); } catch (e) { return ''; } }
+  function ago(v) {
+    var at = +v || 0, now = Date.now(), d = now - at;
+    if (!at || d < 0) return day(at);
+    if (d < 3600 * 1000) return Math.max(1, Math.floor(d / 60000)) + 'm ago';
+    if (d < 24 * 3600 * 1000) return Math.floor(d / 3600000) + 'h ago';
+    if (etDay(at) === etDay(now - 24 * 3600 * 1000)) return 'Yesterday';
+    return day(at);
+  }
+  var BOAST = /^\s*you['’]re\s+welcome\s*[:–—.!-]*\s*/i;
+  function unboast(h) { h = String(h || ''); var m = BOAST.exec(h); return m ? (h.slice(m[0].length).trim() || h) : h; }
+  function stories() {
+    var at = {};
+    (board && board.players || []).forEach(function (p) { if (p && p.position === pos) at[norm(p.name)] = p.name; });
+    var out = [], seen = {}, pieces = (feed && feed.pieces || []).filter(function (p) { return p && p.url && p.headline; });
+    function push(s) { var k = norm(s.headline); if (!k || seen[k]) return; seen[k] = 1; out.push(s); }
+    pieces.forEach(function (p) {
+      (p.components || []).forEach(function (c) {
+        if (!c || !c.headline || c.n == null || !at[norm(c.player)]) return;
+        push({ headline: unboast(c.headline), dek: c.why || '', player: at[norm(c.player)], url: p.url + '#component-' + c.n, title: p.title, publishedAt: p.publishedAt, byline: p.byline });
+      });
+    });
+    if (out.length < NEWS) {
+      var names = Object.keys(at).map(function (k) { return at[k]; }).filter(function (n) { return n.indexOf(' ') > 0; });
+      pieces.forEach(function (p) {
+        var h = unboast(p.headline), who = names.find(function (n) { return h.indexOf(n) >= 0; });
+        if (who) push({ headline: h, dek: p.dek || '', player: who, url: p.url, title: p.title, publishedAt: p.publishedAt, byline: p.byline });
+      });
+    }
+    // Newest first across both kinds, as the feed is.
+    out.sort(function (a, b) { return (+b.publishedAt || 0) - (+a.publishedAt || 0); });
+    return out.slice(0, NEWS);
+  }
+  function initials(name) { return String(name || '').split(/\s+/).map(function (w) { return w.charAt(0); }).join('').slice(0, 2).toUpperCase(); }
+  function paintNews() {
+    if (feedFailed) { $('psNews').innerHTML = ''; $('psNewsEmpty').hidden = false; $('psNewsEmpty').textContent = 'The desk did not answer.'; return; }
+    if (!feed || !board) return;
+    var list = stories();
+    $('psNews').innerHTML = list.map(function (s) {
+      var meta = [s.publishedAt ? ago(s.publishedAt) : '', s.byline && s.byline.name, s.title].filter(Boolean).join(' · ');
+      return '<article class="ps-story">'
+        + '<span class="ps-story-pic" data-face="' + esc(s.player) + '" aria-hidden="true"><b>' + esc(initials(s.player)) + '</b></span>'
+        + '<span class="ps-story-txt"><span class="ps-story-kicker">' + esc(s.player) + '</span>'
+        + '<a class="ps-story-head" href="' + esc(s.url) + '">' + esc(s.headline) + '</a>'
+        + (s.dek ? '<p class="ps-story-dek">' + esc(s.dek) + '</p>' : '')
+        + '<span class="ps-story-meta">' + esc(meta) + '</span></span></article>';
+    }).join('');
+    $('psNewsEmpty').hidden = list.length > 0;
+    if (!list.length) $('psNewsEmpty').textContent = 'The desk has not written about a player at this position in its current pieces.';
+    faces();
+  }
+  // The player's headshot, off the site's player index (player-search.js),
+  // ESPN's first and the NFL's second; his initials on navy when neither loads.
+  function faces() {
+    var PS = window.ITPlayerSearch;
+    if (!PS || !PS.resolve) return;
+    [].forEach.call(document.querySelectorAll('.ps-story-pic[data-face]:not([data-face-done])'), function (box) {
+      box.setAttribute('data-face-done', '1');
+      var hit = null; try { hit = PS.resolve(box.getAttribute('data-face')); } catch (e) {}
+      if (!hit) return;
+      var srcs = [];
+      if (hit.e) srcs.push(FACE_ESPN + hit.e + '.png');
+      if (hit.h) srcs.push(FACE_NFL + hit.h);
+      if (!srcs.length) return;
+      var img = document.createElement('img'), i = 0;
+      img.alt = ''; img.loading = 'lazy'; img.decoding = 'async'; img.referrerPolicy = 'no-referrer';
+      img.onerror = function () { if (++i < srcs.length) img.src = srcs[i]; else { img.remove(); box.classList.remove('has-img'); } };
+      img.onload = function () { box.classList.add('has-img'); };
+      img.src = srcs[0];
+      box.appendChild(img);
+    });
+  }
+  document.addEventListener('it-player-search-ready', faces);
+
+  // ── the position ─────────────────────────────────────────────────────────
+  function paint() {
+    pos = fromHash();
+    $('psTitle').textContent = POS[pos] + ' ' + (boardLabel === 'this week' ? 'this week' : boardLabel);
+    document.title = POS[pos] + ': Rankings and News | Iron Tuna';
+    [].forEach.call($('psSwitch').querySelectorAll('a'), function (a) {
+      if (a.getAttribute('data-pos') === pos) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    paintRail();
+    paintNews();
+  }
+  function getJson(url) { return fetch(url, { credentials: 'same-origin' }).then(function (r) { return r.json(); }); }
+  function boot() {
+    paint();
+    window.addEventListener('hashchange', paint);
+    // This week's board; between seasons, or once the week has run out, the
+    // rest of the season, said as such.
+    getJson('/api/boards?horizon=week&pos=ALL&scoring=ppr').then(function (j) {
+      if (j && j.ok) return j;
+      boardLabel = 'rest of season';
+      return getJson('/api/boards?horizon=ros&pos=ALL&scoring=ppr');
+    }).then(function (j) {
+      if (!j || !j.ok) { boardFailed = true; } else board = j;
+      paint();
+    }).catch(function () { boardFailed = true; paint(); });
+    getJson('/api/newsroom?limit=60&floor=3').then(function (j) {
+      if (!j || !j.ok) feedFailed = true; else feed = j;
+      paintNews();
+    }).catch(function () { feedFailed = true; paintNews(); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
+<!--chrome:navjs--><script>
+(function(){
+  var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');
+  if(!h||!b) return;
+  function set(open){
+    h.setAttribute('data-nav-open', open?'1':'0');
+    b.setAttribute('aria-expanded', open?'true':'false');
+  }
+  b.addEventListener('click',function(){ set(h.getAttribute('data-nav-open')!=='1') });
+  /* Escape closes it, and focus goes back to the button that opened it. */
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&h.getAttribute('data-nav-open')==='1'){ set(false); b.focus() }
+  });
+  /* A tap outside the open menu closes it. */
+  document.addEventListener('click',function(e){
+    if(h.getAttribute('data-nav-open')==='1'&&!h.contains(e.target)) set(false);
+  });
+})();
+</script><!--/chrome:navjs-->
+
+<script src="/player-search.js" defer></script>
+</body>
+</html>
