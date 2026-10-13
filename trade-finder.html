@@ -158,7 +158,7 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .tf-slots{display:flex;gap:var(--space-2) var(--space-3);flex-wrap:wrap}
 .tf-slots label{font-size:var(--fs-13);color:var(--muted);display:inline-flex;flex-direction:column;gap:4px;font-weight:600}
 .tf-slots input{width:56px;min-height:40px;font:inherit;font-size:var(--fs-16);padding:0 var(--space-2);border:1px solid var(--line2);border-radius:var(--radius-input);background:#fff;color:var(--text)}
-select.tf-sel{font:inherit;font-size:var(--fs-16);min-height:40px;padding:0 var(--space-3);border:1px solid var(--line2);border-radius:var(--radius-input);background:#fff;color:var(--text);max-width:100%}
+select.tf-sel{font:inherit;font-size:var(--fs-16);font-weight:600;min-height:44px;padding:0 var(--space-4);border:2px solid var(--sec);border-radius:999px;background:#fff;color:var(--text);max-width:100%}
 .tf-slider{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
 .tf-slider input[type=range]{width:220px;accent-color:var(--teal)}
 .tf-slider .end{font-size:var(--fs-14);color:var(--muted);font-weight:600}
@@ -187,25 +187,41 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
 .tf-more[open] summary{margin-bottom:var(--space-3)}
 
 /* ── 5 · the team boxes ───────────────────────────────────────────────────
-   The homepage's outlined card (white, a hairline, 10px, 24px inside) once
-   per team. The reader's own team is the tinted plate with the 3px navy
-   rule, which is how every board in the section marks its one enclosed
-   surface; no ring. */
-.tf-teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--sp-24);margin-top:var(--sp-8)}
-.tf-team{border:1px solid var(--line);border-top:3px solid var(--line);border-radius:10px;padding:var(--sp-24);background:var(--card);position:relative;min-width:0}
-.tf-team.mine{border-color:var(--panel);border-top-color:var(--mast);background:var(--panel)}
+   Ken, 2026-10-13: the boxes still read as a form, so each one now wears the
+   homepage's tile. The head is a band in one of the position tiles' colours
+   (navy, green, rust, purple, one per team, faint field lines over it) with
+   the team name in white and "My team" as a pill; the body is the outlined
+   card. The player field is the homepage's search field, a pill with the
+   magnifier, and the screenshot controls are the hero's teal text links.
+   The scoring line and the count sit at the foot on a hairline. The reader's
+   own team is ringed in teal, the colour the tool tiles mark the chosen one in. */
+.tf-teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--sp-24);margin-top:var(--sp-8)}
+.tf-team{--t1:#14365a;border:1px solid var(--line);border-radius:10px;padding:0 var(--sp-24) var(--sp-20,20px);background:var(--card);position:relative;min-width:0;overflow:visible;transition:border-color .15s ease,box-shadow .15s ease}
+.tf-team[data-i="1"]{--t1:#1f5a3c}
+.tf-team[data-i="2"]{--t1:#7a3e2b}
+.tf-team[data-i="3"]{--t1:#2f2a68}
+.tf-team.mine{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal)}
 .tf-team.over{border-color:var(--teal);background:var(--teal-tint)}
-.tf-team-h{display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-2)}
+.tf-team-h,.tf-send-h{display:flex;align-items:center;gap:var(--space-3);margin:-1px calc(-1 * var(--sp-24) - 1px) var(--sp-16);padding:var(--sp-24) var(--sp-24) var(--sp-16);min-height:84px;border-radius:10px 10px 0 0;color:#fff;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.06) 0 1px,transparent 1px 16px),linear-gradient(180deg,rgba(0,0,0,0) 30%,rgba(0,0,0,.28)),var(--t1)}
 .tf-team input.nm{width:100%;font:inherit;font-weight:600;font-size:var(--fs-19);letter-spacing:-.005em;border:1px solid transparent;border-radius:var(--radius-input);padding:4px 6px;margin:-4px -6px 6px;background:transparent;color:var(--text)}
-.tf-team .tf-team-h input.nm{flex:1 1 auto;width:auto;min-width:0;margin:-4px 0 0 -6px}
-.tf-team input.nm:hover{border-color:var(--line2);background:#fff}
-.tf-mine-pick{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-13);font-weight:600;color:var(--text);white-space:nowrap;cursor:pointer}
-.tf-mine-pick input{accent-color:var(--teal);margin:0}
+.tf-team .tf-team-h input.nm{flex:1 1 auto;width:auto;min-width:0;margin:0 0 0 -6px;color:#fff;font-size:var(--fs-23)}
+.tf-team .tf-team-h input.nm::placeholder{color:rgba(255,255,255,.7)}
+.tf-team .tf-team-h input.nm:hover{border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.06)}
+.tf-team .tf-team-h input.nm:focus{outline:none;border-color:#fff;background:rgba(255,255,255,.1);box-shadow:none}
+.tf-mine-pick{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border:1px solid rgba(255,255,255,.5);border-radius:999px;font-size:var(--fs-13);font-weight:600;color:#fff;white-space:nowrap;cursor:pointer;transition:background .15s ease,border-color .15s ease}
+.tf-mine-pick:hover{border-color:#fff;background:rgba(255,255,255,.1)}
+.tf-mine-pick input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.tf-mine-pick::before{content:"";width:8px;height:8px;border-radius:50%;border:1.5px solid currentColor;box-sizing:border-box}
+.tf-mine-pick:has(input:checked){background:var(--mast-accent);border-color:var(--mast-accent);color:var(--mast)}
+.tf-mine-pick:has(input:checked)::before{background:currentColor}
+.tf-mine-pick:has(input:focus-visible){outline:3px solid var(--focus);outline-offset:2px}
 .tf-chips{display:flex;flex-wrap:wrap;gap:6px}
+.tf-chips:not(:empty){margin-bottom:var(--sp-12)}
 /* A player on a roster: a name and his position, 14px, white on a hairline.
    site.css's .chip is a 36px filter button; every one of its traits is set
    back here. */
-.chip{font-size:var(--fs-14);font-weight:400;min-height:0;border:1px solid var(--line2);border-radius:var(--radius-sm);padding:3px 6px 3px 8px;background:#fff;color:var(--text);white-space:nowrap;display:inline-flex;align-items:center;gap:6px;cursor:default;line-height:1.4}
+.chip{font-size:var(--fs-14);font-weight:400;min-height:0;border:1px solid var(--line2);border-radius:999px;padding:3px 6px 3px 10px;background:#fff;color:var(--text);white-space:nowrap;display:inline-flex;align-items:center;gap:6px;cursor:default;line-height:1.4}
 .chip:hover{background:#fff;color:var(--text)}
 .chip i{font-style:normal;color:var(--muted);font-size:var(--fs-13)}
 .chip button{appearance:none;border:0;background:transparent;color:var(--muted);cursor:pointer;font:inherit;font-size:var(--fs-16);line-height:1;padding:0 2px;min-width:20px;min-height:20px}
@@ -215,13 +231,22 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
 .tf-fix div{display:flex;gap:6px;align-items:center;margin-top:4px}
 .tf-fix span{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tf-fix input{width:140px;font:inherit;font-size:var(--fs-14);padding:4px 6px;border:1px solid var(--line2);border-radius:var(--radius-input);color:var(--text)}
-.tf-team .kill{position:absolute;top:8px;right:10px;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:18px;line-height:1}
-.tf-team .kill:hover{color:var(--text)}
-.tf-team .cnt{font-size:var(--fs-13);color:var(--muted);margin-top:var(--space-2)}
-.tf-hz{margin-top:var(--space-2);font-size:var(--fs-13);color:var(--muted)}
+.tf-team .kill{position:absolute;top:8px;right:10px;border:0;background:transparent;color:rgba(255,255,255,.8);cursor:pointer;font-size:18px;line-height:1}
+.tf-team .kill:hover{color:#fff}
+.tf-hz{margin-top:var(--sp-16);padding-top:var(--sp-12);border-top:1px solid var(--line);font-size:var(--fs-13);color:var(--muted);line-height:1.45}
 .tf-hz.noted b{color:var(--text)}
-.tf-ac{position:relative;margin-top:var(--space-2)}
-.tf-type{width:100%;font:inherit;font-size:var(--fs-16);min-height:40px;padding:0 var(--space-3);border:1px solid var(--line2);border-radius:var(--radius-input);background:#fff;color:var(--text)}
+.tf-team .cnt{font-size:var(--fs-13);color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
+.tf-hz:empty{display:none}
+.tf-hz:empty+.cnt{margin-top:var(--sp-16);padding-top:var(--sp-12);border-top:1px solid var(--line)}
+.tf-ac{position:relative;margin-top:0}
+/* The player field is the homepage's search field: a pill, the magnifier at
+   the left, the 2px border in the secondary ink until it has focus. */
+.tf-type{width:100%;font:inherit;font-size:var(--fs-16);min-height:48px;padding:0 var(--sp-16) 0 42px;border:2px solid var(--sec);border-radius:999px;color:var(--text);
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 16px 50%/18px 18px}
+.tf-type::placeholder{color:var(--muted);opacity:1}
+/* site.css squares every focused control to 2px for its ring; the pills keep
+   their shape. */
+.tf-type:focus-visible,select.tf-sel:focus-visible,.tf-to select:focus-visible{border-radius:999px}
 .tf-type.bad{border-color:var(--danger)}
 /* The one floating surface on the page: the typeahead list over the box
    below it needs an edge, so it keeps a hairline and a soft lift. */
@@ -229,18 +254,21 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
 .tf-sug li{display:flex;gap:8px;align-items:baseline;padding:6px 10px;font-size:var(--fs-14);color:var(--text);cursor:pointer}
 .tf-sug li i{margin-left:auto;font-style:normal;font-size:var(--fs-13);color:var(--muted);white-space:nowrap}
 .tf-sug li.on,.tf-sug li:hover{background:var(--teal-tint)}
-/* The screenshot control is a secondary button, not a dashed well. */
-.tf-shot{display:inline-flex;align-items:center;justify-content:center;gap:6px;margin-top:var(--space-3);min-height:36px;padding:0 var(--space-3);border:1px solid var(--line2);border-radius:var(--radius-sm);background:#fff;font-size:var(--fs-14);font-weight:600;color:var(--text);cursor:pointer}
-.tf-shot:hover{background:var(--panel)}
-.tf-team.mine .tf-shot:hover{background:var(--elev)}
+/* The screenshot controls are the hero's entry links: teal, 600, an arrow,
+   side by side on one line (labels kept short so they fit the narrowest box, 262px). */
+.tf-shots{display:flex;flex-wrap:wrap;gap:0 var(--sp-16);margin-top:var(--sp-12)}
+.tf-shot{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;min-height:32px;padding:0;border:0;background:transparent;font-size:var(--fs-14);font-weight:600;color:var(--teal);cursor:pointer}
+.tf-shot::after{content:"\2192";font-weight:600}
+.tf-shot:hover{color:var(--teal-hover);text-decoration:underline;background:transparent}
+.tf-shot:has(input:focus-visible),.tf-shot:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:2px}
 .tf-shot input{display:none}
-button.tf-shot{font-family:inherit;line-height:inherit}
-.tf-shots{display:flex;flex-wrap:wrap;gap:0 var(--space-2)}
-.tf-send-h{font-weight:600;font-size:var(--fs-19);letter-spacing:-.005em;margin-bottom:var(--space-2)}
-.tf-send-h span{font-weight:400;font-size:var(--fs-14);color:var(--muted)}
+button.tf-shot{font-family:inherit;line-height:inherit;appearance:none}
+.tf-send-h{font-weight:600;font-size:var(--fs-23);letter-spacing:-.005em}
+.tf-send-h span{font-weight:400;font-size:var(--fs-14);color:rgba(255,255,255,.86);margin-left:2px}
+.tf-send-list{margin-bottom:var(--sp-12)}
 .tf-send-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin:4px 0}
 .tf-to{font-size:var(--fs-13);color:var(--muted)}
-.tf-to select{font:inherit;font-size:var(--fs-13);padding:3px 6px;border:1px solid var(--line2);border-radius:var(--radius-input);background:#fff;color:var(--text)}
+.tf-to select{font:inherit;font-size:var(--fs-13);font-weight:600;padding:3px 10px;border:1px solid var(--line2);border-radius:999px;background:#fff;color:var(--text)}
 .tf-none{font-size:var(--fs-14);color:var(--muted)}
 
 /* ── 6 · the results ──────────────────────────────────────────────────────
@@ -299,11 +327,18 @@ button.tf-shot{font-family:inherit;line-height:inherit}
    circle with the initials at 600. */
 .tf-trade h3 .it-player-face{border-radius:50%;border:0;font-weight:600;font-size:var(--fs-14)}
 .tf-trade h3 .it-player-face i{font-weight:600;font-size:var(--fs-14)}
-.tf-sides{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-5)}
+/* Each side of a deal is the team box's tile again (Ken, 2026-10-13): the
+   band in that team's colour carries "You" or "Them" and the name, the
+   reader's side is ringed in teal, and the figures sit on the white card. */
+.tf-sides{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-24)}
 .tf-sides.multi{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
-.tf-side{border:0;border-left:1px solid var(--line);border-radius:0;padding:0 0 0 var(--space-4);background:transparent;min-width:0}
-.tf-side:first-child{border-left:0;padding-left:0}
-.tf-side .who{font-size:var(--fs-13);font-weight:400;color:var(--muted);line-height:1.4}
+.tf-side{--t1:#14365a;border:1px solid var(--line);border-radius:10px;padding:0 var(--sp-24) var(--sp-24);background:var(--card);min-width:0}
+.tf-side[data-i="1"]{--t1:#1f5a3c}
+.tf-side[data-i="2"]{--t1:#7a3e2b}
+.tf-side[data-i="3"]{--t1:#2f2a68}
+.tf-side.mine{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal)}
+.tf-side .who{display:flex;align-items:flex-end;min-height:64px;margin:-1px calc(-1 * var(--sp-24) - 1px) var(--sp-16);padding:var(--sp-16) var(--sp-24);border-radius:10px 10px 0 0;font-size:var(--fs-16);font-weight:600;color:#fff;line-height:1.3;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.06) 0 1px,transparent 1px 16px),linear-gradient(180deg,rgba(0,0,0,0) 30%,rgba(0,0,0,.28)),var(--t1)}
 .tf-side .gain{font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.1;color:var(--text);margin:4px 0 var(--space-3);font-variant-numeric:tabular-nums}
 .tf-side .gain.neg{color:var(--text)}
 .tf-side .gain small{font-size:var(--fs-14);font-weight:400;color:var(--muted);letter-spacing:0}
@@ -343,13 +378,14 @@ button.tf-shot{font-family:inherit;line-height:inherit}
   .tf-sides,.tf-sides.multi{grid-template-columns:1fr;gap:var(--space-4)}
   .tf-gauge{grid-template-columns:1fr;gap:var(--space-5)}
   .tf-gauge-rows .row{grid-template-columns:1fr;gap:4px}
-  .tf-side{border-left:0;border-top:1px solid var(--line);padding:var(--space-3) 0 0}
-  .tf-side:first-child{border-top:0;padding-top:0}
+  .tf-side{padding:0 var(--sp-16) var(--sp-16)}
+  .tf-side .who{margin:-1px calc(-1 * var(--sp-16) - 1px) var(--sp-12);padding:var(--sp-12) var(--sp-16);min-height:52px}
   .tf-bar{grid-template-columns:1fr 1fr;gap:var(--space-4)}
   .tf-bar > span{border-left:0;padding-left:0}
   .tf-slider input[type=range]{width:160px}
   .tf-teams{gap:var(--sp-16)}
-  .tf-team{padding:var(--sp-16)}
+  .tf-team{padding:0 var(--sp-16) var(--sp-16)}
+  .tf-team-h,.tf-send-h{margin:-1px calc(-1 * var(--sp-16) - 1px) var(--sp-16);padding:var(--sp-16);min-height:72px}
 }
 </style>
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/trade-finder","name":"Trade Tools: Trade Evaluator and Trade Finder","description":"Judge a trade or find one. The Trade Evaluator scores every team in a proposed deal at your scoring, with the rosters optional. The Trade Finder takes two to four rosters, typed or screenshotted, and returns the trades that improve both lineups, each on its own horizon: this week, the next three, the rest of the season, or the fantasy playoffs.","url":"https://irontuna.com/trade-finder","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/trade-finder"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Trade Tools: Trade Evaluator and Trade Finder"}]}]}</script>
@@ -888,8 +924,8 @@ button.tf-shot{font-family:inherit;line-height:inherit}
               + '<datalist id="' + dl + '">' + optionsFor(sug) + '</datalist>'
               + '<button type="button" class="btn alt small" data-drop="' + i + ':' + k + '">drop</button></div>';
           }).join('') + '</div>' : '')
-        + '<div class="tf-shots"><label class="tf-shot"><input type="file" accept="image/*" multiple data-shot="' + i + '">Add a roster screenshot</label>'
-        + '<button type="button" class="tf-shot" data-paste="' + i + '" title="Read a screenshot off the clipboard">Paste a screenshot</button></div>'
+        + '<div class="tf-shots"><label class="tf-shot"><input type="file" accept="image/*" multiple data-shot="' + i + '" aria-label="Upload a screenshot of the roster page">Upload image</label>'
+        + '<button type="button" class="tf-shot" data-paste="' + i + '" title="Read a screenshot off the clipboard" aria-label="Paste a screenshot from the clipboard">Paste image</button></div>'
         + '<div class="tf-hz" data-hz="' + i + '"></div>'
         + '<div class="cnt">' + tradeable + ' tradeable' + (t.players.length !== tradeable ? ' (kickers and defenses ignored)' : '') + '</div>'
         + '</div>';
@@ -1551,7 +1587,7 @@ button.tf-shot{font-family:inherit;line-height:inherit}
     return list.map(function (p) { return '<b>' + esc(p.name) + '</b> <span style="color:var(--muted)">' + esc(p.pos) + (h ? ' &middot; ' + n1(points(p, h) / weeksOf(h)) + '/wk' : '') + '</span>'; }).join(', ');
   }
   function signed(v) { return (v < 0 ? '−' : '+') + n1(Math.abs(v)); }
-  function sideCard(who, name, give, get, gain, h, lines, needsSpot, bare, kase) {
+  function sideCard(who, name, give, get, gain, h, lines, needsSpot, bare, kase, ti) {
     var starts = lines.startsNow.map(function (s) { return esc(s.p.name) + ' at ' + esc(s.slot); });
     var stops = lines.stopsStarting.map(function (s) { return esc(s.p.name); });
     var cut = (lines.cut || []).map(function (s) { return esc(s.p.name); });
@@ -1562,7 +1598,8 @@ button.tf-shot{font-family:inherit;line-height:inherit}
     var detail = bare ? 'No roster entered: scored on the players alone.'
       : (starts.length ? 'Starts: ' + starts.join(', ') + '. ' : '') + (stops.length ? 'To the bench: ' + stops.join(', ') + '. ' : '')
         + (needsSpot ? 'Needs ' + (needsSpot === 1 ? 'a roster spot' : needsSpot + ' roster spots') + ' opened' + (cut.length ? ', scored as dropping ' + cut.join(' and ') : '') + '.' : '');
-    return '<div class="tf-side"><div class="who">' + who + ' &middot; ' + esc(name) + '</div>'
+    // ti is the team's box, so the side wears the same colour band as its box.
+    return '<div class="tf-side' + (who === 'You' ? ' mine' : '') + '" data-i="' + (ti | 0) + '"><div class="who">' + who + ' &middot; ' + esc(name) + '</div>'
       + '<div class="gain' + (gain < 0 ? ' neg' : '') + '">' + signed(gain) + ' <small>pts / week &middot; ' + esc(HORIZONS[h] || h) + '</small></div>'
       + '<div class="give">Sends ' + chips(give, h) + '<br>Gets ' + chips(get, h) + '</div>'
       + '<div class="lines' + (bare ? ' bare' : '') + '">' + detail + '</div>'
@@ -1590,10 +1627,10 @@ button.tf-shot{font-family:inherit;line-height:inherit}
     var A = T[t.a], B = T[t.b];
     var youAreA = t.a === mi;
     var spot = function (give, get) { return Math.max(0, get.length - give.length); };
-    var first = youAreA ? sideCard('You', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, spot(t.giveA, t.giveB), false, t.caseA)
-                        : sideCard('You', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, spot(t.giveB, t.giveA), false, t.caseB);
-    var second = youAreA ? sideCard('Them', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, spot(t.giveB, t.giveA), false, t.caseB)
-                         : sideCard('Them', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, spot(t.giveA, t.giveB), false, t.caseA);
+    var first = youAreA ? sideCard('You', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, spot(t.giveA, t.giveB), false, t.caseA, t.a)
+                        : sideCard('You', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, spot(t.giveB, t.giveA), false, t.caseB, t.b);
+    var second = youAreA ? sideCard('Them', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, spot(t.giveB, t.giveA), false, t.caseB, t.b)
+                         : sideCard('Them', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, spot(t.giveA, t.giveB), false, t.caseA, t.a);
     var label = (youAreA ? t.giveA : t.giveB).map(function (p) { return p.name; }).join(' + ') + ' for ' + (youAreA ? t.giveB : t.giveA).map(function (p) { return p.name; }).join(' + ');
     return '<div class="tf-trade"><h3>' + (i + 1) + '. ' + esc(label) + '<span class="with">with ' + esc(youAreA ? B.name : A.name) + '</span></h3><div class="tf-sides">' + first + second + '</div></div>';
   }
@@ -1791,7 +1828,7 @@ button.tf-shot{font-family:inherit;line-height:inherit}
     var ordered = sides.slice().sort(function (a, b) { return (b.i === mi) - (a.i === mi) || a.i - b.i; });
     var html = '<div class="tf-trade tf-proposed"><h3>' + esc(title) + '<span class="with">' + esc(sides.map(function (s) { return s.name; }).join(', ')) + '</span></h3><div class="tf-sides' + (sides.length > 2 ? ' multi' : '') + '">'
       + ordered.map(function (s) {
-          return sideCard(s.i === mi ? 'You' : 'Them', s.name, s.give, s.get, s.gain, s.h, s.lines, Math.max(0, s.get.length - s.give.length), !s.entered, s.case);
+          return sideCard(s.i === mi ? 'You' : 'Them', s.name, s.give, s.get, s.gain, s.h, s.lines, Math.max(0, s.get.length - s.give.length), !s.entered, s.case, s.i);
         }).join('')
       + '</div></div>';
     if (alt) {
