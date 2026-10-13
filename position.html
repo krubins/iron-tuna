@@ -91,6 +91,7 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .ps-story-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%}
 .ps-story-pic b{font-size:var(--fs-28);font-weight:700;letter-spacing:-.01em}
 .ps-story-pic.has-img b{visibility:hidden}
+.ps-story-pic.is-team img{object-fit:contain;inset:18% 0 22%;height:60%;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
 .ps-story-txt{display:flex;flex-direction:column;flex:1;min-width:0;padding:var(--sp-16)}
 .ps-story-kicker{font-size:var(--fs-13);font-weight:600;color:var(--teal);margin-bottom:4px}
 .ps-story-head{display:block;font-size:var(--fs-19);font-weight:600;line-height:1.3;color:var(--ink)}
@@ -227,6 +228,22 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
   var RAIL = 30, NEWS = 5;
   var FACE_ESPN = 'https://a.espncdn.com/i/headshots/nfl/players/full/';
   var FACE_NFL = 'https://static.www.nfl.com/image/upload/f_auto,q_auto/league/';
+  // A DEFENSE HAS NO FACE (2026-10-13). Its story card carries the club's mark
+  // instead of "DST" on navy. The club is the one the story is about when the
+  // board names it, or the first club the headline or dek writes as an
+  // abbreviation ("WAS DST", "CIN leads the stream"): upper case and whole
+  // words only, as on the homepage, so "Ne" or "no" never reads as a club.
+  // The board files the Rams as LA and Washington as WAS; ESPN as lar and wsh.
+  var FACE_TEAM = 'https://a.espncdn.com/i/teamlogos/nfl/500/';
+  var CLUB = /\b(ARI|ATL|BAL|BUF|CAR|CHI|CIN|CLE|DAL|DEN|DET|GB|HOU|IND|JAX|KC|LAC|LAR|LV|MIA|MIN|NE|NO|NYG|NYJ|PHI|PIT|SEA|SF|TB|TEN|WAS|WSH)\b/g;
+  var ESPN_CLUB = { LA: 'LAR', WAS: 'WSH', JAC: 'JAX', LVR: 'LV' };
+  function espnClub(t) { t = String(t || '').toUpperCase(); return ESPN_CLUB[t] || t; }
+  function clubsIn(text) {
+    var out = [], m;
+    CLUB.lastIndex = 0;
+    while ((m = CLUB.exec(text))) { var t = espnClub(m[1]); if (out.indexOf(t) < 0) out.push(t); }
+    return out;
+  }
   var pos = 'QB', board = null, roster = null, boardLabel = 'this week', feed = null, boardFailed = false, feedFailed = false;
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
@@ -306,11 +323,11 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
   var DESK = { 'quarterback-monday': ['QB'], 'tailback-tuesday': ['RB'], 'wideout-wednesday': ['WR'], 'tight-end-thursday': ['TE'], 'kickers-defenses': ['K', 'DST'] };
   var PER_PIECE = 2;
   function stories() {
-    var at = {}, names = [];
+    var at = {}, names = [], clubOf = {};
     // Names off the full rest-of-season board: the week's board drops a man
     // once his game kicks off, and a story about him is still about him.
     [roster, board].forEach(function (b) {
-      (b && b.players || []).forEach(function (p) { if (p && p.position === pos && p.name) at[norm(p.name)] = p.name; });
+      (b && b.players || []).forEach(function (p) { if (p && p.position === pos && p.name) { at[norm(p.name)] = p.name; if (p.team) clubOf[p.name] = espnClub(p.team); } });
     });
     Object.keys(at).forEach(function (k) {
       var n = at[k];
@@ -339,7 +356,18 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
     });
     // Live before archive, newest first within each, as the feed is.
     out.sort(function (a, b) { return (a.old - b.old) || ((+b.publishedAt || 0) - (+a.publishedAt || 0)); });
-    return out.slice(0, NEWS);
+    out = out.slice(0, NEWS);
+    if (pos === 'DST') {
+      // A club once per list where the text allows it, so three streaming
+      // columns do not all wear the same mark.
+      var shown = {};
+      out.forEach(function (s) {
+        var clubs = clubOf[s.player] ? [clubOf[s.player]] : clubsIn(s.headline + ' ' + s.dek);
+        s.club = clubs.filter(function (c) { return !shown[c]; })[0] || clubs[0] || null;
+        if (s.club) shown[s.club] = 1;
+      });
+    }
+    return out;
   }
   function initials(name) { return String(name || '').split(/\s+/).map(function (w) { return w.charAt(0); }).join('').slice(0, 2).toUpperCase(); }
   function paintNews() {
@@ -348,8 +376,9 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
     var list = stories();
     $('psNews').innerHTML = list.map(function (s) {
       var meta = [s.publishedAt ? ago(s.publishedAt) : '', s.byline && s.byline.name, s.title].filter(Boolean).join(' · ');
+      var art = s.club ? ' data-team="' + esc(s.club) + '"' : s.player === POS[pos] || pos === 'DST' ? '' : ' data-face="' + esc(s.player) + '"';
       return '<article class="ps-story">'
-        + '<span class="ps-story-pic"' + (s.player === POS[pos] ? '' : ' data-face="' + esc(s.player) + '"') + ' aria-hidden="true"><b>' + esc(s.player === POS[pos] ? pos : initials(s.player)) + '</b></span>'
+        + '<span class="ps-story-pic"' + art + ' aria-hidden="true"><b>' + esc(s.player === POS[pos] ? pos : initials(s.player)) + '</b></span>'
         + '<span class="ps-story-txt"><span class="ps-story-kicker">' + esc(s.player) + '</span>'
         + '<a class="ps-story-head" href="' + esc(s.url) + '">' + esc(s.headline) + '</a>'
         + (s.dek ? '<p class="ps-story-dek">' + esc(s.dek) + '</p>' : '')
@@ -357,7 +386,19 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
     }).join('');
     $('psNewsEmpty').hidden = list.length > 0;
     if (!list.length) $('psNewsEmpty').textContent = 'The desk has not written about a player at this position in its recent pieces.';
+    teams();
     faces();
+  }
+  function teams() {
+    [].forEach.call(document.querySelectorAll('.ps-story-pic[data-team]:not([data-face-done])'), function (box) {
+      box.setAttribute('data-face-done', '1');
+      var img = document.createElement('img');
+      img.alt = ''; img.loading = 'lazy'; img.decoding = 'async'; img.referrerPolicy = 'no-referrer';
+      img.onerror = function () { img.remove(); box.classList.remove('has-img', 'is-team'); };
+      img.onload = function () { box.classList.add('has-img', 'is-team'); };
+      img.src = FACE_TEAM + box.getAttribute('data-team').toLowerCase() + '.png';
+      box.appendChild(img);
+    });
   }
   // The player's headshot, off the site's player index (player-search.js),
   // ESPN's first and the NFL's second; his initials on navy when neither loads.
