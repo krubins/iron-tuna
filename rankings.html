@@ -730,7 +730,9 @@ p{color:var(--sec);margin:0 0 16px}
     $('rkHead').innerHTML = cols.map(function (c) { return '<th data-key="' + c[0] + '"' + (/^(it|ppg|games|crank|vrank)$/.test(c[0]) ? ' class="num"' : '') + (c[0] === sortKey ? ' aria-sort="' + (sortDir > 0 ? 'ascending' : 'descending') + '"' : '') + '>' + c[1] + '</th>'; }).join('');
     $('rkBody').innerHTML = rows.slice(0, 200).map(function (r) { return '<tr>' + cols.map(function (c) { return cell(r, c[0], rankField).replace(/^<td/, '<td data-k="' + c[0] + '" data-l="' + c[1] + '"'); }).join('') + '</tr>'; }).join('');
     $('rkTable').hidden = !rows.length; $('rkEmpty').hidden = !!rows.length;
-    if (!rows.length) $('rkEmpty').textContent = 'Nothing matches.';
+    if (!rows.length) $('rkEmpty').textContent = horizon === 'week' && payload.played && !payload.players.length
+      ? 'Every game this week has kicked off, so there is nothing left to project. Next week\u2019s board posts when this week\u2019s last game ends; Next 3 Weeks and Rest of Season still answer.'
+      : 'Nothing matches.';
     // The out-this-week switch is a one-week question; on a longer board it is
     // left in place but off, rather than quietly doing nothing.
     $('rkHideOut').disabled = horizon !== 'week';

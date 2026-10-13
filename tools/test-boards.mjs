@@ -482,6 +482,21 @@ console.log('\na projection for a game that has kicked off is a result, not a pr
   const n3 = H.buildBoards({ ...ctx(), sched: SCHED2, state: H.nflSeasonState(SCHED2, at.afternoon), ratings: H.teamRatingsFrom(SCHED2) }, { horizon: 'next3', preset: 'ppr' });
   ok('a longer horizon is a sum over weeks and is returned whole', H.boardStillToPlay(n3).players.length === POOL.length && H.boardStillToPlay(n3).played == null);
   ok('no board, no judgement', H.boardStillToPlay(null) === null && H.boardStillToPlay({ ok: false }).ok === false);
+  // The report: on Monday night the /rankings WR board was nothing but the
+  // injured, every one at 0.0 and ranked WR1, WR2... by name, because an out
+  // week carried no game state and a bye has no game at all.
+  const wk = (players) => ({ ok: true, horizon: { key: 'week' }, players });
+  const outRow = (gs) => ({ name: 'Out Receiver', weeks: [{ week: 2, out: true, gameState: gs }] });
+  const byeRow = { name: 'Bye Receiver', weeks: [{ week: 2, bye: true }] };
+  const playRow = (gs) => ({ name: 'Live Receiver', weeks: [{ week: 2, gameState: gs }] });
+  ok('a man ruled out leaves the week board when his club kicks off',
+     H.boardStillToPlay(wk([outRow('completed'), playRow('upcoming')])).players.map(p => p.name).join() === 'Live Receiver');
+  ok('and stays on it, at zero, until it does', H.boardStillToPlay(wk([outRow('upcoming'), playRow('upcoming')])).players.length === 2);
+  ok('a bye stays while a game is still to come', H.boardStillToPlay(wk([byeRow, playRow('upcoming')])).players.length === 2);
+  ok('once nothing is left to play, the byes and the injured go too',
+     H.boardStillToPlay(wk([byeRow, outRow('completed'), playRow('completed')])).players.length === 0
+     && H.boardStillToPlay(wk([byeRow, outRow('completed'), playRow('completed')])).played === 3);
+  ok('no game state anywhere is no schedule: the byes are left alone', H.boardStillToPlay(wk([byeRow, { name: 'X', weeks: [{ week: 2 }] }])).players.length === 2);
   const stPm = H.nflSeasonState(SCHED2, at.afternoon);
   ok('the clubs that have kicked off, by the same rule', [...H.playedTeams(stPm)].sort().join() === 'AAA,CCC' && H.playedTeams(H.nflSeasonState(SCHED2, at.morning)).size === 0);
   const postponed = H.nflSeasonState({ ...SCHED2, updatedAt: 4, games: SCHED2.games.map(g => g.week === 2 && g.home === 'AAA' ? { ...g, status: 'postponed' } : g) }, at.afternoon);
