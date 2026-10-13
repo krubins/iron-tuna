@@ -252,9 +252,9 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
 .tf-sug li i{margin-left:auto;font-style:normal;font-size:var(--fs-13);color:var(--muted);white-space:nowrap}
 .tf-sug li.on,.tf-sug li:hover{background:var(--teal-tint)}
 /* The screenshot controls are the hero's entry links: teal, 600, an arrow,
-   side by side. */
-.tf-shots{display:flex;flex-wrap:wrap;gap:0 var(--sp-24);margin-top:var(--sp-12)}
-.tf-shot{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0;border:0;background:transparent;font-size:var(--fs-14);font-weight:600;color:var(--teal);cursor:pointer}
+   side by side on one line (labels kept short so they fit the narrowest box, 262px). */
+.tf-shots{display:flex;flex-wrap:wrap;gap:0 var(--sp-16);margin-top:var(--sp-12)}
+.tf-shot{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;min-height:32px;padding:0;border:0;background:transparent;font-size:var(--fs-14);font-weight:600;color:var(--teal);cursor:pointer}
 .tf-shot::after{content:"\2192";font-weight:600}
 .tf-shot:hover{color:var(--teal-hover);text-decoration:underline;background:transparent}
 .tf-shot:has(input:focus-visible),.tf-shot:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:2px}
@@ -914,8 +914,8 @@ button.tf-shot{font-family:inherit;line-height:inherit;appearance:none}
               + '<datalist id="' + dl + '">' + optionsFor(sug) + '</datalist>'
               + '<button type="button" class="btn alt small" data-drop="' + i + ':' + k + '">drop</button></div>';
           }).join('') + '</div>' : '')
-        + '<div class="tf-shots"><label class="tf-shot"><input type="file" accept="image/*" multiple data-shot="' + i + '">Add a roster screenshot</label>'
-        + '<button type="button" class="tf-shot" data-paste="' + i + '" title="Read a screenshot off the clipboard">Paste a screenshot</button></div>'
+        + '<div class="tf-shots"><label class="tf-shot"><input type="file" accept="image/*" multiple data-shot="' + i + '" aria-label="Upload a screenshot of the roster page">Upload image</label>'
+        + '<button type="button" class="tf-shot" data-paste="' + i + '" title="Read a screenshot off the clipboard" aria-label="Paste a screenshot from the clipboard">Paste image</button></div>'
         + '<div class="tf-hz" data-hz="' + i + '"></div>'
         + '<div class="cnt">' + tradeable + ' tradeable' + (t.players.length !== tradeable ? ' (kickers and defenses ignored)' : '') + '</div>'
         + '</div>';
