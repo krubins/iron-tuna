@@ -7617,7 +7617,11 @@ function buildBoards(ctx, opts) {
     for (const w of weeks) {
       const env = weekEnvironment(ratings, team, w);
       if (env.bye) { byes.push(w); weekRows.push({ week: w, bye: true }); continue; }
-      if (outWeeks.has(w)) { weekRows.push({ week: w, out: true, opponent: env.opponent, home: env.home }); continue; }
+      // A man ruled out still has a fixture, and it kicks off with his club's.
+      // Without its state the week board's kicked-off rule (boardStillToPlay)
+      // could never take him off, so on Monday night the only receivers left
+      // were the injured ones, every one at 0.0 and ranked WR1, WR2... by name.
+      if (outWeeks.has(w)) { weekRows.push({ week: w, out: true, opponent: env.opponent, home: env.home, kickoff: env.kickoff, status: env.status, gameState: _fixtureState(env, state) }); continue; }
       games++;
       if (env.opponentDefRank) { oppAllowedSum += env.opponentDefRank; oppN++; }
       // CONSENSUS: flat per-game share of the season line. No market in it.
@@ -7885,7 +7889,15 @@ function playedTeams(state) {
 function boardStillToPlay(board) {
   if (!board || !board.ok || !board.horizon || board.horizon.key !== 'week') return board;
   const played = p => (p.weeks || []).some(w => w.gameState === 'in_progress' || w.gameState === 'completed');
-  const players = (board.players || []).filter(p => !played(p));
+  let players = (board.players || []).filter(p => !played(p));
+  // A club on its bye has no fixture to kick off, so the rule above never
+  // reaches it. While a game is still to come that is right: he is on the
+  // board at zero, below the men who play. Once every game has kicked off
+  // there is nothing left to rank him beneath, and a board of byes at 0.0
+  // reads as a ranking. No game state anywhere is no schedule: no judgement.
+  const judged = (board.players || []).some(p => (p.weeks || []).some(w => w.gameState != null));
+  const toPlay = players.some(p => (p.weeks || []).some(w => w.gameState === 'upcoming'));
+  if (judged && !toPlay) players = players.filter(p => !(p.weeks || []).every(w => w.bye));
   return { ...board, players, played: (board.players || []).length - players.length };
 }
 

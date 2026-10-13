@@ -482,6 +482,33 @@ console.log('\na projection for a game that has kicked off is a result, not a pr
   const n3 = H.buildBoards({ ...ctx(), sched: SCHED2, state: H.nflSeasonState(SCHED2, at.afternoon), ratings: H.teamRatingsFrom(SCHED2) }, { horizon: 'next3', preset: 'ppr' });
   ok('a longer horizon is a sum over weeks and is returned whole', H.boardStillToPlay(n3).players.length === POOL.length && H.boardStillToPlay(n3).played == null);
   ok('no board, no judgement', H.boardStillToPlay(null) === null && H.boardStillToPlay({ ok: false }).ok === false);
+  // The report: on Monday night the /rankings WR board was nothing but the
+  // injured, every one at 0.0 and ranked WR1, WR2... by name, because an out
+  // week carried no game state and a bye has no game at all.
+  const wk = (players) => ({ ok: true, horizon: { key: 'week' }, players });
+  const outRow = (gs) => ({ name: 'Out Receiver', weeks: [{ week: 2, out: true, gameState: gs }] });
+  const byeRow = { name: 'Bye Receiver', weeks: [{ week: 2, bye: true }] };
+  const playRow = (gs) => ({ name: 'Live Receiver', weeks: [{ week: 2, gameState: gs }] });
+  ok('a man ruled out leaves the week board when his club kicks off',
+     H.boardStillToPlay(wk([outRow('completed'), playRow('upcoming')])).players.map(p => p.name).join() === 'Live Receiver');
+  ok('and stays on it, at zero, until it does', H.boardStillToPlay(wk([outRow('upcoming'), playRow('upcoming')])).players.length === 2);
+  ok('a bye stays while a game is still to come', H.boardStillToPlay(wk([byeRow, playRow('upcoming')])).players.length === 2);
+  ok('once nothing is left to play, the byes and the injured go too',
+     H.boardStillToPlay(wk([byeRow, outRow('completed'), playRow('completed')])).players.length === 0
+     && H.boardStillToPlay(wk([byeRow, outRow('completed'), playRow('completed')])).played === 3);
+  ok('no game state anywhere is no schedule: the byes are left alone', H.boardStillToPlay(wk([byeRow, { name: 'X', weeks: [{ week: 2 }] }])).players.length === 2);
+  // The same, through the board itself and at every position: the whole pool
+  // ruled out for Week 2. The report is dated the day before the Monday
+  // checkpoint, so it is inside its seven days at all three times read here.
+  const allOut = Object.fromEntries(POOL.map(p => [_oddsNorm(p.name) + '|' + p.position, { status: 'Out', asOf: new Date(at.monday - 86400000).toISOString() }]));
+  const outBoard = (now) => H.boardStillToPlay(H.buildBoards({ ...ctx(), week: allOut, sched: SCHED2, state: H.nflSeasonState(SCHED2, now), ratings: H.teamRatingsFrom(SCHED2) }, { horizon: 'week', preset: 'ppr' }));
+  const oAm = outBoard(at.morning), oMon = outBoard(at.monday), oNight = outBoard(at.night);
+  const outs = b => JSON.stringify(b.players.map(p => [p.position, p.weeks[0].out, p.weeks[0].gameState]));
+  ok('every position ruled out is on the board, out, before kickoff',
+     oAm.players.length === POOL.length && oAm.players.every(p => p.weeks[0].out && p.weeks[0].gameState === 'upcoming'), outs(oAm));
+  ok('on Monday morning only the night game\'s injured remain, and they are still out',
+     oMon.players.length === 4 && oMon.players.every(p => (p.team === 'BBB' || p.team === 'DDD') && p.weeks[0].out) && oMon.played === 4, outs(oMon));
+  ok('and on Monday night not one of them, at any position', oNight.players.length === 0 && oNight.played === POOL.length, outs(oNight));
   const stPm = H.nflSeasonState(SCHED2, at.afternoon);
   ok('the clubs that have kicked off, by the same rule', [...H.playedTeams(stPm)].sort().join() === 'AAA,CCC' && H.playedTeams(H.nflSeasonState(SCHED2, at.morning)).size === 0);
   const postponed = H.nflSeasonState({ ...SCHED2, updatedAt: 4, games: SCHED2.games.map(g => g.week === 2 && g.home === 'AAA' ? { ...g, status: 'postponed' } : g) }, at.afternoon);
