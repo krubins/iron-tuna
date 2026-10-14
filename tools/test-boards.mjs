@@ -617,5 +617,40 @@ console.log('\nthis week\'s prop, carried into the later weeks');
   ok('the week board is untouched by the carry', wk.vegas.carriedWeeks === 0 && !wk.weeks[0].carried);
 }
 
+console.log('\nprominent players the board leaves out (14 Oct 2026)');
+{
+  // Ken: when a prominent player is not in the rankings, name him. The band
+  // is the PRESEASON line, read off the committed projections (`base`), not
+  // the availability-adjusted pool, whose season-ender row is zeroed.
+  const b = H.buildBoards(ctx(), { horizon: 'week', preset: 'ppr' });
+  ok('every row carries his preseason rank at his position',
+     b.players.find(p => p.name === 'Beta Back').preRank === 1 && b.players.find(p => p.name === 'Gamma Back').preRank === 2
+     && b.players.find(p => p.name === 'Alpha Quarterback').preRank === 1, JSON.stringify(b.players.map(p => [p.name, p.preRank])));
+  ok('a kicker or a defense has no band and no preseason rank', b.players.filter(p => p.pos === 'K' || p.pos === 'DEF').every(p => p.preRank === null));
+  ok('the board says what the band is', b.prominentBand && b.prominentBand.QB === 12 && b.prominentBand.WR === 24 && !b.prominentBand.K);
+  ok('and a healthy board leaves nobody out', Array.isArray(b.absent) && b.absent.length === 0);
+  const gone = { 'betaback|RB': { status: 'IR', gamesOut: 17, asOf: '2026-09-23', note: 'Knee' } };
+  const zeroed = POOL.map(p => p.name === 'Beta Back' ? { ...p, projectedStats: { rushYd: 0, rushTD: 0, rec: 0, recYd: 0, recTD: 0 } } : p);
+  for (const horizon of ['week', 'ros']) {
+    const out = H.buildBoards(ctx({ avail: gone, pool: zeroed, base: POOL }), { horizon, preset: 'ppr' });
+    const a = out.absent.find(x => x.name === 'Beta Back');
+    ok(`a prominent season-ender is named on the ${horizon} board, with why`, a && a.reason === 'season' && a.status === 'IR' && a.preRank === 1 && a.position === 'RB', JSON.stringify(out.absent));
+    ok(`...and ranked off the preseason line, not his zeroed row`, out.players.find(p => p.name === 'Gamma Back').preRank === 2);
+  }
+  const rbOnly = H.buildBoards(ctx({ avail: gone, pool: zeroed, base: POOL }), { horizon: 'week', preset: 'ppr', position: 'WR' });
+  ok('a board for another position does not name him', rbOnly.absent.length === 0);
+  // Held back by the kicked-off rule: named with that reason, and a bye once
+  // every game has kicked off.
+  const wk = (players) => ({ ok: true, horizon: { key: 'week' }, players, absent: [] });
+  const row = (name, preRank, weeks) => ({ name, position: 'WR', pos: 'WR', team: 'AAA', key: name, preRank, weeks });
+  const held = H.boardStillToPlay(wk([row('Star Receiver', 3, [{ week: 2, gameState: 'completed' }]), row('Deep Receiver', 60, [{ week: 2, gameState: 'completed' }]),
+                                      row('Live Receiver', 30, [{ week: 2, gameState: 'upcoming' }])]));
+  ok('a prominent player whose game has kicked off is named, an unprominent one is not',
+     held.absent.length === 1 && held.absent[0].name === 'Star Receiver' && held.absent[0].reason === 'played', JSON.stringify(held.absent));
+  const byes = H.boardStillToPlay(wk([row('Bye Star', 5, [{ week: 2, bye: true }]), row('Done', 40, [{ week: 2, gameState: 'completed' }])]));
+  ok('a prominent bye held back at the end of the week is named as a bye', byes.absent.some(x => x.name === 'Bye Star' && x.reason === 'bye'));
+  ok('the worker\'s own absences ride through', H.boardStillToPlay({ ...wk([]), absent: [{ name: 'X', reason: 'season' }] }).absent[0].name === 'X');
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

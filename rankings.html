@@ -153,6 +153,12 @@ p{color:var(--sec);margin:0 0 16px}
 .rk-blend-h span:nth-child(2){color:var(--text);font-size:var(--fs-16)}
 .rk-blend input[type=range]{width:100%;margin:8px 0 4px;accent-color:var(--teal)}
 .rk-blend .is-note{margin:0}
+/* Prominent players this view does not show, in red because Ken asked for red
+   (14 Oct 2026): a reader looking for a star should not have to scroll to the
+   bottom, or past a hidden row, to learn he is on bye or out. */
+.rk-left{color:#b3261e;background:#fdecea;border-left:3px solid #b3261e;border-radius:6px;padding:var(--space-3) var(--space-4);margin:0 0 var(--space-4);font-size:var(--fs-14);line-height:1.5}
+.rk-left b{color:#b3261e}
+.rk-left ul{margin:6px 0 0;padding-left:18px}
 /* The line under the rows: what is on screen, in one sentence. */
 .rk-fine{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-3);margin:0 0 var(--space-2);font-size:var(--fs-14);color:var(--muted);max-width:none}
 .rk-fine b{color:var(--text);font-weight:600}
@@ -437,6 +443,7 @@ p{color:var(--sec);margin:0 0 16px}
       <p class="is-note" id="rkBlendNote">At the left the board is the <a href="/analysts/rankings">Rankings Desk</a>&rsquo;s: the consensus projection at your scoring, with the usage role trend once three games have earned it. At the right it is <a href="/analysts/market">Market Desk</a>&rsquo;s: the sportsbook read, shrunk toward the fantasy number where no prop is priced (a fitted team rating is a projection of the market, not a market). In between is a weighted point total, recomputed here in the browser from those two components, never a reorder.</p>
     </div>
 
+    <div class="rk-left" id="rkLeft" role="note" hidden></div>
     <p class="rk-playoff-cta" id="rkPlayoffCta" hidden>Ranking for the playoffs? <a href="#" data-goto="playoffs">See the Playoffs board: Weeks 15&ndash;17 &rarr;</a></p>
 
     <div class="is-scroll"><table class="is-table rk-table" id="rkTable" hidden>
@@ -718,7 +725,7 @@ p{color:var(--sec);margin:0 0 16px}
   }
   function render() {
     var payload = (preset === 'league' ? dataL : data)[horizon]; if (!payload) { load(horizon); return; }
-    var rows = scored(payload);
+    var rows = scored(payload), all = rows;
     readContext(payload);
     tiles(rows); kpi(rows, payload);
     var rankField = (board === 'ironTuna' ? 'i' : board === 'consensus' ? 'c' : board === 'blend' ? 'b' : 'v') + (pos === 'FLEX' ? 'Flex' : 'Rank');
@@ -729,6 +736,7 @@ p{color:var(--sec);margin:0 0 16px}
     var cols = COLS[horizon];
     $('rkHead').innerHTML = cols.map(function (c) { return '<th data-key="' + c[0] + '"' + (/^(it|ppg|games|crank|vrank)$/.test(c[0]) ? ' class="num"' : '') + (c[0] === sortKey ? ' aria-sort="' + (sortDir > 0 ? 'ascending' : 'descending') + '"' : '') + '>' + c[1] + '</th>'; }).join('');
     $('rkBody').innerHTML = rows.slice(0, 200).map(function (r) { return '<tr>' + cols.map(function (c) { return cell(r, c[0], rankField).replace(/^<td/, '<td data-k="' + c[0] + '" data-l="' + c[1] + '"'); }).join('') + '</tr>'; }).join('');
+    leftOut(payload, all);
     $('rkTable').hidden = !rows.length; $('rkEmpty').hidden = !!rows.length;
     if (!rows.length) $('rkEmpty').textContent = horizon === 'week' && payload.played && !payload.players.length
       ? 'Every game this week has kicked off, so there is nothing left to project. Next week\u2019s board posts when this week\u2019s last game ends; Next 3 Weeks and Rest of Season still answer.'
@@ -746,6 +754,47 @@ p{color:var(--sec);margin:0 0 16px}
     $('rkFoot').innerHTML = 'Vegas basis: <b>props</b> is a priced player prop; <b>gamelines</b> is the posted game line’s scoring environment applied to his line; <b>ratings</b> is a fixture no book has posted yet, projected from fitted team ratings and graded LOW. ' +
       (payload.sources && payload.sources.props ? payload.sources.props + ' players carry a prop this week.' : 'No priced player prop has reached this board for the week. Books post them; this feed is not carrying them.') +
       (payload.sources && payload.sources.usage ? ' Usage through week ' + payload.sources.usage + '.' : ' No weekly usage has been published yet.');
+  }
+  // PROMINENT PLAYERS NOT IN THIS RANKING (14 Oct 2026). Ken: when a prominent
+  // player is left out, by injury, demotion, bye or otherwise, flag it in red
+  // and say who. Prominent is the worker's band on the PRESEASON line
+  // (`preRank`, `prominentBand`), so a starter who lost his job still counts.
+  // Two ways to be left out: the board does not carry him at all (`absent`:
+  // out for the season, or held back because his game has kicked off or every
+  // game has and he was on bye), or it ranks him below the band at this
+  // position, where nobody reads. The second is only flagged with a reason
+  // the board itself gives (a bye, a week out, games missed in the window) or
+  // a fall past twice the band, so ordinary drift (preseason WR20 now WR27)
+  // is not called an absence. Independent of the filter box and the hide
+  // switch: a reader who hid the out players is still told who they were.
+  function leftOut(payload, all) {
+    var band = payload.prominentBand || {};
+    var inView = function (position) { return pos === 'FLEX' ? /^(RB|WR|TE)$/.test(position) : position === pos; };
+    var f = (board === 'ironTuna' ? 'i' : board === 'consensus' ? 'c' : board === 'blend' ? 'b' : 'v') + 'Rank';
+    var nWeeks = payload.horizon && payload.horizon.weeks ? payload.horizon.weeks.length : 0;
+    var out = [];
+    (payload.absent || []).forEach(function (a) {
+      if (!inView(a.position)) return;
+      out.push({ name: a.name, position: a.position, team: a.team, preRank: a.preRank,
+        why: a.reason === 'season' ? 'out for the season' + (a.status ? ' (' + a.status + ')' : '') : a.reason === 'played' ? 'his game has kicked off' : 'on bye' });
+    });
+    all.forEach(function (r) {
+      var p = r.p, n = band[p.position], inj = p.injury, w0 = p.weeks && p.weeks[0], why = null;
+      if (!n || !inView(p.position) || !(p.preRank <= n) || !(r[f] > n)) return;
+      var st = inj ? (inj.thisWeek || inj.status) : null;
+      if (horizon === 'week' && w0 && w0.bye) why = 'on bye';
+      else if (horizon === 'week' && w0 && w0.out) why = 'out this week' + (st ? ' (' + st + ')' : '');
+      else if (horizon !== 'week' && inj && inj.weeksOut > 0) why = 'out ' + inj.weeksOut + ' of the ' + nWeeks + ' weeks' + (inj.status ? ' (' + inj.status + ')' : '');
+      else if (horizon !== 'week' && horizon !== 'ros' && p.byes && p.byes.length) why = 'on bye in week ' + p.byes.join(', ');
+      else if (r[f] > 2 * n) why = 'ranked ' + p.position + r[f] + ' now';
+      if (why) out.push({ name: p.name, position: p.position, team: p.team, preRank: p.preRank, why: why });
+    });
+    out.sort(function (a, b) { return (a.position < b.position ? -1 : a.position > b.position ? 1 : 0) || a.preRank - b.preRank; });
+    var bands = Object.keys(band).filter(inView).map(function (k) { return 'top-' + band[k] + ' ' + k; });
+    $('rkLeft').hidden = !out.length;
+    $('rkLeft').innerHTML = !out.length ? '' : '<b>Not in this ranking:</b> ' + out.length + ' prominent player' + (out.length > 1 ? 's' : '') +
+      ' (a preseason ' + e(bands.join(' or ')) + ') ' + (out.length > 1 ? 'are' : 'is') + ' missing from this board or ranked out of sight on it.' +
+      '<ul>' + out.map(function (x) { return '<li><b>' + e(x.name) + '</b> (' + e(x.team) + ', preseason ' + e(x.position + x.preRank) + '): ' + e(x.why) + '</li>'; }).join('') + '</ul>';
   }
   function load(hz) {
     var store = preset === 'league' ? dataL : data, LS = window.ITSync && ITSync.active();
