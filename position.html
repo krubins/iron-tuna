@@ -73,6 +73,11 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .ps-col-head a{font-size:var(--fs-14);font-weight:600;white-space:nowrap}
 .ps-note{margin:0 0 var(--sp-12);font-size:var(--fs-13);color:var(--ink-3)}
 .ps-empty{margin:var(--sp-12) 0;color:var(--ink-3);font-size:var(--fs-14)}
+/* Prominent players the rail does not show, in red, as on /rankings
+   (14 Oct 2026). */
+.ps-left{color:#b3261e;background:#fdecea;border-left:3px solid #b3261e;border-radius:6px;padding:var(--sp-12);margin:0 0 var(--sp-12);font-size:var(--fs-13);line-height:1.5}
+.ps-left b{color:#b3261e}
+.ps-left ul{margin:6px 0 0;padding-left:18px}
 /* the rail */
 .ps-ranks{margin:0;padding:0;list-style:none;border-top:1px solid var(--line)}
 .ps-ranks li{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto;gap:var(--sp-8);align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)}
@@ -198,6 +203,7 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
       <a id="psFull" href="/rankings#pos=QB">Full board &rarr;</a>
     </div>
     <p class="ps-note" id="psRailNote">Iron Tuna points, this week.</p>
+    <div class="ps-left" id="psLeft" role="note" hidden></div>
     <ol class="ps-ranks" id="psRanks"></ol>
     <p class="ps-empty" id="psRailEmpty">Reading the board&hellip;</p>
   </aside>
@@ -299,13 +305,14 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
   }
   function paintRail() {
     $('psFull').href = '/rankings#pos=' + pos;
-    if (boardFailed) { $('psRanks').innerHTML = ''; $('psRailEmpty').hidden = false; $('psRailEmpty').textContent = 'The board did not answer. Nothing is shown rather than a stale ranking.'; return; }
+    if (boardFailed) { $('psLeft').hidden = true; $('psRanks').innerHTML = ''; $('psRailEmpty').hidden = false; $('psRailEmpty').textContent = 'The board did not answer. Nothing is shown rather than a stale ranking.'; return; }
     if (!board) return;
     var rows = (board.players || []).filter(function (p) { return p && p.position === pos; })
       .map(function (p) { return { p: p, pts: points(p) }; })
       .filter(function (r) { return r.pts != null && isFinite(r.pts); })
-      .sort(function (a, b) { return b.pts - a.pts || (a.p.name < b.p.name ? -1 : 1); })
-      .slice(0, RAIL);
+      .sort(function (a, b) { return b.pts - a.pts || (a.p.name < b.p.name ? -1 : 1); });
+    leftOut(rows);
+    rows = rows.slice(0, RAIL);
     $('psRailNote').textContent = 'Iron Tuna points, ' + boardLabel + ', ' + scoringWord() + '.';
     $('psRanks').innerHTML = rows.map(function (r, i) {
       var p = r.p, inj = p.injury && p.injury.status ? '<span class="ps-tag">' + esc(p.injury.status) + '</span>' : '';
@@ -316,6 +323,43 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
     }).join('');
     $('psRailEmpty').hidden = rows.length > 0;
     if (!rows.length) $('psRailEmpty').textContent = 'Nobody at this position is on the board ' + boardLabel + '.';
+  }
+
+  // PROMINENT PLAYERS THE RAIL DOES NOT SHOW (14 Oct 2026), by /rankings'
+  // rule: the worker's preseason band (`preRank`, `prominentBand`) says who is
+  // prominent; `absent` names those the board does not carry (out for the
+  // season, game kicked off, end-of-week bye). One he does carry is flagged
+  // when he ranks below the rail's thirty and the board says why (a bye, a
+  // week out, games missed in the window), or when he has fallen past both
+  // the rail and twice his band, which is the demotion case. Ranks are the
+  // rail's own order, over the whole position, before the cut.
+  function leftOut(ranked) {
+    var band = board.prominentBand || {}, n = band[pos], hz = board.horizon && board.horizon.key;
+    var nWeeks = board.horizon && board.horizon.weeks ? board.horizon.weeks.length : 0;
+    var out = [];
+    if (n) {
+      (board.absent || []).forEach(function (a) {
+        if (a.position !== pos) return;
+        out.push({ name: a.name, team: a.team, preRank: a.preRank,
+          why: a.reason === 'season' ? 'out for the season' + (a.status ? ' (' + a.status + ')' : '') : a.reason === 'played' ? 'his game has kicked off' : 'on bye' });
+      });
+      ranked.forEach(function (r, i) {
+        var p = r.p, rk = i + 1, inj = p.injury, w0 = (p.weeks || [])[0], why = null;
+        if (!(p.preRank <= n) || rk <= RAIL) return;
+        var st = inj ? (inj.thisWeek || inj.status) : null;
+        if (nWeeks === 1 && w0 && w0.bye) why = 'on bye';
+        else if (nWeeks === 1 && w0 && w0.out) why = 'out this week' + (st ? ' (' + st + ')' : '');
+        else if (nWeeks > 1 && inj && inj.weeksOut > 0) why = 'out ' + inj.weeksOut + ' of the ' + nWeeks + ' weeks' + (inj.status ? ' (' + inj.status + ')' : '');
+        else if (nWeeks > 1 && hz !== 'ros' && p.byes && p.byes.length) why = 'on bye in week ' + p.byes.join(', ');
+        else if (rk > 2 * n) why = 'ranked ' + pos + rk + ' now';
+        if (why) out.push({ name: p.name, team: p.team, preRank: p.preRank, why: why });
+      });
+    }
+    out.sort(function (a, b) { return a.preRank - b.preRank; });
+    $('psLeft').hidden = !out.length;
+    $('psLeft').innerHTML = !out.length ? '' : '<b>Not in these rankings:</b> ' + out.length + ' prominent player' + (out.length > 1 ? 's' : '') +
+      ' (a preseason top-' + n + ' ' + esc(pos) + ') ' + (out.length > 1 ? 'are' : 'is') + ' missing from the board or ranked below the ' + RAIL + ' shown.' +
+      '<ul>' + out.map(function (x) { return '<li><b>' + esc(x.name) + '</b> (' + esc(x.team) + ', preseason ' + esc(pos + x.preRank) + '): ' + esc(x.why) + '</li>'; }).join('') + '</ul>';
   }
 
   // ── the news ─────────────────────────────────────────────────────────────

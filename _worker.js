@@ -7502,6 +7502,34 @@ function seasonFormFrom(u, position, rules) {
            volume, volumeUnit, tds: Number(sea.tds) || 0, snapPct };
 }
 
+// WHO A READER EXPECTS TO FIND (14 Oct 2026). Ken: when a prominent player is
+// not in the rankings (injury, demotion, bye or otherwise), say so, and name
+// him. "Prominent" is the preseason line, not this week's: a starter who lost
+// his job ranks low on every current board, which is exactly the case to
+// catch. Ranked within position off the committed projections BEFORE the
+// availability file touched them (a season-ender's row there is zeroed) and
+// at the base scoring, so the band does not move with a reader's settings.
+// Kickers and defenses carry no band: no reader goes looking for one.
+const PROMINENT_BAND = { QB: 12, RB: 24, WR: 24, TE: 12 };
+const _PRESEASON_MEMO = new WeakMap();
+function preseasonRanks(base) {
+  if (!Array.isArray(base)) return new Map();
+  const hit = _PRESEASON_MEMO.get(base);
+  if (hit) return hit;
+  const by = {};
+  for (const p of base) {
+    if (!PROMINENT_BAND[p.position]) continue;
+    const pts = scoreAny(p.projectedStats || {}, p.position, SCORING_BASE, AVAILABILITY_GAMES);
+    if (!Number.isFinite(pts)) continue;
+    (by[p.position] = by[p.position] || []).push({ key: _oddsNorm(p.name) + '|' + p.position, name: p.name, pts });
+  }
+  const out = new Map();
+  for (const list of Object.values(by)) list.sort((x, y) => y.pts - x.pts || (x.name < y.name ? -1 : 1)).forEach((x, i) => out.set(x.key, i + 1));
+  _PRESEASON_MEMO.set(base, out);
+  return out;
+}
+const _prominent = (position, preRank) => !!PROMINENT_BAND[position] && Number.isFinite(preRank) && preRank <= PROMINENT_BAND[position];
+
 // THE BOARD. `ctx` is everything read once for the request; `opts` is what
 // the caller asked for. Returns stat lines AND points at the caller's rules,
 // so the page can re-score at another setting without a round trip.
@@ -7549,7 +7577,12 @@ function buildBoards(ctx, opts) {
   // teammates at every position.
   const slate = marketSlateFrom(ctx.weekMarkets, ctx.pool, ratings, curWeek);
   const pricedBefore = ctx.priorMarkets instanceof Set ? ctx.priorMarkets : null;
+  const pre = preseasonRanks(ctx.base || ctx.pool);
   const rows = [];
+  // Prominent players this board does not carry at all, and why. The rows
+  // themselves carry `preRank`, so a page can name the ones it ranks too low
+  // to be seen (a bye, a week out, a lost job) by the same band.
+  const absent = [];
   for (const p of ctx.pool) {
     if (!posMatch(p.position)) continue;
     const team = teamKey(p.team);
@@ -7570,7 +7603,11 @@ function buildBoards(ctx, opts) {
     // every preseason reserve placement was inflated by 17/13 the same way.
     const af = a ? _availF(gamesOut) : 1;
     const full = af > 0 && af < 1 ? Object.fromEntries(Object.entries(p.projectedStats || {}).map(([kk, v]) => [kk, Number.isFinite(v) ? v / af : v])) : (p.projectedStats || {});
-    if (af <= 0) continue;                         // out for the year: nothing to rank
+    const preRank = pre.get(k) || null;
+    if (af <= 0) {                                 // out for the year: nothing to rank
+      if (_prominent(p.position, preRank)) absent.push({ name: p.name, position: p.position, team, key: k, preRank, reason: 'season', status: a.status || null, note: a.note || '' });
+      continue;
+    }
     const u = ctx.usage && ctx.usage.players ? ctx.usage.players[k] : null;
     const role = roleTrendFrom(u);
     // WHAT HE HAS ACTUALLY DONE. The usage overlay is already read for the role
@@ -7733,7 +7770,7 @@ function buildBoards(ctx, opts) {
     const ip = _oddsRound(scoreAny(iStats, p.position, rules, games));
     rows.push({
       name: p.name, position: p.position === 'DEF' ? 'DST' : p.position, pos: p.position, team, key: k,
-      games, byes, weeks: weekRows,
+      games, byes, weeks: weekRows, preRank,
       // The season list first (it carries the games), else this week's report.
       // `weeksOut` is the games he sits INSIDE this horizon, which is what a
       // reader of this board wants to hear; `gamesOut` is the season-list
@@ -7816,6 +7853,8 @@ function buildBoards(ctx, opts) {
     delta: MARKET_DELTA, blend: IT_BLEND,
     sources: { schedule: ctx.sched ? ctx.sched.provider : null, ratings: ratings && ratings.ok ? 'fitted' : 'none',
                props: ctx.weekMarkets ? Object.keys(ctx.weekMarkets).length : 0, usage: ctx.usage ? ctx.usage.throughWeek : null },
+    prominentBand: PROMINENT_BAND,
+    absent: absent.sort((x, y) => (x.position < y.position ? -1 : x.position > y.position ? 1 : 0) || x.preRank - y.preRank),
     players: rows
   };
 }
@@ -7833,7 +7872,7 @@ async function boardsContext(env, opts) {
   ]);
   return { sched, state, ratings: teamRatingsFrom(sched), avail: availWk.table, week: availWk.weekly, usage,
            overlay: overlay ? overlay.overlay : null, weekMarkets, priorMarkets, nameIndex: _oddsProjectionIndex(),
-           pool: _availPool(PROJECTIONS), rules: scoringRules(o.preset, o.custom) };
+           pool: _availPool(PROJECTIONS), base: PROJECTIONS, rules: scoringRules(o.preset, o.custom) };
 }
 let _BOARDS_MEMO = new Map();
 async function boardsPayload(env, opts) {
@@ -7898,7 +7937,13 @@ function boardStillToPlay(board) {
   const judged = (board.players || []).some(p => (p.weeks || []).some(w => w.gameState != null));
   const toPlay = players.some(p => (p.weeks || []).some(w => w.gameState === 'upcoming'));
   if (judged && !toPlay) players = players.filter(p => !(p.weeks || []).every(w => w.bye));
-  return { ...board, players, played: (board.players || []).length - players.length };
+  // A prominent player held back here is named, so a page can say where he
+  // went rather than leave a reader hunting the board for him.
+  const kept = new Set(players);
+  const held = (board.players || []).filter(p => !kept.has(p) && _prominent(p.pos || p.position, p.preRank))
+    .map(p => ({ name: p.name, position: p.position, team: p.team, key: p.key, preRank: p.preRank, reason: played(p) ? 'played' : 'bye' }));
+  return { ...board, players, played: (board.players || []).length - players.length,
+           absent: (board.absent || []).concat(held) };
 }
 
 // -- the insight detection engine ------------------------------------------
