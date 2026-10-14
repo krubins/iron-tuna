@@ -73,20 +73,52 @@ const STYLE_EXCLUDE = new Set(['lead.html', 'play-caller-premium.html', 'the-tel
 //                                              in the offseason, not in week 2.
 //   Rankings, Depth Charts, Weekly Intel,      individual tools
 //   Waivers & FAAB, Trade Finder, My Week
+//
+// 14 Oct 2026 (Ken): each heading drops a menu of the pages under it on hover.
+// The five headings are still the nav; the tools and columns above came back
+// as their menus, not as headings, so the bar is still five words wide.
 const NAV = [
-  { label: 'Fantasy', href: '/fantasy' },
-  { label: 'DFS', href: '/dfs' },
+  { label: 'Fantasy', href: '/fantasy', menu: [
+    { label: 'Rankings', href: '/rankings' },
+    { label: 'My Week', href: '/my-week' },
+    { label: 'Waivers & FAAB', href: '/faab' },
+    { label: 'Trade Finder', href: '/trade-finder' },
+    { label: 'Weekly Intel', href: '/weekly-intel' },
+    { label: 'Depth Charts', href: '/depth-charts' },
+    { label: 'My League', href: '/my-league' },
+  ] },
+  { label: 'DFS', href: '/dfs', menu: [
+    { label: 'DFS Lobby', href: '/dfs' },
+    { label: 'Getting Started', href: '/dfs-getting-started' },
+    { label: 'Strategy Guide', href: '/dfs-strategy-guide' },
+    { label: 'DFS Desk', href: '/analysts/dfs' },
+  ] },
   // The desk is the articles hub: the week's written coverage and the standing
-  // columns under one heading rather than six of their own.
-  { label: 'Articles', href: '/in-season/desk' },
+  // columns under one heading rather than six of their own. The columns come
+  // back as the heading's menu, not as headings of their own.
+  { label: 'Articles', href: '/in-season/desk', menu: [
+    { label: 'The Desk', href: '/in-season/desk' },
+    { label: 'The Pick', href: '/the-pick' },
+    { label: 'The Tell', href: '/the-tell' },
+    { label: 'Weekly Wrap', href: '/weekly-wrap' },
+    { label: 'The Analysts', href: '/analysts' },
+  ] },
   // There is no /how-it-works page in the repo, and this phase adds no pages.
   // The FAQ's "Getting started" group is the site's existing answer to the
   // question, so the label points there rather than at a new URL.
-  { label: 'How It Works', href: '/faq#faq-start' },
+  { label: 'How It Works', href: '/faq#faq-start', menu: [
+    { label: 'Getting Started', href: '/faq#faq-start' },
+    { label: 'FAQ', href: '/faq' },
+    { label: 'Data Sources', href: '/data' },
+    { label: 'Support', href: '/support' },
+  ] },
   // /player is the site's search page: a real <form role="search"> posting ?q=
   // with the shared typeahead behind it. Same destination the app's header
   // lookup resolves to.
-  { label: 'Search', href: '/player' },
+  { label: 'Search', href: '/player', menu: [
+    { label: 'Player Search', href: '/player' },
+    { label: 'All Players', href: '/players' },
+  ] },
 ];
 
 // The one header button, on every page.
@@ -182,7 +214,21 @@ function navHtml(file) {
     const cls = l.cta ? ' class="cta"' : '';
     return `<a${cls} href="${l.href}"${cur}>${esc(l.label)}</a>`;
   };
-  const items = NAV.map((l) => '      ' + link(l)).join('\n');
+  // Each heading drops a menu of the pages under it on hover and on focus, in
+  // CSS (site.css, .nav-dd). The heading stays a real link, so a phone, where
+  // the menus are off, still lands on the section. A menu link never marks
+  // itself current: the five headings are the only "you are here".
+  const item = (l) => {
+    if (!l.menu) return '      ' + link(l);
+    const kids = l.menu.map((k) => `<a href="${k.href}">${esc(k.label)}</a>`).join('');
+    return [
+      '      <span class="nav-dd">',
+      '        ' + link(l).replace('<a ', '<a class="nav-dd-top" '),
+      `        <span class="nav-dd-menu" role="group" aria-label="${esc(l.label)}">${kids}</span>`,
+      '      </span>',
+    ].join('\n');
+  };
+  const items = NAV.map(item).join('\n');
   return [
     '    <nav class="nav" id="sitenav" aria-label="Main">',
     items,
