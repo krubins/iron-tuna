@@ -283,7 +283,7 @@ const read = page => page.evaluate(() => {
     // The header chrome, shared with every other page.
     line: text(document.querySelector('.site-line')),
     lineH: document.querySelector('.site-line') ? document.querySelector('.site-line').getBoundingClientRect().height : null,
-    nav: [...document.querySelectorAll('header.site .nav a')].map(a => a.getAttribute('href')),
+    nav: [...document.querySelectorAll('header.site .nav a:not(.nav-dd-menu a)')].map(a => a.getAttribute('href')),
     cta: (() => { const c = document.querySelector('header.site a.cta'); return c ? { href: c.getAttribute('href'), text: c.textContent.trim(), shown: vis(c) } : null; })(),
     tabbar: [...document.querySelectorAll('.tabbar a')].filter(vis).map(a => a.getAttribute('href')),
     toggle: (() => { const b = document.querySelector('header.site .nav-toggle'); return b && vis(b) ? b.getAttribute('aria-controls') : null; })(),

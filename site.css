@@ -316,19 +316,39 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
 }
 
 /* ── nav dropdown ───────────────────────────────────────────────────────── */
-/* Inert: the nav is five flat links and no page emits .nav-dd markup any more.
-   The rules stay until the navigation has settled, so a revert is one generator
-   run. */
-.nav-dd { position: relative; display: inline-block }
-.nav-dd .nav-dd-menu {
+/* Every heading in the nav drops a menu of the pages under it, on hover and on
+   focus, in CSS with no script. The heading stays a real link. The menu hangs
+   from the foot of the navy bar as a white card.
+
+   Every selector starts `header.site .nav`. Forty-eight older pages still
+   carry the July dropdown's rules (.nav-dd, centred, teal-bordered) in a
+   second inline <style> that build-chrome's strip does not reach, and an
+   inline rule of equal weight would win on source order. These outrank them,
+   and the properties only those rules set (transform, the negative margin,
+   the rounded links) are reset here by name. */
+header.site .nav .nav-dd { position: relative; display: flex; align-items: stretch; padding: 0; margin: 0 }
+header.site .nav .nav-dd-menu {
   display: flex; flex-direction: column; visibility: hidden; opacity: 0;
-  position: absolute; top: 100%; left: 0;
-  background: var(--bg); border: 1px solid var(--line2);
-  border-radius: var(--radius-sm); padding: var(--space-2); z-index: 40; min-width: 180px;
+  transition: opacity .12s ease, visibility 0s linear .2s;
+  position: absolute; top: 100%; left: 0; transform: none; margin: 0; z-index: 60; min-width: 200px;
+  background: var(--bg, #fff); border: 1px solid var(--line2, #d6dbe1); border-top: 3px solid var(--mast);
+  border-radius: 0 0 var(--radius-sm, 4px) var(--radius-sm, 4px);
+  box-shadow: 0 8px 24px rgba(10, 25, 41, .14); padding: var(--space-2) 0;
 }
-.nav-dd:hover .nav-dd-menu, .nav-dd:focus-within .nav-dd-menu { visibility: visible; opacity: 1 }
-.nav-dd .nav-dd-menu a { display: block; margin: 0; padding: var(--space-3) var(--space-4); text-transform: none; letter-spacing: 0; font-size: var(--fs-16); color: var(--text) }
-.nav-dd .nav-dd-menu a:hover { background: var(--panel); text-decoration: none }
+/* Bridges the seam between heading and menu so the pointer can cross it. */
+header.site .nav .nav-dd-menu::before { content: ""; position: absolute; left: 0; right: 0; top: -10px; height: 10px }
+header.site .nav .nav-dd:hover > .nav-dd-menu,
+header.site .nav .nav-dd:focus-within > .nav-dd-menu { visibility: visible; opacity: 1; transition-delay: 0s }
+header.site .nav .nav-dd:hover > .nav-dd-top,
+header.site .nav .nav-dd:focus-within > .nav-dd-top { background: rgba(255, 255, 255, .08); color: #fff }
+header.site .nav .nav-dd-menu a {
+  display: block; min-height: 0; margin: 0; padding: 9px var(--space-4); border: 0; border-radius: 0;
+  color: var(--text, #14202b); background: transparent;
+  font-size: var(--fs-14); font-weight: 500; letter-spacing: 0; text-transform: none; white-space: nowrap;
+}
+header.site .nav .nav-dd-menu a:hover,
+header.site .nav .nav-dd-menu a:focus-visible { background: var(--panel, #f3f5f7); color: var(--text, #14202b); text-decoration: none }
+header.site .nav .nav-dd-menu a::after { content: none }
 
 /* ── the phone chrome ───────────────────────────────────────────────────────
    One breakpoint, 860px. The ribbon becomes a top bar with the logo and a
@@ -383,8 +403,14 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
   .nav a:last-child { border-bottom: 0 }
   .nav a:hover { background: transparent; text-decoration: underline }
   .nav a[aria-current="page"]::after { left: auto; right: 0; top: 0; bottom: 0; width: 3px; height: auto }
-  .nav-dd { display: block }
-  .nav-dd .nav-dd-menu { position: static; visibility: visible; opacity: 1; display: flex; background: transparent; border: 0; padding: 0 0 0 var(--space-4) }
+  /* On a phone the panel is the five headings only: a hover menu has no hover
+     to open it, and each heading lands on its section's own page. */
+  header.site .nav .nav-dd { display: block; border-bottom: 1px solid var(--mast-line) }
+  header.site .nav .nav-dd:last-child { border-bottom: 0 }
+  header.site .nav .nav-dd > .nav-dd-top { display: flex; border-bottom: 0 }
+  header.site .nav .nav-dd:hover > .nav-dd-top,
+  header.site .nav .nav-dd:focus-within > .nav-dd-top { background: transparent }
+  header.site .nav .nav-dd-menu { display: none }
   /* No header button: the top bar is the logo and Menu, and the league form
      has a tab below. */
   header.site a.cta { display: none }
