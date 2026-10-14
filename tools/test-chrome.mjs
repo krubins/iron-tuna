@@ -115,11 +115,17 @@ console.log('\nthe chrome leads with two lanes and nothing else');
   // The in-season section ribbon (tools/build-ranks.mjs) is page furniture, not
   // site chrome, so it is matched out: this check owns <header class="site">
   // and <footer class="site"> only.
+  //
+  // 14 Oct 2026 (Ken): each nav heading now drops a menu of the pages under it,
+  // and several of these are in those menus on purpose. The menus are cut out
+  // before this check: what it guards is that none of them is a heading, a
+  // header button or a footer link again.
   const isGone = (h) => GONE.some((g) => h === g || h.startsWith(g + '?') || h.startsWith(g + '#'));
+  const noMenus = (h) => h.replace(/<span class="nav-dd-menu"[\s\S]*?<\/span>/g, '');
   const bad = [];
   for (const f of allPages) {
     const src = read(f);
-    for (const h of [...hrefs(header(src)), ...hrefs(footer(src))]) {
+    for (const h of [...hrefs(noMenus(header(src))), ...hrefs(footer(src))]) {
       if (isGone(h)) bad.push(`${f}: ${h}`);
     }
   }
@@ -142,7 +148,10 @@ console.log('\nthe nav link set is identical everywhere');
 {
   // The <nav> only; the CTA sits outside it in the header and is asserted below.
   const navOf = (h) => (h.match(/<nav class="nav"[\s\S]*?<\/nav>/) || [''])[0];
-  const shape = (f) => hrefs(navOf(header(read(f)))).filter((h) => h.startsWith('/')).join(',');
+  // The headings only: each one's dropdown is cut out first, and asserted on
+  // its own below.
+  const topOf = (n) => n.replace(/<span class="nav-dd-menu"[\s\S]*?<\/span>/g, '');
+  const shape = (f) => hrefs(topOf(navOf(header(read(f))))).filter((h) => h.startsWith('/')).join(',');
   const shapes = new Map();
   for (const f of pages) {
     const s = shape(f);
@@ -155,6 +164,13 @@ console.log('\nthe nav link set is identical everywhere');
   ok('and it is the five-item one',
     [...shapes.keys()][0] === '/fantasy,/dfs,/in-season/desk,/faq#faq-start,/player',
     [...shapes.keys()][0]);
+
+  // 14 Oct 2026: every heading drops a menu of the pages under it on hover.
+  // Five headings, five menus, each with links in it, on every page.
+  const menus = (f) => [...navOf(header(read(f))).matchAll(/<span class="nav-dd-menu"[^>]*>([\s\S]*?)<\/span>/g)]
+    .map((m) => hrefs(m[1]).length);
+  const noMenu = pages.filter((f) => { const m = menus(f); return m.length !== 5 || m.some((n) => n === 0); });
+  ok('every heading carries a dropdown of its pages', noMenu.length === 0, noMenu.slice(0, 4).join(', '));
 
   // The same ten footer links, in the same order, everywhere.
   // Players joined them when /player/<slug> became indexable: ~400 cards
