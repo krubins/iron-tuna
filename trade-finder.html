@@ -353,6 +353,11 @@ button.tf-shot{font-family:inherit;line-height:inherit;appearance:none}
 .tf-case .but{margin:var(--space-2) 0 0;color:var(--muted)}
 .tf-alt{font-size:var(--fs-23);font-weight:600;letter-spacing:-.01em;margin:var(--space-6) 0 var(--space-3)}
 .tf-empty{color:var(--muted);font-size:var(--fs-16);border:0;border-top:1px solid var(--line);border-radius:0;padding:var(--space-5) 0 0;margin-top:0;line-height:1.5}
+.tf-none{border:1px solid var(--line2);border-left:6px solid var(--teal);border-radius:10px;background:var(--card);padding:var(--space-5) var(--space-6);margin:0 0 var(--space-5)}
+.tf-none h3{margin:0 0 var(--space-2);font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.15;color:var(--text)}
+.tf-none p{margin:0;font-size:var(--fs-16);color:var(--ink-2);max-width:72ch;line-height:1.5}
+.tf-none p+p{margin-top:var(--space-2)}
+@media (max-width:600px){.tf-none{padding:var(--space-4)}.tf-none h3{font-size:var(--fs-23)}}
 .tf-note{font-size:var(--fs-14);color:var(--muted);margin:var(--space-4) 0 0;line-height:1.5;max-width:72ch}
 /* The model's read of the notes: under the numbers, labelled as an estimate
    with the amber disclosure label, no colour bar. */
@@ -1662,11 +1667,11 @@ button.tf-shot{font-family:inherit;line-height:inherit;appearance:none}
     $('tf-verdict').innerHTML = '';
     $('tf-gauge').hidden = true; $('tf-gauge').innerHTML = '';
     if (!res.trades.length) {
-      $('tf-trades').innerHTML = '<div class="tf-empty">No trade between your team and ' + (count === 2 ? esc(T[1 - mi].name) : 'these teams') + ' improves both lineups by at least three quarters of a point a week and gives both managers a reason to say yes' + (res.refused ? ' (' + res.refused + ' improved both lineups on paper, and every one asked a manager to give up the best player, or far more projection than came back, for a bump)' : '') + '. That is a real answer: the rosters are already sorted, or the two horizons want the same players. Try a different horizon, or allow bigger packages in the settings.</div>';
+      $('tf-trades').innerHTML = '<div class="tf-none" role="status"><h3>No trade to recommend</h3><p>No trade between your team and ' + (count === 2 ? esc(T[1 - mi].name) : 'these teams') + ' improves both lineups by at least three quarters of a point a week and gives both managers a reason to say yes' + (res.refused ? ' (' + res.refused + ' improved both lineups on paper, and every one asked a manager to give up the best player, or far more projection than came back, for a bump)' : '') + '.</p><p>That is a real answer: the rosters are already sorted, or the two horizons want the same players. Try a different horizon, or allow bigger packages in the settings.</p></div>';
     } else {
       $('tf-trades').innerHTML = res.trades.map(function (t, i) { return foundCard(t, i, T, mi); }).join('');
     }
-    $('tf-results-note').innerHTML = res.considered + ' swap' + (res.considered === 1 ? '' : 's') + ' improved both lineups and gave both managers a reason to say yes' + (res.refused ? ' (another ' + res.refused + ' improved both lineups on paper and were set aside: one side was being asked to send the best player in the deal, or far more projection than came back, for a small bump)' : '') + '; the ' + res.trades.length + ' above are the strongest, no more than four with one partner. Under each side is the case that manager would make for it. ' + scoredNote();
+    $('tf-results-note').innerHTML = res.considered + ' swap' + (res.considered === 1 ? '' : 's') + ' improved both lineups and gave both managers a reason to say yes' + (res.refused ? ' (another ' + res.refused + ' improved both lineups on paper and were set aside: one side was being asked to send the best player in the deal, or far more projection than came back, for a small bump)' : '') + '' + (res.trades.length ? '; the ' + res.trades.length + ' above are the strongest, no more than four with one partner. Under each side is the case that manager would make for it. ' : '. ') + scoredNote();
     host.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   // ── the gauge: is it worth it for the reader ─────────────────────────────
