@@ -97,8 +97,13 @@
       if (!RE.test(email)) { say('Enter a valid email address.', false); inp.focus(); return; }
       if (!cb.checked) { say('Tick the box to agree to the email.', false); cb.focus(); return; }
       btn.disabled = true; say('Sending…', true);
+      // The visit's source labels as it-metrics.js recorded them (growth plan
+      // Phase 6), so /admin can count confirmed subscriptions per source. The
+      // labels only: never the browser id, which stays out of the subscriber table.
+      var vis = null; try { vis = JSON.parse(get('it.visit') || 'null'); } catch (e2) {}
+      var visit = vis ? { src: vis.src || '', med: vis.med || '', cmp: vis.cmp || '' } : null;
       fetch('/api/newsletter/subscribe', { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email: email, scoring: sel.value, consent: true, source: place, company: hp.firstChild.value }) })
+        body: JSON.stringify({ email: email, scoring: sel.value, consent: true, source: place, company: hp.firstChild.value, visit: visit }) })
         .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
         .then(function (j) {
           if (j && j.ok) {

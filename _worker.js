@@ -10925,11 +10925,23 @@ const NL_DDL = [
   'CREATE TABLE IF NOT EXISTS unsubscribes (email TEXT PRIMARY KEY, created_at INTEGER)',
   'CREATE TABLE IF NOT EXISTS findings (id TEXT PRIMARY KEY, kind TEXT NOT NULL, season INTEGER, week INTEGER, scoring TEXT, created_at INTEGER NOT NULL, payload TEXT NOT NULL)'
 ];
+// Phase 6: the source of the visit a reader signed up in, so /admin can
+// compare sources by confirmed subscriptions. Labels only (a site name, a
+// medium, a campaign), never an identifier; the browser id stays out of this
+// table. Each is added once and fails harmlessly when it is already there.
+const NL_MIGRATIONS = [
+  'ALTER TABLE newsletter_subscribers ADD COLUMN visit_src TEXT',
+  'ALTER TABLE newsletter_subscribers ADD COLUMN visit_med TEXT',
+  'ALTER TABLE newsletter_subscribers ADD COLUMN visit_cmp TEXT'
+];
 let _NL_READY = null;
 async function nlReady(env) {
   if (!env || !env.LEADS_DB) return false;
   if (_NL_READY === env.LEADS_DB) return true;
-  try { for (const q of NL_DDL) await env.LEADS_DB.prepare(q).run(); _NL_READY = env.LEADS_DB; return true; } catch (e) { return false; }
+  try { for (const q of NL_DDL) await env.LEADS_DB.prepare(q).run(); } catch (e) { return false; }
+  for (const q of NL_MIGRATIONS) { try { await env.LEADS_DB.prepare(q).run(); } catch (e) {} }
+  _NL_READY = env.LEADS_DB;
+  return true;
 }
 const NL_MAX = 5;
 // A player whose game kicks off within this long of the edition being built
@@ -11095,16 +11107,21 @@ async function newsletterSubscribe(env, origin, body, now) {
   const db = env.LEADS_DB;
   const scoring = nlPreset(b.scoring);
   const source = String(b.source || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32) || 'unknown';
+  // The visit's source as it-metrics.js recorded it, cleaned to a label;
+  // anything with an @ in it is dropped rather than stored.
+  const vtag = (x, n) => { const t = String(x == null ? '' : x).toLowerCase().slice(0, n); return !t || t.indexOf('@') >= 0 ? null : t.replace(/[^a-z0-9._()-]/g, '-'); };
+  const v = b.visit && typeof b.visit === 'object' ? b.visit : {};
+  const vsrc = vtag(v.src, 60), vmed = vtag(v.med, 20), vcmp = vtag(v.cmp, 60);
   const row = await db.prepare('SELECT * FROM newsletter_subscribers WHERE email = ?').bind(email).first();
   const generic = { status: 200, body: { ok: true, state: 'check_inbox' } };
   if (row && row.status === 'confirmed') return generic;
   if (row && row.status === 'pending' && row.confirm_sent_at && at - row.confirm_sent_at < NL_CONFIRM_GAP_MS) return generic;
   const hour = await db.prepare('SELECT COUNT(*) AS n FROM newsletter_subscribers WHERE confirm_sent_at >= ?').bind(at - 3600000).first();
   if (hour && hour.n >= NL_CONFIRM_HOURLY) return { status: 429, body: { ok: false, error: 'rate' } };
-  if (row) await db.prepare("UPDATE newsletter_subscribers SET status = 'pending', scoring = ?, source = ?, consent = ?, updated_at = ?, confirm_sent_at = ? WHERE email = ?")
-    .bind(scoring, source, NL_CONSENT, at, at, email).run();
-  else await db.prepare("INSERT INTO newsletter_subscribers (email, status, scoring, source, consent, created_at, updated_at, confirm_sent_at) VALUES (?, 'pending', ?, ?, ?, ?, ?, ?)")
-    .bind(email, scoring, source, NL_CONSENT, at, at, at).run();
+  if (row) await db.prepare("UPDATE newsletter_subscribers SET status = 'pending', scoring = ?, source = ?, consent = ?, updated_at = ?, confirm_sent_at = ?, visit_src = ?, visit_med = ?, visit_cmp = ? WHERE email = ?")
+    .bind(scoring, source, NL_CONSENT, at, at, vsrc, vmed, vcmp, email).run();
+  else await db.prepare("INSERT INTO newsletter_subscribers (email, status, scoring, source, consent, created_at, updated_at, confirm_sent_at, visit_src, visit_med, visit_cmp) VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    .bind(email, scoring, source, NL_CONSENT, at, at, at, vsrc, vmed, vcmp).run();
   const link = origin + '/api/newsletter/confirm?e=' + encodeURIComponent(email) + '&s=' + at + '&t=' + encodeURIComponent(await nlConfirmToken(env, email, at));
   const e = _preEsc;
   const html = '<div style="font-family:system-ui,Arial;max-width:480px;color:#1a2129"><h2 style="color:#0b1117">Confirm the Iron Tuna Sunday email</h2>'
@@ -11166,6 +11183,10 @@ async function nlBoardNow(env) {
 // ── dated findings ─────────────────────────────────────────────────────────
 // A finding is what the board said about one player (kind "gap") or two
 // (kind "compare") at one scoring, frozen the moment it is shared or mailed.
+// Phase 6 added two kinds for the owner's weekly drafts: "set", up to three
+// gaps on one page so a post can carry one dated link, and "waiver", one
+// player the three-week board ranks inside a 12-team league's rostered depth
+// and the consensus ranks outside it.
 // Its id carries a hash of its own figures, so the same numbers shared twice
 // are one page and different numbers are a different page: a link never
 // changes under the person it was sent to. The live view is the player page
@@ -11178,9 +11199,14 @@ async function nlHash(s) {
 async function findingFreeze(env, rec, now) {
   if (!(await nlReady(env))) return null;
   const at = Number.isFinite(now) ? now : Date.now();
-  const names = rec.kind === 'compare' ? [rec.a.name, rec.b.name] : [rec.player.name];
-  const figures = JSON.stringify({ kind: rec.kind, season: rec.season, week: rec.week, scoring: rec.scoring, player: rec.player || null, a: rec.a || null, b: rec.b || null });
-  const id = [rec.season || 's', 'w' + rec.week, names.map(_homeSlug).join('-vs-'), rec.scoring, await nlHash(figures)].join('-').slice(0, 120);
+  // The readable part of the id is cut to fit; the hash after it never is,
+  // or two different sets of figures could share a page.
+  const names = rec.kind === 'compare' ? [rec.a.name, rec.b.name] : rec.kind === 'set' ? ['gaps', rec.players[0].name] : rec.kind === 'waiver' ? ['waiver', rec.player.name] : [rec.player.name];
+  // The extra keys only when present, so a gap or a comparison hashes exactly
+  // as it did before Phase 6 and an old link's figures still find their page.
+  const figures = JSON.stringify({ kind: rec.kind, season: rec.season, week: rec.week, scoring: rec.scoring, player: rec.player || null, a: rec.a || null, b: rec.b || null,
+    ...(rec.players ? { players: rec.players } : {}), ...(rec.weeks ? { weeks: rec.weeks } : {}) });
+  const id = ([rec.season || 's', 'w' + rec.week, names.map(_homeSlug).join(rec.kind === 'compare' ? '-vs-' : '-'), rec.scoring].join('-').slice(0, 100) + '-' + await nlHash(figures)).replace(/--+/g, '-');
   const payload = { ...rec, frozenAt: at };
   await env.LEADS_DB.prepare('INSERT OR IGNORE INTO findings (id, kind, season, week, scoring, created_at, payload) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .bind(id, rec.kind, rec.season == null ? null : rec.season, rec.week, rec.scoring, at, JSON.stringify(payload)).run();
@@ -11222,11 +11248,15 @@ function findingCompareRec(nb, nameA, nameB, preset) {
 function findingTitle(r) {
   const lab = HOME_PRESET_LABEL[r.scoring] || r.scoring;
   if (r.kind === 'compare') return r.a.name + ' or ' + r.b.name + ': Week ' + r.week + ', ' + lab;
+  if (r.kind === 'set') return 'Week ' + r.week + ': ' + (r.players.length === 1 ? 'one market-versus-consensus difference' : r.players.length + ' market-versus-consensus differences') + ' (' + lab + ')';
+  if (r.kind === 'waiver') return r.player.name + ': Iron Tuna ' + r.player.position + r.player.ironTunaRank + ', consensus ' + r.player.position + r.player.consensusRank + ' (' + _distSpan(r.weeks) + ', ' + lab + ')';
   const x = r.player;
   return x.name + ': market ' + _nlN1(x.market) + ', consensus ' + _nlN1(x.consensus) + ' (Week ' + r.week + ', ' + lab + ')';
 }
 function findingDesc(r) {
   if (r.kind === 'compare') return 'Iron Tuna projects ' + r.a.name + ' ' + _nlN1(r.a.ironTuna) + ' and ' + r.b.name + ' ' + _nlN1(r.b.ironTuna) + ' points. Frozen ' + _etStamp(r.frozenAt) + '.';
+  if (r.kind === 'set') return 'Betting market against fantasy consensus: ' + r.players.map(x => x.name + ' ' + _nlSigned(x.gap)).join(', ') + ' points. Frozen ' + _etStamp(r.frozenAt) + '.';
+  if (r.kind === 'waiver') return waiverWhy(r) + ' Frozen ' + _etStamp(r.frozenAt) + '.';
   const x = r.player;
   return 'The betting market projects ' + x.name + ' ' + _nlSigned(x.gap) + ' points against the fantasy consensus. ' + _nlWhy(x.why) + ' Frozen ' + _etStamp(r.frozenAt) + '.';
 }
@@ -11245,6 +11275,22 @@ function findingBodyHtml(r, id) {
     h += '<h1>' + e(r.a.name) + ' or ' + e(r.b.name) + '</h1><ul class="fd-cmp">' + row(r.a) + row(r.b) + '</ul>'
       + '<p class="fd-why">' + (hi.ironTuna === lo.ironTuna ? 'Iron Tuna projected the two level at ' + lab + '.'
         : 'Iron Tuna projected ' + e(hi.name) + ' ' + _nlN1(hi.ironTuna - lo.ironTuna) + ' more points at ' + lab + '.') + ' A projection, not a guarantee.</p>';
+  } else if (r.kind === 'set') {
+    const row = (x) => '<li><p class="fd-who"><a href="/player/' + e(_homeSlug(x.name)) + '"><b>' + e(x.name) + '</b></a> <span class="fd-gap' + (x.gap > 0 ? ' good' : '') + '">' + _nlSigned(x.gap) + ' pts</span> '
+      + '<span>' + e(x.position + ' ' + x.team + ' ' + _nlFix(x)) + (x.kickoff ? ' &middot; ' + e(_etStamp(x.kickoff)) : '') + '</span></p>'
+      + '<p class="fd-nums">Market <b>' + _nlN1(x.market) + '</b> &middot; consensus <b>' + _nlN1(x.consensus) + '</b></p>'
+      + '<p class="fd-lab"><span class="fd-tag">Derived estimate</span> Market points converted from ' + e(x.books) + ' books&rsquo; props.</p>'
+      + '<p class="fd-lab"><span class="fd-tag q">Quoted prop</span> ' + e(_nlWhy(x.why)) + (x.why.lastSeen ? ' Line last seen ' + e(_etStamp(x.why.lastSeen)) + '.' : '') + '</p></li>';
+    h += '<h1>Where the betting market and the fantasy consensus disagree</h1><ul class="fd-cmp">' + r.players.map(row).join('') + '</ul>'
+      + '<p class="fd-why">' + (r.players.length < DIST_SET_MAX ? 'Only ' + r.players.length + ' cleared the bar. ' : '') + 'A disagreement between two projections, not a prediction of the result and not betting advice.</p>';
+  } else if (r.kind === 'waiver') {
+    const x = r.player;
+    h = '<p class="fd-kick">' + e(_distSpan(r.weeks)) + ' &middot; ' + lab + '</p>'
+      + '<h1>' + e(x.name) + '</h1>'
+      + '<p class="fd-who">' + e(x.position + ' ' + x.team) + (x.next && x.next.length ? ' &middot; ' + e(x.next.map(n => 'W' + n.week + ' ' + (n.home ? 'vs ' : 'at ') + n.opponent).join(', ')) : '') + '</p>'
+      + '<p class="fd-nums">Iron Tuna <b>' + e(x.position + x.ironTunaRank) + '</b>, ' + _nlN1(x.ironTuna) + ' pts &middot; consensus <b>' + e(x.position + x.consensusRank) + '</b>, ' + _nlN1(x.consensus) + ' pts</p>'
+      + '<p class="fd-why">' + e(waiverWhy(r)) + '</p>'
+      + '<p class="fd-note">Availability is not known here. Check your league before you claim.</p>';
   } else {
     const x = r.player;
     h += '<h1>' + e(x.name) + ' <span class="fd-gap' + (x.gap > 0 ? ' good' : '') + '">' + _nlSigned(x.gap) + ' pts</span></h1>'
@@ -11254,10 +11300,11 @@ function findingBodyHtml(r, id) {
       + '<p class="fd-lab"><span class="fd-tag q">Quoted prop</span> ' + e(_nlWhy(x.why)) + (x.why.lastSeen ? ' Line last seen ' + e(_etStamp(x.why.lastSeen)) + '.' : '') + '</p>'
       + '<p class="fd-why">A disagreement between two projections, not a prediction of the result and not betting advice.</p>';
   }
-  const live = r.kind === 'compare' ? r.a : r.player;
+  const live = r.kind === 'compare' ? [r.a, r.b] : r.kind === 'set' ? r.players : [r.player];
+  const ln = live.map(x => '<a href="/player/' + e(_homeSlug(x.name)) + '">' + e(x.name) + '</a>');
   h += dated
-    + '<p class="fd-live">Current numbers: <a href="/player/' + e(_homeSlug(live.name)) + '">' + e(live.name) + '</a>'
-    + (r.kind === 'compare' ? ' and <a href="/player/' + e(_homeSlug(r.b.name)) + '">' + e(r.b.name) + '</a>' : '') + ', or <a href="/vegas-edge#board">this week&rsquo;s board</a>.</p>'
+    + '<p class="fd-live">Current numbers: ' + (ln.length > 2 ? ln.slice(0, -1).join(', ') + ' and ' + ln[ln.length - 1] : ln.join(' and '))
+    + (r.kind === 'waiver' ? ', or <a href="/waivers">the waiver board</a>.</p>' : ', or <a href="/vegas-edge#board">this week&rsquo;s board</a>.</p>')
     + '<img class="fd-img" src="/finding/' + e(id) + '/card.svg" width="1200" height="630" alt="' + e(findingTitle(r)) + '">'
     + '<div class="fd-share" data-it-share-url="https://irontuna.com/finding/' + e(id) + '" data-it-share-title="' + e(findingTitle(r)) + '" data-it-share-tool="finding_' + e(r.kind) + '" data-it-share-key="' + e(id.slice(0, 48)) + '" data-it-share-image="/finding/' + e(id) + '/card.svg"></div>';
   return h;
@@ -11273,6 +11320,18 @@ function findingSvg(r) {
   if (r.kind === 'compare') {
     const line = (x, y) => T(80, y, 54, 700, '#e8eef2', x.name) + T(80, y + 46, 28, 400, '#aebcc6', x.position + ' ' + x.team + ' ' + _nlFix(x)) + T(1120, y, 64, 700, '#e8eef2', _nlN1(x.ironTuna), 'end');
     body = T(80, 150, 30, 600, '#9fe1cb', 'Iron Tuna projection, Week ' + r.week + ', ' + lab) + line(r.a, 250) + line(r.b, 390);
+  } else if (r.kind === 'set') {
+    const line = (x, y) => T(80, y, 46, 700, '#e8eef2', x.name) + T(80, y + 38, 24, 400, '#aebcc6', x.position + ' ' + x.team + ' ' + _nlFix(x) + '  ·  market ' + _nlN1(x.market) + ', consensus ' + _nlN1(x.consensus))
+      + T(1120, y, 54, 700, x.gap > 0 ? '#2dd4a3' : '#e8eef2', _nlSigned(x.gap), 'end');
+    body = T(80, 150, 30, 600, '#9fe1cb', 'Market versus consensus, Week ' + r.week + ', ' + lab) + r.players.slice(0, DIST_SET_MAX).map((x, i) => line(x, 225 + i * 100)).join('')
+      + T(80, 520, 24, 400, '#aebcc6', 'Market points: derived estimates from books’ props');
+  } else if (r.kind === 'waiver') {
+    const x = r.player;
+    body = T(80, 150, 30, 600, '#9fe1cb', 'Waiver finding, ' + _distSpan(r.weeks) + ', ' + lab)
+      + T(80, 250, 72, 700, '#e8eef2', x.name) + T(80, 302, 30, 400, '#aebcc6', x.position + ' ' + x.team)
+      + T(80, 400, 40, 700, '#2dd4a3', 'Iron Tuna ' + x.position + x.ironTunaRank + '  ·  ' + _nlN1(x.ironTuna) + ' pts')
+      + T(80, 456, 40, 400, '#e8eef2', 'Consensus ' + x.position + x.consensusRank + '  ·  ' + _nlN1(x.consensus) + ' pts')
+      + T(80, 512, 24, 400, '#aebcc6', 'Availability not known: check your league before you claim');
   } else {
     const x = r.player;
     body = T(80, 150, 30, 600, '#9fe1cb', 'Market versus consensus, Week ' + r.week + ', ' + lab)
@@ -11409,6 +11468,289 @@ async function newsletterPreview(env, now) {
   return ed ? { frozen: false, ed } : null;
 }
 // THE SUNDAY EMAIL AND SHARED FINDINGS END
+// ════════════════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════════════════
+// THE WEEKLY DRAFTS AND PARTNERS START (growth plan Phase 6, 17 Oct 2026)
+// tools/test-distribution.mjs lifts this section with the Sunday email's.
+//
+// Three posts a week for the owner to publish by hand: Tuesday, one waiver
+// finding; Thursday or Friday, up to three market-versus-consensus
+// differences; Sunday, one close lineup comparison. Each is cut from the same
+// rules the site already prints by (homeExamples, homeSamplePair,
+// findingCompareRec, and the pickup tiers' rostered depth), frozen as a dated
+// finding so the numbers in the post and the numbers behind its link are the
+// same numbers, and tagged per the UTM convention in docs/growth-plan.md.
+//
+// NOTHING HERE POSTS, SCHEDULES OR SENDS. A draft is built when the owner
+// presses Build on /admin (a POST, so a prefetch cannot freeze anything);
+// the text comes back into an editable box to copy. The X and Threads
+// automation elsewhere in this file is separate and is not touched.
+//
+// Partners are the owner's own list of creators: nothing is seeded, nobody
+// is contacted, and the outreach draft is text to copy into the owner's own
+// email. A partner's link carries utm_source=creator-<slug>, so its visits,
+// useful visits, saved leagues, returns and confirmed subscriptions are read
+// off the same tables as every other source.
+const DIST_SET_MAX = 3;
+// The league size the waiver finding assumes, and the rostered depth comes
+// from the pickup tiers (PICKUP_ROSTERED) rather than a second guess.
+const DIST_WAIVER_TEAMS = 12;
+// A player kicking off within this long of the build is left out of a draft:
+// a post read at kickoff about a game under way is stale on arrival.
+const DIST_KICKOFF_MARGIN_MS = 3600000;
+const DIST_PIECES = {
+  waiver: { label: 'Tuesday waiver finding', piece: 'waiver' },
+  market: { label: 'Thursday or Friday market differences', piece: 'vegas-gaps' },
+  lineup: { label: 'Sunday lineup comparison', piece: 'lineup' }
+};
+// `max` is the platform's post length, for the counter on /admin; X counts a
+// link as 23 characters whatever its length.
+const DIST_CHANNELS = {
+  x: { label: 'X', source: 'x', medium: 'social', max: 280 },
+  threads: { label: 'Threads', source: 'threads', medium: 'social', max: 500 },
+  bluesky: { label: 'Bluesky', source: 'bluesky', medium: 'social', max: 300 },
+  reddit: { label: 'Reddit', source: 'reddit', medium: 'social', max: null },
+  discord: { label: 'Discord', source: 'discord', medium: 'social', max: 2000 }
+};
+const DIST_URL_RE = /https?:\/\/\S+/g;
+const _distSpan = (weeks) => !weeks || !weeks.length ? '' : weeks.length === 1 ? 'Week ' + weeks[0] : 'Weeks ' + weeks[0] + ' to ' + weeks[weeks.length - 1];
+const distSlug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32).replace(/-$/, '');
+function distCampaign(season, week, piece) { return (season || 'season') + '-w' + String(week == null ? 0 : week).padStart(2, '0') + '-' + piece; }
+// A channel key, or creator-<slug> for a partner's own link.
+function distTag(channel) {
+  const c = String(channel || '');
+  if (DIST_CHANNELS[c]) return { channel: c, ...DIST_CHANNELS[c] };
+  const m = /^creator-([a-z0-9-]{1,32})$/.exec(c);
+  return m ? { channel: c, label: 'Partner ' + m[1], source: c, medium: 'partner', max: null } : null;
+}
+// The tags go before the fragment, or the browser never sends them.
+function distUtm(u, tag, campaign) {
+  const i = u.indexOf('#'), base = i < 0 ? u : u.slice(0, i), hash = i < 0 ? '' : u.slice(i);
+  return base + (base.indexOf('?') < 0 ? '?' : '&') + 'utm_source=' + encodeURIComponent(tag.source) + '&utm_medium=' + encodeURIComponent(tag.medium)
+    + '&utm_campaign=' + encodeURIComponent(campaign) + hash;
+}
+function distChars(text, tag) {
+  return tag && tag.channel === 'x' ? String(text).replace(DIST_URL_RE, '12345678901234567890123').length : String(text).length;
+}
+const _distSoon = (at) => (p) => (p.weeks || []).some(w => Number.isFinite(w.kickoff) && w.kickoff - at < DIST_KICKOFF_MARGIN_MS);
+
+// ── the Tuesday waiver finding ─────────────────────────────────────────────
+// From the three-week board at the reader's scoring: a quarterback, back,
+// receiver or tight end whom Iron Tuna ranks INSIDE the depth a 12-team league
+// rosters at his position and the consensus ranks OUTSIDE it, who plays every
+// week of the span (no bye, not listed out, no designation but Active or
+// Probable) and whose role is not trending down. The best Iron Tuna rank wins,
+// name to break a tie. Whether he is on a waiver wire is not known: no league
+// is read, so every draft and page says to check, never that he is available.
+function waiverFindingPick(b) {
+  if (!b || !b.ok || !Array.isArray(b.players) || !b.horizon || b.horizon.key !== 'next3') return null;
+  const weeks = b.horizon.weeks || [];
+  if (!weeks.length) return null;
+  const r1 = (v) => Math.round(v * 10) / 10;
+  const out = [];
+  for (const p of b.players) {
+    if (!/^(QB|RB|WR|TE)$/.test(p.position)) continue;
+    const line = Math.round((PICKUP_ROSTERED[p.position] || 1) * DIST_WAIVER_TEAMS);
+    const c = p.consensus && p.consensus.rank, r = p.ironTuna && p.ironTuna.rank;
+    if (!Number.isFinite(c) || !Number.isFinite(r) || c <= line || r > line) continue;
+    const ws = p.weeks || [];
+    if (ws.length !== weeks.length || ws.some(w => w.bye || w.out || (w.gameState && w.gameState !== 'upcoming'))) continue;
+    if (p.injury && !/^(active|probable)$/i.test(String(p.injury.status || ''))) continue;
+    const t = p.roleTrend || null;
+    if (t && t.label === 'down') continue;
+    if (!Number.isFinite(p.ironTuna.points) || !Number.isFinite(p.consensus.points)) continue;
+    out.push({ name: p.name, position: p.position, team: p.team, teams: DIST_WAIVER_TEAMS, line,
+      ironTunaRank: r, consensusRank: c, ironTuna: r1(p.ironTuna.points), consensus: r1(p.consensus.points),
+      next: ws.map(w => ({ week: w.week, opponent: w.opponent, home: !!w.home })),
+      trend: t && t.label === 'up' && Number.isFinite(t.pct) ? { label: 'up', pct: t.pct, latest: t.latestTouches, avg: t.avgTouches } : null });
+  }
+  out.sort((a, x) => a.ironTunaRank - x.ironTunaRank || (a.name < x.name ? -1 : 1));
+  return out[0] || null;
+}
+function waiverWhy(r) {
+  const x = r.player, lab = HOME_PRESET_LABEL[r.scoring] || r.scoring;
+  return 'Over ' + _distSpan(r.weeks) + ' at ' + lab + ', Iron Tuna ranks ' + x.name + ' ' + x.position + x.ironTunaRank + ' (' + _nlN1(x.ironTuna) + ' points) and the consensus ranks him '
+    + x.position + x.consensusRank + ' (' + _nlN1(x.consensus) + '). Iron Tuna assumes a ' + x.teams + '-team league rosters about ' + x.line + ' ' + x.position
+    + 's, so the consensus has him outside that depth and Iron Tuna inside it.'
+    + (x.trend ? ' His touches last game (' + x.trend.latest + ') ran ' + x.trend.pct + '% above his season average (' + x.trend.avg + ').' : '');
+}
+function findingWaiverRec(b, x, preset) {
+  const up = b.updated || {}, weeks = (b.horizon && b.horizon.weeks) || [];
+  return { kind: 'waiver', season: b.season == null ? null : b.season, week: weeks[0], weeks: weeks.slice(), scoring: preset, boardAt: up.board || null, oddsAt: up.odds || null, player: x };
+}
+function findingSetRec(nb, list, preset) {
+  const up = nb.b.updated || {};
+  return { kind: 'set', season: nb.season == null ? null : nb.season, week: nb.week, scoring: preset, boardAt: up.board || null, oddsAt: up.odds || null, players: list.slice(0, DIST_SET_MAX) };
+}
+
+// ── the draft text ─────────────────────────────────────────────────────────
+// Plain, short, and every figure the finding page carries. The owner edits it
+// on /admin before posting; these are a starting point, not a voice.
+function distDraftText(kind, r, link) {
+  const lab = HOME_PRESET_LABEL[r.scoring] || r.scoring;
+  if (kind === 'market') {
+    return 'Week ' + r.week + ' (' + lab + '): biggest gaps, betting market vs fantasy consensus\n\n'
+      + r.players.map(x => x.name + ' ' + _nlSigned(x.gap) + ' (' + _nlN1(x.market) + ' vs ' + _nlN1(x.consensus) + ')').join('\n')
+      + '\n\nMarket (derived from sportsbook props) vs consensus, in points. Not betting advice.\n' + link;
+  }
+  if (kind === 'waiver') {
+    const x = r.player;
+    return 'Waiver finding, ' + _distSpan(r.weeks) + ' (' + lab + '): ' + x.name + ', ' + x.position + ' ' + x.team + '\n\n'
+      + 'Iron Tuna ranks him ' + x.position + x.ironTunaRank + '. The consensus has him ' + x.position + x.consensusRank + ', outside the ~' + x.line + ' ' + x.position + 's a ' + x.teams + '-team league rosters.\n\n'
+      + 'Check whether he is free in your league.\n' + link;
+  }
+  const hi = r.a.ironTuna >= r.b.ironTuna ? r.a : r.b, lo = hi === r.a ? r.b : r.a;
+  return 'Week ' + r.week + ' flex call (' + lab + '): ' + hi.name + ' or ' + lo.name + '?\n\n'
+    + (hi.ironTuna === lo.ironTuna ? 'Iron Tuna projects them level at ' + _nlN1(hi.ironTuna) + '.'
+      : 'Iron Tuna projects ' + hi.name + ' ' + _nlN1(hi.ironTuna) + ' and ' + lo.name + ' ' + _nlN1(lo.ironTuna) + '.')
+    + ' A projection, not a guarantee.\n' + link;
+}
+function distExplain(kind, r) {
+  if (kind === 'waiver') return [waiverWhy(r), 'Availability is not known: no league is read for this draft. The post says to check.'];
+  if (kind === 'market') return r.players.map(x => x.name + ': market ' + _nlN1(x.market) + ' is a derived estimate from ' + x.books + ' books’ props. Quoted prop: ' + _nlWhy(x.why)
+    + (x.why.lastSeen ? ' Line last seen ' + _etStamp(x.why.lastSeen) + '.' : '')).concat(['Each cleared the homepage bar: Active or Probable, a market fully priced off quoted props from two or more books, a gap of at least the board’s strong threshold in points and share.']);
+  const hi = r.a.ironTuna >= r.b.ironTuna ? r.a : r.b, lo = hi === r.a ? r.b : r.a;
+  return [(hi.ironTuna === lo.ironTuna ? 'Iron Tuna projects the two level' : 'Iron Tuna projects ' + hi.name + ' ' + _nlN1(hi.ironTuna - lo.ironTuna) + ' more points') + ' at ' + (HOME_PRESET_LABEL[r.scoring] || r.scoring) + '.',
+    'The pair is the homepage sample’s flex call: the players Iron Tuna ranks FLEX 30 and the next one at or below FLEX 34 who projects less, healthy and still to play.']
+    .concat([r.a, r.b].filter(x => x.market != null).map(x => x.name + ': market ' + _nlN1(x.market) + ' is a derived estimate from ' + x.books + ' books’ props.'));
+}
+// Rows for the figures table on /admin.
+function distFigures(kind, r) {
+  if (kind === 'market') return r.players.map(x => ({ name: x.name, detail: x.position + ' ' + x.team + ' ' + _nlFix(x), a: 'market ' + _nlN1(x.market) + ' (derived)', b: 'consensus ' + _nlN1(x.consensus), c: _nlSigned(x.gap) + ' pts', kickoff: x.kickoff || null }));
+  if (kind === 'waiver') { const x = r.player; return [{ name: x.name, detail: x.position + ' ' + x.team, a: 'Iron Tuna ' + x.position + x.ironTunaRank + ', ' + _nlN1(x.ironTuna) + ' pts', b: 'consensus ' + x.position + x.consensusRank + ', ' + _nlN1(x.consensus) + ' pts', c: 'rostered line ' + x.position + x.line, kickoff: null }]; }
+  return [r.a, r.b].map(x => ({ name: x.name, detail: x.position + ' ' + x.team + ' ' + _nlFix(x), a: 'Iron Tuna ' + _nlN1(x.ironTuna), b: x.consensus != null ? 'consensus ' + _nlN1(x.consensus) : 'no consensus', c: x.market != null ? 'market ' + _nlN1(x.market) + ' (derived)' : 'no full market price', kickoff: x.kickoff || null }));
+}
+
+// ── building one ───────────────────────────────────────────────────────────
+// The board, the rule, the frozen finding, the tagged link, the text. A week
+// where nothing clears the rule is a draft that says so: none is invented.
+async function distDraft(env, origin, q, now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const kind = String(q.kind || ''), tag = distTag(q.channel || 'x');
+  if (!DIST_PIECES[kind]) return { status: 400, body: { ok: false, error: 'bad_kind' } };
+  if (!tag) return { status: 400, body: { ok: false, error: 'bad_channel' } };
+  const preset = nlPreset(q.scoring);
+  const lab = HOME_PRESET_LABEL[preset];
+  const base = { kind, label: DIST_PIECES[kind].label, scoring: preset, channel: tag.channel, channelLabel: tag.label, max: tag.max, builtAt: at };
+  let rec = null, none = null, season = null, week = null;
+  if (kind === 'waiver') {
+    const b = await boardsPayload(env, { horizon: 'next3', position: 'ALL', preset, through: null });
+    if (!b || !b.ok || !b.horizon) return { status: 409, body: { ok: false, error: 'no_board' } };
+    season = b.season; week = (b.horizon.weeks || [])[0];
+    const x = waiverFindingPick(b);
+    if (x) rec = findingWaiverRec(b, x, preset);
+    else none = 'No player clears the waiver rule at ' + lab + ' for ' + _distSpan(b.horizon.weeks) + ': Iron Tuna inside a ' + DIST_WAIVER_TEAMS + '-team league’s rostered depth, the consensus outside it, a game every week, Active or Probable, role not trending down.';
+  } else {
+    const nb = await nlBoardNow(env);
+    if (!nb) return { status: 409, body: { ok: false, error: 'no_board' } };
+    season = nb.season; week = nb.week;
+    const soon = _distSoon(at);
+    const b = { ...nb.b, players: (nb.b.players || []).filter(p => !soon(p)) };
+    if (kind === 'market') {
+      const list = homeExamples(b, nb.markets, preset, DIST_SET_MAX) || [];
+      if (list.length) rec = findingSetRec(nb, list, preset);
+      else none = 'No player clears the homepage bar at ' + lab + ' right now, so there is no market post this week at this scoring.';
+    } else {
+      const pair = homeSamplePair(b);
+      if (pair) rec = findingCompareRec({ ...nb, b }, pair[0].name, pair[1].name, preset);
+      if (!rec) none = 'The board has no healthy pair to compare at the flex line right now.';
+    }
+  }
+  const campaign = distCampaign(season, week, DIST_PIECES[kind].piece);
+  if (!rec) return { status: 200, body: { ok: true, ...base, season, week, campaign, none } };
+  const f = await findingFreeze(env, rec, at);
+  if (!f) return { status: 503, body: { ok: false, error: 'storage' } };
+  const page = origin + '/finding/' + f.id;
+  const link = distUtm(page, tag, campaign);
+  const text = distDraftText(kind, f.rec, link);
+  return { status: 200, body: { ok: true, ...base, season, week, weeks: f.rec.weeks || [f.rec.week], campaign, source: tag.source, medium: tag.medium,
+    boardAt: f.rec.boardAt || null, oddsAt: f.rec.oddsAt || null, frozenAt: f.rec.frozenAt, findingId: f.id, findingUrl: page, link,
+    image: origin + '/finding/' + f.id + '/card.svg', title: findingTitle(f.rec), figures: distFigures(kind, f.rec), explain: distExplain(kind, f.rec),
+    text, chars: distChars(text, tag) } };
+}
+
+// ── partners ───────────────────────────────────────────────────────────────
+// The owner's own list. A row is a name the owner typed, a slug for the
+// tagged link, where they publish, a status and notes. Never seeded.
+const PARTNER_DDL = 'CREATE TABLE IF NOT EXISTS partners (slug TEXT PRIMARY KEY, name TEXT NOT NULL, channel TEXT, url TEXT, status TEXT NOT NULL, notes TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)';
+const PARTNER_STATUSES = ['prospect', 'contacted', 'agreed', 'active', 'paused', 'ended'];
+let _PARTNER_READY = null;
+async function partnerReady(env) {
+  if (!(await nlReady(env))) return false;
+  if (_PARTNER_READY === env.LEADS_DB) return true;
+  try { await env.LEADS_DB.prepare(PARTNER_DDL).run(); _PARTNER_READY = env.LEADS_DB; return true; } catch (e) { return false; }
+}
+async function partnerUpsert(env, body, now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const b = body || {};
+  const name = String(b.name || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+  if (!name) return { status: 400, body: { ok: false, error: 'name_required' } };
+  const slug = distSlug(b.slug || name);
+  if (!slug) return { status: 400, body: { ok: false, error: 'bad_slug' } };
+  const status = PARTNER_STATUSES.includes(String(b.status)) ? String(b.status) : 'prospect';
+  const url = String(b.url || '').trim().slice(0, 200);
+  if (url && !/^https?:\/\/[^\s]+$/i.test(url)) return { status: 400, body: { ok: false, error: 'bad_url' } };
+  if (!(await partnerReady(env))) return { status: 503, body: { ok: false, error: 'storage' } };
+  await env.LEADS_DB.prepare('INSERT INTO partners (slug, name, channel, url, status, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) '
+    + 'ON CONFLICT(slug) DO UPDATE SET name = excluded.name, channel = excluded.channel, url = excluded.url, status = excluded.status, notes = excluded.notes, updated_at = excluded.updated_at')
+    .bind(slug, name, String(b.channel || '').trim().slice(0, 40), url, status, String(b.notes || '').slice(0, 1000), at, at).run();
+  return { status: 200, body: { ok: true, slug, source: 'creator-' + slug } };
+}
+async function partnerList(env, days) {
+  if (!(await partnerReady(env))) return { ok: false, error: 'storage' };
+  const db = env.LEADS_DB;
+  const rows = ((await db.prepare('SELECT * FROM partners ORDER BY CASE status WHEN \'active\' THEN 0 WHEN \'agreed\' THEN 1 WHEN \'contacted\' THEN 2 WHEN \'prospect\' THEN 3 ELSE 4 END, name').all()).results) || [];
+  const since = Date.now() - days * 86400000;
+  // The same measures as the source table on /admin, for creator-* only.
+  const m = {};
+  try {
+    for (const r of await usageSourceRows(db, since, USAGE_OWNER_FILTER, "AND " + EVJ('src') + " LIKE 'creator-%'")) m[r.src] = r;
+  } catch (e) {}
+  const c = {};
+  try {
+    const cr = ((await db.prepare("SELECT visit_src AS src, COUNT(*) AS n FROM newsletter_subscribers WHERE status = 'confirmed' AND visit_src LIKE 'creator-%' AND confirmed_at >= ? GROUP BY visit_src").bind(since).all()).results) || [];
+    for (const r of cr) c[r.src] = r.n || 0;
+  } catch (e) {}
+  return { ok: true, days, statuses: PARTNER_STATUSES, partners: rows.map(p => {
+    const src = 'creator-' + p.slug, x = m[src] || {};
+    return { slug: p.slug, name: p.name, channel: p.channel || '', url: p.url || '', status: p.status, notes: p.notes || '', createdAt: p.created_at, updatedAt: p.updated_at, source: src,
+      visitors: x.visitors || 0, visits: x.visits || 0, usefulVisits: x.usefulVisits || 0, leagueVisitors: x.leagueVisitors || 0, confirmed: c[src] || 0 };
+  }) };
+}
+// The package for one partner: tagged links, a sample segment built from the
+// current board (not frozen; a sample is not a share), and an outreach draft
+// with the partner's name in it and the owner's choices left in brackets.
+async function partnerPackage(env, origin, slug, now) {
+  if (!(await partnerReady(env))) return { status: 503, body: { ok: false, error: 'storage' } };
+  const p = await env.LEADS_DB.prepare('SELECT * FROM partners WHERE slug = ?').bind(distSlug(slug)).first();
+  if (!p) return { status: 404, body: { ok: false, error: 'no_partner' } };
+  const tag = distTag('creator-' + p.slug);
+  let nb = null; try { nb = await nlBoardNow(env); } catch (e) {}
+  // No board, no week: the campaign falls back to the season alone rather
+  // than a made-up week (a January date belongs to the season before).
+  const at = Number.isFinite(now) ? now : Date.now(), d0 = new Date(at);
+  const campaign = nb ? distCampaign(nb.season, nb.week, 'partner') : (d0.getUTCMonth() < 2 ? d0.getUTCFullYear() - 1 : d0.getUTCFullYear()) + '-partner';
+  const links = [['Homepage', '/'], ['This week’s board', '/vegas-edge#board'], ['Sunday email sign-up', '/newsletter'], ['My Week', '/my-week']]
+    .map(([label, path]) => ({ label, url: distUtm(origin + path, tag, campaign) }));
+  let segment;
+  const list = nb ? (homeExamples({ ...nb.b, players: (nb.b.players || []).filter(q => !_distSoon(at)(q)) }, nb.markets, 'ppr', DIST_SET_MAX) || []) : [];
+  if (list.length) {
+    segment = 'Iron Tuna compares what sportsbook player props imply for fantasy scoring with the fantasy consensus. For Week ' + nb.week + ' at PPR, the biggest gaps:\n'
+      + list.map(x => '- ' + x.name + ' (' + x.position + ', ' + x.team + '): ' + _nlSigned(x.gap) + ' points. Market ' + _nlN1(x.market) + ' (derived from ' + x.books + ' books’ props), consensus ' + _nlN1(x.consensus) + '. ' + _nlWhy(x.why)).join('\n')
+      + '\nA gap is a disagreement between two projections, not a prediction or betting advice. Figures as of ' + _etStamp((nb.b.updated || {}).board || Date.now()) + '.';
+  } else segment = '[No player clears the bar right now, so there is no sample this week. Build the package again when the board has differences.]';
+  const outreach = 'Subject: Weekly Vegas-versus-consensus fantasy data for ' + p.name + '\n\n'
+    + 'Hi ' + p.name + ',\n\n'
+    + 'I run Iron Tuna (irontuna.com). Each week it converts sportsbook player props into fantasy points and compares them with the fantasy consensus, then lists the players where the two disagree most. [One or two sentences on why you are writing to ' + p.name + ' in particular.]\n\n'
+    + 'Here is this week’s version as a segment, free to use with a credit:\n\n' + segment + '\n\n'
+    + 'If it is useful, I can send it each week. This link is tagged to you, so we can both see what your audience does with it: ' + links[1].url + '\n\n'
+    + '[What you are offering, if anything. Do not promise results or audience numbers.]\n\n'
+    + '[Your name]';
+  return { status: 200, body: { ok: true, partner: { slug: p.slug, name: p.name, status: p.status, source: tag.source, medium: tag.medium }, campaign, links, segment, outreach,
+    note: 'A draft for you to edit and send yourself. Nothing has been sent and nobody has been contacted.' } };
+}
+// THE WEEKLY DRAFTS AND PARTNERS END
 // ════════════════════════════════════════════════════════════════════════════
 
 // A desk piece's head and its first screen: headline, kicker, publication
@@ -16383,6 +16725,26 @@ const EVJ = k => "(CASE WHEN json_valid(props) THEN json_extract(props, '$." + k
 // The NFL week runs Tuesday to Monday, so the weekly read does too: the start
 // of the week a UTC day falls in.
 const EV_WEEK = "date(day, '-' || ((CAST(strftime('%w', day) AS INTEGER) + 5) % 7) || ' days')";
+// Owner rows are flagged by cookie as they are written, and by first-party id
+// after the fact; either one excludes them.
+const USAGE_OWNER_FILTER = " AND uid != '' AND internal = 0 AND uid NOT IN (SELECT uid FROM analytics_owner)";
+// Visits by the source it-metrics.js assigned when each began (UTM, else an
+// outside referrer, else direct; a click between our own pages never starts
+// one), and what they produced. A visit is "useful" when it produced at least
+// one populated result, joined on the visit id. `where` narrows the visits
+// (the partner list reads creator-* only); `byCampaign` splits by campaign.
+async function usageSourceRows(db, since, F, where, byCampaign) {
+  const g = byCampaign ? 'v.cmp, v.src, v.med' : 'v.src, v.med';
+  const sel = g.replace(/v\.(\w+)/g, 'v.$1 AS $1'), only = byCampaign ? "WHERE v.cmp != '' " : '', cap = byCampaign ? 40 : 30;
+  return ((await db.prepare(
+    "WITH v AS (SELECT " + EVJ('vid') + " AS vid, COALESCE(" + EVJ('src') + ", '') AS src, COALESCE(" + EVJ('med') + ", '') AS med, COALESCE(" + EVJ('cmp') + ", '') AS cmp, uid FROM site_events WHERE event = 'visit_start' AND ts >= ?" + F + " " + (where || '') + "), " +
+    "s AS (SELECT DISTINCT " + EVJ('vid') + " AS vid FROM site_events WHERE event = 'tool_success' AND ts >= ?" + F + "), " +
+    "l AS (SELECT DISTINCT " + EVJ('vid') + " AS vid FROM site_events WHERE event = 'league_setup_complete' AND ts >= ?" + F + ") " +
+    "SELECT " + sel + ", COUNT(*) AS visits, COUNT(DISTINCT v.uid) AS visitors, SUM(CASE WHEN s.vid IS NOT NULL THEN 1 ELSE 0 END) AS usefulVisits, " +
+    "COUNT(DISTINCT CASE WHEN s.vid IS NOT NULL THEN v.uid END) AS usefulVisitors, COUNT(DISTINCT CASE WHEN l.vid IS NOT NULL THEN v.uid END) AS leagueVisitors " +
+    "FROM v LEFT JOIN s ON s.vid = v.vid LEFT JOIN l ON l.vid = v.vid " + only + "GROUP BY " + g + " ORDER BY visitors DESC LIMIT " + cap
+  ).bind(since, since, since).all()).results) || [];
+}
 async function adminUsage(env, url) {
   const db = env.LEADS_DB;
   const days = Math.min(90, Math.max(1, parseInt(url.searchParams.get('days') || '30', 10) || 30));
@@ -16390,7 +16752,7 @@ async function adminUsage(env, url) {
   const now = Date.now(), since = now - days * 86400000, today = utcDay(now);
   // Owner rows are flagged by cookie as they are written, and by first-party
   // id after the fact; either one excludes them unless &includeMe=1.
-  const F = includeMe ? " AND uid != ''" : " AND uid != '' AND internal = 0 AND uid NOT IN (SELECT uid FROM analytics_owner)";
+  const F = includeMe ? " AND uid != ''" : USAGE_OWNER_FILTER;
   let readErr = null;
   const rows = async (sql, ...bind) => { try { return ((await db.prepare(sql).bind(...bind).all()).results) || []; } catch (e) { readErr = readErr || e; return []; } };
   const one = async (sql, ...bind) => { try { return (await db.prepare(sql).bind(...bind).first()) || {}; } catch (e) { readErr = readErr || e; return {}; } };
@@ -16408,19 +16770,49 @@ async function adminUsage(env, url) {
   const visitors = nv.visitors || 0;
   out.visitors = { visits: nv.visits || 0, visitors, newVisitors: nv.newVisitors || 0, returningVisitors: Math.max(0, visitors - (nv.newVisitors || 0)), returningVisits: nv.returningVisits || 0 };
 
-  // Acquisition: each visit carries the source it-metrics.js assigned when the
-  // visit began (UTM, else an outside referrer, else direct; a click between
-  // our own pages never starts one). A visit is "useful" when it produced at
-  // least one populated result, joined on the visit id.
-  const src = await rows(
-    "WITH v AS (SELECT " + EVJ('vid') + " AS vid, COALESCE(" + EVJ('src') + ", '') AS src, COALESCE(" + EVJ('med') + ", '') AS med, uid FROM site_events WHERE event = 'visit_start' AND ts >= ?" + F + "), " +
-    "s AS (SELECT DISTINCT " + EVJ('vid') + " AS vid FROM site_events WHERE event = 'tool_success' AND ts >= ?" + F + "), " +
-    "l AS (SELECT DISTINCT " + EVJ('vid') + " AS vid FROM site_events WHERE event = 'league_setup_complete' AND ts >= ?" + F + ") " +
-    "SELECT v.src AS src, v.med AS med, COUNT(*) AS visits, COUNT(DISTINCT v.uid) AS visitors, SUM(CASE WHEN s.vid IS NOT NULL THEN 1 ELSE 0 END) AS usefulVisits, " +
-    "COUNT(DISTINCT CASE WHEN s.vid IS NOT NULL THEN v.uid END) AS usefulVisitors, COUNT(DISTINCT CASE WHEN l.vid IS NOT NULL THEN v.uid END) AS leagueVisitors " +
-    "FROM v LEFT JOIN s ON s.vid = v.vid LEFT JOIN l ON l.vid = v.vid GROUP BY v.src, v.med ORDER BY visitors DESC LIMIT 30", since, since, since);
-  out.sources = src.map(r => ({ source: r.src || 'direct', medium: r.med || 'none', visits: r.visits || 0, visitors: r.visitors || 0,
-    usefulVisits: r.usefulVisits || 0, usefulPct: pct(r.usefulVisits || 0, r.visits || 0), usefulVisitors: r.usefulVisitors || 0, leagueVisitors: r.leagueVisitors || 0 }));
+  // Acquisition (usageSourceRows): visitors, visits, useful visits, saved
+  // leagues, per source and medium as the visit began.
+  let src = [];
+  try { src = await usageSourceRows(db, since, F); } catch (e) { readErr = readErr || e; }
+  // Phase 6, for comparing sources: returns and confirmed subscriptions.
+  // Returns: each browser is credited to the source of its FIRST visit in the
+  // window, and returned when it began a visit on any of the seven UTC days
+  // after that day. Only browsers first seen at least eight days ago can have
+  // returned yet (mature); the rest are reported as maturing, not as misses.
+  const matureBy = utcDay(now - 8 * 86400000);
+  const ft = await rows(
+    "WITH f AS (SELECT uid, MIN(ts) AS t0, day AS d0, COALESCE(" + EVJ('src') + ", '') AS src, COALESCE(" + EVJ('med') + ", '') AS med FROM site_events WHERE event = 'visit_start' AND ts >= ?" + F + " GROUP BY uid), " +
+    "r AS (SELECT DISTINCT uid, day FROM site_events WHERE event = 'visit_start' AND ts >= ?" + F + ") " +
+    "SELECT f.src AS src, f.med AS med, COUNT(DISTINCT f.uid) AS firstTouch, COUNT(DISTINCT CASE WHEN f.d0 <= ? THEN f.uid END) AS mature, " +
+    "COUNT(DISTINCT CASE WHEN f.d0 <= ? AND r.day > f.d0 AND julianday(r.day) - julianday(f.d0) <= 7 THEN f.uid END) AS returned " +
+    "FROM f LEFT JOIN r ON r.uid = f.uid GROUP BY f.src, f.med", since, since, matureBy, matureBy);
+  const ftBy = {}; for (const r of ft) ftBy[r.src + '|' + r.med] = r;
+  // Confirmed subscriptions by the source of the visit the reader signed up
+  // in (stored with the subscription since Phase 6; earlier ones have none).
+  // The subscriber table has no browser id, so the owner's own test sign-ups
+  // are not excluded here.
+  let cs = null;
+  try { cs = ((await db.prepare("SELECT COALESCE(visit_src, '') AS src, COALESCE(visit_med, '') AS med, COALESCE(visit_cmp, '') AS cmp, COUNT(*) AS n FROM newsletter_subscribers WHERE status = 'confirmed' AND confirmed_at >= ? GROUP BY 1, 2, 3").bind(since).all()).results) || []; } catch (e) {}
+  const csBy = {}, csCmp = {};
+  for (const r of cs || []) { const k = r.src + '|' + r.med; csBy[k] = (csBy[k] || 0) + (r.n || 0); if (r.cmp) csCmp[r.cmp + '|' + k] = (csCmp[r.cmp + '|' + k] || 0) + (r.n || 0); }
+  out.sources = src.map(r => {
+    const k = r.src + '|' + r.med, f = ftBy[k] || {};
+    return { source: r.src || 'direct', medium: r.med || 'none', visits: r.visits || 0, visitors: r.visitors || 0,
+      usefulVisits: r.usefulVisits || 0, usefulPct: pct(r.usefulVisits || 0, r.visits || 0), usefulVisitors: r.usefulVisitors || 0, leagueVisitors: r.leagueVisitors || 0,
+      firstTouch: f.firstTouch || 0, matureFirstTouch: f.mature || 0, returned: f.returned || 0, returnPct: f.mature ? pct(f.returned || 0, f.mature) : null,
+      confirmed: cs ? (csBy[k] || 0) : null };
+  });
+  // Campaigns: tagged visits only (the weekly drafts, the Sunday email and
+  // partner links all carry utm_campaign), with the same measures.
+  let cmp = [];
+  try { cmp = await usageSourceRows(db, since, F, '', true); } catch (e) { readErr = readErr || e; }
+  out.campaigns = cmp.map(r => ({ campaign: r.cmp, source: r.src || 'direct', medium: r.med || 'none', visits: r.visits || 0, visitors: r.visitors || 0,
+    usefulVisits: r.usefulVisits || 0, usefulPct: pct(r.usefulVisits || 0, r.visits || 0), leagueVisitors: r.leagueVisitors || 0,
+    confirmed: cs ? (csCmp[r.cmp + '|' + r.src + '|' + r.med] || 0) : null }));
+  out.sourcesNote = {
+    returns: 'Each browser is credited to the source of its first visit in this window. Returned means it began a visit on any of the seven UTC days after that day; only browsers first seen on or before ' + matureBy + ' count (mature), the rest are maturing.',
+    confirmed: cs ? 'Confirmed subscriptions in this window, credited to the source of the visit the reader signed up in. Recorded from Phase 6 onward; owner test sign-ups are not excluded.' : 'Confirmed subscriptions by source are unavailable (no subscriber table yet).'
+  };
 
   // Tool outcomes. An output is one (visit, tool, key) result, so a rerender or
   // a reload of the same board inside one visit is one output however many
@@ -16486,7 +16878,6 @@ async function adminUsage(env, url) {
     "COUNT(DISTINCT CASE WHEN r.visit = 1 AND r.day > c.d0 AND julianday(r.day) - julianday(c.d0) <= 7 THEN c.uid END) AS returned, " +
     "COUNT(DISTINCT CASE WHEN r.useful = 1 AND r.day > c.d0 AND julianday(r.day) - julianday(c.d0) <= 7 THEN c.uid END) AS returnedUseful " +
     "FROM c LEFT JOIN r ON r.uid = c.uid GROUP BY c.d0 ORDER BY c.d0", since, since);
-  const matureBy = utcDay(now - 8 * 86400000);
   const cohorts = ret.map(r => ({ day: r.day, cohort: r.cohort || 0, returned: r.returned || 0, returnedUseful: r.returnedUseful || 0, mature: r.day <= matureBy, returnPct: pct(r.returned || 0, r.cohort || 0) }));
   const mature = cohorts.filter(c => c.mature);
   const mSize = mature.reduce((s, c) => s + c.cohort, 0), mRet = mature.reduce((s, c) => s + c.returned, 0), mUse = mature.reduce((s, c) => s + c.returnedUseful, 0);
@@ -18862,6 +19253,34 @@ export default {
       const m = newsletterEmail(pv.ed, preset, { origin: url.origin, unsub, address: env.MAIL_ADDRESS, test: true });
       const r = await nlResend(env, { from: cfg.from, to, subject: m.subject, html: m.html, text: m.text, headers: { 'List-Unsubscribe': '<' + unsub + '>', 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } });
       return json({ ok: r.ok, error: r.error || null, subject: m.subject }, r.ok ? 200 : 502, c);
+    }
+    // ── the weekly drafts and partners (Phase 6) ──────────────────────────────
+    // Key-gated like every admin route. A draft is built on a POST only, since
+    // building one freezes a finding; nothing here posts or sends anything.
+    if (url.pathname === '/api/admin/drafts' || url.pathname === '/api/admin/partners' || url.pathname === '/api/admin/partners/package') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      const nc = { ...c, 'cache-control': 'no-store' };
+      try {
+        if (url.pathname === '/api/admin/drafts') {
+          if (request.method !== 'POST') return json({ ok: false, error: 'post_only' }, 405, c);
+          let b = {}; try { b = await request.json(); } catch (e) {}
+          const r = await distDraft(env, url.origin, b);
+          return json(r.body, r.status, nc);
+        }
+        if (url.pathname === '/api/admin/partners/package') {
+          const r = await partnerPackage(env, url.origin, url.searchParams.get('slug') || '');
+          return json(r.body, r.status, nc);
+        }
+        if (request.method === 'POST') {
+          let b = {}; try { b = await request.json(); } catch (e) {}
+          const r = await partnerUpsert(env, b);
+          return json(r.body, r.status, nc);
+        }
+        const days = Math.min(90, Math.max(1, parseInt(url.searchParams.get('days') || '30', 10) || 30));
+        const r = await partnerList(env, days);
+        return json(r, r.ok ? 200 : 503, nc);
+      } catch (e) { return json({ ok: false, error: 'server' }, 500, c); }
     }
     // ── dated findings: share links that never change (Phase 5) ───────────────
     // The browser names a player (or two) and a scoring; the worker cuts the

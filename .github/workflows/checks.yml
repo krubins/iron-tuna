@@ -923,6 +923,14 @@ jobs:
       - name: Sunday email and findings
         if: ${{ !cancelled() }}
         run: node tools/test-newsletter.mjs
+      - name: Weekly drafts and creator partners
+        if: ${{ !cancelled() }}
+        run: node tools/test-distribution.mjs
+      - name: Weekly drafts and partners on /admin, in the browser
+        if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
+        env:
+          REQUIRE_BROWSER: '1'
+        run: node tools/test-distribution-admin.mjs
       - name: Sign-up form and share controls, in the browser
         if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
         env:

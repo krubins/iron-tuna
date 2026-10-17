@@ -201,5 +201,46 @@ function seed(db, ts, event, uid, props, internal = 0) {
   ok('internal hops are left out of the sources table', !j.sources.some(s => s.source === '(internal)') && j.internalHops === 2, JSON.stringify(j.sources));
 }
 
+// ── 6. comparing sources: returns, confirmed subscriptions, campaigns (Phase 6) ──
+{
+  const db = makeDb(), h = harness(db);
+  const now = Date.now(), at = n => now - n * DAY;
+  // x brings two browsers 10 days ago (mature); one returns on day 2, the
+  // other on day 9 (too late). It brings one more 2 days ago (maturing).
+  seed(db, at(10), 'visit_start', 'xsrc0001', { vid: 'x1', src: 'x', med: 'social', cmp: '2026-w06-vegas-gaps', new: 1 });
+  seed(db, at(10), 'visit_start', 'xsrc0002', { vid: 'x2', src: 'x', med: 'social', cmp: '2026-w06-vegas-gaps', new: 1 });
+  seed(db, at(10) + 1000, 'tool_success', 'xsrc0002', { vid: 'x2', tool: 'vegas_edge', key: 'w6' });
+  seed(db, at(8), 'visit_start', 'xsrc0001', { vid: 'x1b', src: 'direct', med: 'none', new: 0 });
+  seed(db, at(1), 'visit_start', 'xsrc0002', { vid: 'x2b', src: 'direct', med: 'none', new: 0 });
+  seed(db, at(2), 'visit_start', 'xsrc0003', { vid: 'x3', src: 'x', med: 'social', cmp: '2026-w07-waiver', new: 1 });
+  // A partner's link, 9 days ago: one browser, no return.
+  seed(db, at(9), 'visit_start', 'crea0001', { vid: 'c1', src: 'creator-some-show', med: 'partner', cmp: '2026-w06-partner', new: 1 });
+  // The owner's own tagged click is not a campaign visit.
+  seed(db, at(3), 'visit_start', 'owner0009', { vid: 'o9', src: 'x', med: 'social', cmp: '2026-w07-waiver', new: 0 }, 1);
+  db.sqlite.exec("CREATE TABLE newsletter_subscribers (email TEXT PRIMARY KEY, status TEXT NOT NULL, scoring TEXT, source TEXT, consent TEXT, created_at INTEGER, updated_at INTEGER, confirm_sent_at INTEGER, confirmed_at INTEGER, unsubscribed_at INTEGER, visit_src TEXT, visit_med TEXT, visit_cmp TEXT)");
+  const sub = (e, st, src, med, cmp, t) => db.sqlite.prepare('INSERT INTO newsletter_subscribers (email, status, scoring, confirmed_at, visit_src, visit_med, visit_cmp) VALUES (?,?,?,?,?,?,?)').run(e, st, 'ppr', t, src, med, cmp);
+  sub('a@ex.com', 'confirmed', 'x', 'social', '2026-w06-vegas-gaps', at(9));
+  sub('b@ex.com', 'pending', 'x', 'social', '2026-w06-vegas-gaps', null);
+  sub('c@ex.com', 'confirmed', 'creator-some-show', 'partner', '2026-w06-partner', at(8));
+  sub('d@ex.com', 'confirmed', null, null, null, at(5));
+  const j = await usage(h);
+  ok('the comparison read is clean', j.ok && !j.readError, JSON.stringify(j.readError));
+  const x = j.sources.find(s => s.source === 'x');
+  ok('returns are credited to the first visit\'s source, mature browsers only', x && x.firstTouch === 3 && x.matureFirstTouch === 2 && x.returned === 1 && x.returnPct === 50, JSON.stringify(x));
+  ok('confirmed subscriptions per source count confirmed only', x.confirmed === 1, JSON.stringify(x));
+  const c = j.sources.find(s => s.source === 'creator-some-show');
+  ok('a partner source has its own row', c && c.medium === 'partner' && c.visitors === 1 && c.confirmed === 1 && c.returned === 0 && c.matureFirstTouch === 1, JSON.stringify(c));
+  const dr = j.sources.find(s => s.source === 'direct');
+  ok('a source whose visitors were all first seen elsewhere has no returns to rate', dr && dr.firstTouch === 0 && dr.returnPct === null, JSON.stringify(dr));
+  const cg = j.campaigns.find(r => r.campaign === '2026-w06-vegas-gaps');
+  ok('campaigns: tagged visits with useful visits and confirmed sign-ups', cg && cg.visitors === 2 && cg.usefulVisits === 1 && cg.confirmed === 1, JSON.stringify(j.campaigns));
+  const cw = j.campaigns.find(r => r.campaign === '2026-w07-waiver');
+  ok('the owner\'s own tagged click is not counted', cw && cw.visitors === 1, JSON.stringify(cw));
+  ok('untagged visits are not campaigns', !j.campaigns.some(r => !r.campaign));
+  ok('the notes say how returns and confirmed sign-ups are credited', /first visit in this window/.test(j.sourcesNote.returns) && /signed up in/.test(j.sourcesNote.confirmed));
+  const e = await usage(harness(makeDb()));
+  ok('no subscriber table: confirmed per source is unavailable, not zero', e.sources.every(s => s.confirmed === null) && /unavailable/.test(e.sourcesNote.confirmed));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
