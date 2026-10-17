@@ -47,7 +47,7 @@ expectations and fantasy consensus. The retention feature is My Week.
 | 3 | First-visit experience | **Done** (2026-10-17, merged as #444) | `claude/growth-phase-3` |
 | 4 | Repeat usage (My Week) | **Done** (2026-10-17, merged as #445) | `claude/growth-phase-4` |
 | 5 | Email and sharing | **Done** (2026-10-17, merged as #446; delivery off until configured) | `claude/growth-phase-5` |
-| 6 | Distribution and evaluation | **Done** (2026-10-17, awaiting review and merge) | `claude/growth-phase-6` |
+| 6 | Distribution and evaluation | **Done** (2026-10-17, merged as #447) | `claude/growth-phase-6` |
 
 ---
 
