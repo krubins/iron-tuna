@@ -2697,3 +2697,37 @@ body.ln-front .sl-story .nr-by{border-top-color:var(--line)}
 body.ln-front .sl-story.is-boast{background:var(--card)}
 @media(max-width:700px){body.ln-front .sl-stories{grid-template-columns:1fr;gap:var(--sp-16)}
   body.ln-front .sl-story.lead{padding:var(--sp-24)}body.ln-front .sl-story.lead h3{font-size:var(--fs-23)}}
+
+/* ── 7 · the Sunday email and share controls (growth plan Phase 5) ────────
+   it-newsletter.js fills [data-it-newsletter]; it-share.js adds the share
+   buttons. Inline, never a popup: the form sits where the result is. */
+.it-nl{border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:20px 0;background:#ffffff}
+.it-nl[hidden]{display:none}
+.it-nl-head{margin:0;font-weight:700;font-size:var(--fs-16);color:var(--text)}
+.it-nl-offer{margin:4px 0 12px;color:var(--sec)}
+.it-nl-row{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 10px}
+.it-nl-f{flex:1 1 220px;min-width:0}
+.it-nl-f.it-nl-sc{flex:0 1 160px}
+.it-nl-f label{display:block;font-size:14px;color:var(--sec);margin:0 0 4px}
+.it-nl-f input,.it-nl-f select{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#ffffff;color:var(--text);min-height:44px}
+.it-nl-f input:focus-visible,.it-nl-f select:focus-visible,.it-nl-consent input:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+.it-nl-consent{display:block;font-size:14.5px;color:var(--sec);margin:0 0 12px;line-height:1.45}
+.it-nl-consent input{width:18px;height:18px;vertical-align:-3px;margin:0 6px 0 0}
+.it-nl-hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.it-nl-act{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.it-nl-act button{font:inherit;font-weight:700;font-size:16px;border-radius:8px;padding:10px 18px;min-height:44px;cursor:pointer}
+.it-nl-act button[type=submit]{background:var(--teal);color:#ffffff;border:0}
+.it-nl-act button[type=submit]:disabled{opacity:.6;cursor:default}
+.it-nl-act .it-nl-no{background:transparent;border:1px solid var(--line);color:var(--sec);font-weight:600}
+.it-nl-act button:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+.it-nl-msg{margin:10px 0 0;font-size:15px;min-height:1em}
+.it-nl-msg:empty{display:none}
+.it-nl-msg.ok{color:var(--teal)}
+.it-nl-msg.err{color:#c0322f}
+.it-nl-fine,.it-nl-closed{margin:10px 0 0;font-size:13.5px;color:var(--muted)}
+.hm-share{font:inherit;font-size:14px;font-weight:600;background:transparent;border:1px solid var(--line);border-radius:6px;color:var(--sec);padding:6px 12px;min-height:36px;cursor:pointer;margin:8px 0 0}
+.hm-share:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.hm-share:disabled{opacity:.6}
+.it-share-msg{margin:6px 0 0;font-size:14px;color:var(--sec);overflow-wrap:anywhere}
+.it-share-msg:empty{display:none}
+.it-share-url{width:100%;max-width:520px;box-sizing:border-box;font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;margin-top:4px}

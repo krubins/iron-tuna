@@ -45,8 +45,8 @@ expectations and fantasy consensus. The retention feature is My Week.
 | 1 | Analytics and admin dashboard | **Done** (2026-10-17, merged as #442) | `claude/growth-phase-1` |
 | 2 | Reliability and search visibility | **Done** (2026-10-17, merged as #443) | `claude/growth-phase-2` |
 | 3 | First-visit experience | **Done** (2026-10-17, merged as #444) | `claude/growth-phase-3` |
-| 4 | Repeat usage (My Week) | **Done** (2026-10-17, awaiting review and merge) | `claude/growth-phase-4` |
-| 5 | Email and sharing | Not started | |
+| 4 | Repeat usage (My Week) | **Done** (2026-10-17, merged as #445) | `claude/growth-phase-4` |
+| 5 | Email and sharing | **Done** (2026-10-17, awaiting review and merge; delivery off until configured) | `claude/growth-phase-5` |
 | 6 | Distribution and evaluation | Not started | |
 
 ---
@@ -221,8 +221,27 @@ beside every percentage and `n/a` where there is no denominator:
 
 ## Outstanding configuration and access
 
-- **Merge and deploy** `claude/growth-phase-4` (owner). Phases 1 to 3 merged
-  as #442, #443 and #444. On 2026-10-17 production held no outcome events yet;
+- **Merge and deploy** `claude/growth-phase-5` (owner). Phases 1 to 4 merged
+  as #442, #443, #444 and #445.
+- **Turn on the Sunday email** (owner, Phase 5). Until all of these are set,
+  the sign-up form does not appear anywhere, `/newsletter` says sign-up is not
+  open, and the Sunday job logs "disabled": `RESEND_API_KEY` (already used by
+  sign-in mail), `MAIL_ADDRESS` (a real postal address; the law requires it in
+  every marketing email), `AUTH_SECRET` (already set), and
+  `NEWSLETTER_ENABLED=1`. Optional: `EMAIL_FROM_NEWSLETTER` (defaults to
+  `EMAIL_FROM_MARKETING`, then `Iron Tuna <hello@irontuna.com>`); the sending
+  domain must be verified in Resend. Before switching it on, send yourself a
+  test from /admin (Operator tools, Sunday email), which works with the mail
+  settings alone, and read the preview at each scoring.
+- **Privacy policy** (owner). `/privacy` does not yet describe the Sunday
+  email (what is stored: address, scoring, where they signed up, the consent
+  wording and times; Resend as processor; how to unsubscribe). The sign-up
+  form links to it, so it should say so before the switch is turned on. Not
+  edited here: a policy is the owner's statement, not copy to draft unasked.
+- **Washington.** Sign-up is not offered to visitors located in Washington,
+  matching the market lane's removal there. An email cannot be geofenced: a
+  subscriber who signed up elsewhere still receives it in Washington. Owner
+  decision whether that is acceptable. On 2026-10-17 production held no outcome events yet;
   check /admin's Tools table shows rows within a day, and if not, check that
   `/api/track` is accepting them. Retention needs 8 days of collection before
   the first mature cohort.
@@ -545,12 +564,178 @@ Miller (consensus 0.9) and every no-line fade were suppressed.
 - Read /admin after a week: `home_myweek` clicks, and `lineup` / `waiver`
   results from returning browsers by NFL week.
 
-## Next steps: Phase 5 (email and sharing)
+## Phase 5: email and sharing (2026-10-17)
 
-Start here when told "Start next phase". The Phase 5 requirements are under
-"Later phases" below. Phase 4 leaves the email edition one rule to reuse:
-only call something available, or a difference current, when the data behind
-it is complete, and say so when it is not.
+### What existed
+
+`sendCampaignOne`, the `unsubscribes` table and a signed `/api/unsubscribe`
+(GET and POST, so one-click works), a `contacts` table every older form writes
+to without newsletter consent, `share_click` on three pages, and the hourly
+`JOB_SCHEDULE`. There was no confirmation step, no subscriber status, no
+edition and no share page: a shared homepage example pointed at the live
+player page, whose numbers move.
+
+### What changed
+
+- **The offer, in one permanent place and after useful results.** "Get the
+  five biggest Vegas-versus-expert fantasy differences every Sunday morning."
+  `/newsletter` (new page, footer link "Sunday Email" on every page via
+  `build-chrome`, in the sitemap) says what is in it, how the bar works, that
+  fewer than five is possible and that none means no email. `it-newsletter.js`
+  (new) puts one inline form under the homepage examples, under the
+  `/vegas-edge` board once it has answered, and under My Week once the lineup
+  has answered (`data-after`, driven by a new `it:result` page event that
+  `it-metrics.js` emits on every success, including for automation, which
+  still sends nothing). No popup. "No thanks" or a sign-up keeps the prompts
+  away in that browser (`it.nl`); the permanent page always has the form. The
+  form appears only when `/api/newsletter/status` says sign-up is open.
+- **Consent and validation.** Email, scoring (PPR, Half PPR, Standard;
+  defaults to the homepage choice) and an unticked consent box that must be
+  ticked ("Send me the Iron Tuna Sunday email. I can unsubscribe from any
+  email.", linked to /privacy). The worker requires `consent: true`, stores the
+  consent wording with a version, validates the address, and has a honeypot.
+- **Double opt-in (`newsletter_subscribers`, its own table).** A sign-up is
+  `pending` until the owner of the address presses "Confirm my subscription".
+  Opening the emailed link only shows that button; the POST confirms, so a
+  mail scanner that opens every link cannot subscribe anyone. Only the newest
+  link works, for seven days. The answer is always "check your inbox" (new,
+  pending or already confirmed), so the form cannot be used to learn who is
+  subscribed; a confirmed address is not mailed again and its scoring cannot
+  be changed by someone typing it in.
+- **Rate limits that hold without KV.** The route's KV limiter (10 per 10
+  minutes per IP), plus, in the database: one confirmation email per address
+  per 15 minutes and at most 200 confirmation emails an hour in total. A
+  confirmation that fails to send says so and can be retried at once.
+- **Unsubscribe and suppression.** Every edition carries the existing signed
+  unsubscribe link and `List-Unsubscribe` / `List-Unsubscribe-Post` headers.
+  `/api/unsubscribe` now also marks the newsletter row. The send query skips
+  anyone with a suppression row newer than their confirmation, so a fresh,
+  confirmed sign-up after an unsubscribe is honoured and nothing older is.
+- **Subscriber data apart from analytics.** Addresses live only in
+  `newsletter_subscribers` and `newsletter_deliveries`. `site_events` gets
+  `subscribe_request` with the placement and scoring, never the address (the
+  browser test checks every tracked payload).
+- **The edition (`newsletterEdition`).** Cut from `homeExamples`, the rules
+  that already decide what the homepage may print, at each preset: up to five,
+  widest first, fewer when fewer qualify. A player kicking off within four
+  hours of the build is left out (a 9:30 London game is under way before the
+  reader opens it). It is built and frozen once per NFL week
+  (`newsletter_editions`); every subscriber that week gets the same figures.
+  No qualifying player at any scoring: no email, and the job says so. A
+  scoring with none while others have some: that subscriber is skipped and the
+  delivery row says why.
+- **The email (`newsletterEmail`).** One column, 560 px, inline styles, a
+  plain-text part. Week, scoring, when built, when the odds were read; per
+  player the fixture and kickoff, the gap, market and consensus, the
+  **Derived estimate** and **Quoted prop** labels with when the line was last
+  seen; the bar it had to clear; "not a prediction of the result and not
+  betting advice"; why they received it, unsubscribe, the site's 21+ and
+  gambling-help notice, `MAIL_ADDRESS`. Each
+  name links to its dated finding with `utm_source=newsletter`,
+  `utm_medium=email`, `utm_campaign=<season>-w<NN>-sunday`.
+- **Sunday-morning scheduling.** `newsletter-send` in `JOB_SCHEDULE`: Sunday
+  7:00 to 11:45 AM ET, quarter-hourly, phase 3, through the job log. It sends
+  nothing outside Sunday 7 AM to noon ET, 40 per run (the subrequest cap; the
+  next quarter-hour carries on), and logs `disabled` with what is missing when
+  off.
+- **Duplicate-send prevention.** One `newsletter_deliveries` row per address
+  per week, claimed on its primary key before the send, so overlapping or
+  repeated runs cannot mail anyone twice. A failed send is logged with the
+  provider's answer and not retried (a provider that timed out may still have
+  delivered it). Every send in a run failing makes the run a logged failure.
+- **Admin.** /admin, Operator tools, "Sunday email": on or off and exactly
+  what is missing, confirmed, pending and unsubscribed counts, each edition's
+  counts per scoring and its sent, failed and skipped, recent failures with
+  masked addresses, a preview of this week's edition at any scoring (the
+  frozen one once it exists, otherwise built for the preview and not stored),
+  and a test send to one address, marked as a test and not recorded as a
+  delivery. The Meaningful use tile and `/api/admin/usage` now report
+  confirmed subscribers (`subscriptions.confirmed`, `confirmedInWindow`,
+  `pending`).
+- **Dated findings (`findings`, `/finding/<id>`).** A finding is one player's
+  market-versus-consensus gap, or two players' projections, at one scoring,
+  frozen when it is shared or mailed. The worker cuts it from its own current
+  board; the browser sends a name and a scoring only, so nothing from a league
+  can reach one. Its id carries a hash of its figures: the same numbers shared
+  twice are one page, different numbers a different page, and a row is never
+  updated. The page (`finding.html` shell, filled by the worker, `noindex`
+  because one page per shared link is thin by design) says "Dated finding.
+  Frozen ... These numbers do not update." and links to the live player page
+  and board. Social title, description, canonical and URL name the finding.
+- **Share images.** `/finding/<id>/card.svg`: the player or pair, the
+  numbers, the week, the scoring, when frozen, the market label and the site
+  name, on the site's dark ground. The finding page's "Save image" turns it
+  into a PNG in the browser and shares it through the phone's share sheet or
+  downloads it. **Limit:** link previews (`og:image`) still use `og.png`,
+  because X and Facebook do not accept SVG and the worker has no rasterizer.
+  A per-finding preview image needs Cloudflare Browser Rendering or an image
+  service; an owner decision, not built.
+- **Share controls.** "Share this difference" on each homepage example and
+  "Share this comparison" on the sample flex call (`it-share.js`, new): freeze,
+  then the native share sheet or copy link, with the link printed if both are
+  refused. The finding page has Copy link, Share (where the browser has a
+  share sheet) and Save image. All send `share_click` with the method.
+- **Washington.** No sign-up and no findings there, matching the market lane.
+- **Pregame history.** `board-freeze` already stores an immutable pre-kickoff
+  board per game (`week_board_snapshots`), and every finding and edition is
+  itself a frozen pregame record. No reconstructed predictions were added; no
+  copy claims the market is right more often.
+
+### Phase 5 verification (2026-10-17)
+
+- `node tools/test-newsletter.mjs` (new, in CI): 111 checks, against SQLite
+  and a recorded Resend. Edition (homepage prefix, four at PPR, five of eight,
+  suppression carried over, kickoff margin at 3h59 and 4h01, no board, no
+  lines); email (subject, labels, UTM, finding links, footer, text part,
+  escaping, test banner, the 21+ notice, no em dash); the switch; sign-up (closed, invalid,
+  consent, honeypot, normalisation, generic answers, both throttles, a GET
+  that changes nothing, stale and expired links, a failed send retried); the
+  job (disabled, outside the window, one per confirmed unsuppressed address at
+  its scoring, signed one-click headers, frozen findings, no second send, the
+  frozen edition after the board moves, a claimed row, batches of 40, logged
+  failures, all-failed as a failed run, nothing qualifying); findings
+  (deterministic ids, immutability, shell fill, image, comparison rules,
+  nothing from a league, escaping); the real worker's routes (status,
+  subscribe, GET then POST confirm, one-click unsubscribe, `/finding/<id>`
+  200 and 404, its image, sharing with no board, the admin gate and payloads,
+  Washington). Three deliberate mutations (suppression clause, GET-confirm,
+  re-mailing confirmed addresses) each fail it.
+- `REQUIRE_BROWSER=1 node tools/test-share-signup.mjs` (new, in CI): 41
+  checks at 390 px. No form while closed; inline under the examples when
+  open; bad address and missing consent refused in the page; payload has
+  consent, scoring and placement; no tracked payload carries the address;
+  "No thanks" and a sign-up persist; the permanent page keeps the form;
+  `/vegas-edge`'s offer only after its own result; share buttons post only a
+  name and scoring and copy the dated link; the comparison; the finding page's
+  image, Copy link and a real PNG download; `share_click` per method; no
+  sideways scroll; no page errors.
+- Updated for deliberate changes: `test-chrome` (eleven footer links),
+  `test-seo` (finding shell not listed), `test-jobs` (the new job),
+  `test-usage` (confirmed is counted when the table exists),
+  `test-data-sources` and `docs/data-sources.md` (`www.w3.org`, the SVG
+  namespace, never fetched).
+- Full CI node suite less `test-dry-run`: see the commit for the final count.
+  Generators clean.
+
+### Still open from Phase 5
+
+- The owner items under "Outstanding configuration and access": the four
+  settings, the privacy policy, Washington.
+- Per-finding link-preview images (above).
+- My Week's own lineup calls are not shareable: a league's scoring may not be
+  a preset, and a share must not carry league data. The homepage sample's
+  comparison is.
+- After the first Sunday: read /admin for confirmed subscribers, sent and
+  failed, and `share_click` by method; Phase 6 compares sources by confirmed
+  subscriptions.
+
+## Next steps: Phase 6 (distribution and evaluation)
+
+Start here when told "Start next phase". The Phase 6 requirements are under
+"Later phases" below. Phase 5 leaves it dated findings to link drafts to
+(`/api/share/finding`, `/api/share/compare`), an SVG share image per finding,
+the UTM convention already applied to the email, and confirmed subscribers
+counted on /admin.
 
 ## Phase 2 requirements, as given (for reference)
 

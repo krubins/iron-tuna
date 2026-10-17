@@ -41,15 +41,30 @@
   if (window.ITMetrics) return;
   var VISIT_MS = 30 * 60 * 1000;
   var noop = function () {};
-  var api = { uid: function () { return ''; }, success: noop, empty: noop, error: noop, event: noop, visit: function () { return null; } };
+  // Every success is also announced in the page (Phase 5), whether or not
+  // anything is sent: it-newsletter.js shows its offer after a useful
+  // result. window.ITResults keeps the tools that have answered, for a
+  // listener that arrives after the event.
+  var emit = function (tool, key) {
+    if (!tool) return;
+    try { (window.ITResults = window.ITResults || {})[tool] = 1; } catch (e) {}
+    try { document.dispatchEvent(new CustomEvent('it:result', { detail: { tool: tool, key: key } })); } catch (e) {}
+  };
+  var api = { uid: function () { return ''; }, success: emit, empty: noop, error: noop, event: noop, visit: function () { return null; } };
   window.ITMetrics = api;
+  // A page that cannot send events (automation, blocked storage) still runs
+  // its queued successes through emit, and nothing else.
+  var quiet = function () {
+    var q0 = window.ITMetricsQ; if (q0 && q0.length) for (var j = 0; j < q0.length; j++) { try { if (q0[j][0] === 'success') emit(q0[j][1], q0[j][2]); } catch (e) {} }
+    window.ITMetricsQ = { push: function (c) { try { if (c[0] === 'success') emit(c[1], c[2]); } catch (e) {} } };
+  };
 
   // Identifiable automation sends nothing. This mirrors BOT_RE in the worker
   // and is deliberately conservative; the admin page reports the rest.
   var ua = (navigator.userAgent || '');
-  if (navigator.webdriver || /bot|crawl|spider|slurp|headless|lighthouse|pagespeed|preview|phantomjs|puppeteer|playwright|selenium/i.test(ua)) return;
+  if (navigator.webdriver || /bot|crawl|spider|slurp|headless|lighthouse|pagespeed|preview|phantomjs|puppeteer|playwright|selenium/i.test(ua)) { quiet(); return; }
 
-  var ls; try { ls = window.localStorage; ls.setItem('it.t', '1'); ls.removeItem('it.t'); } catch (e) { return; }
+  var ls; try { ls = window.localStorage; ls.setItem('it.t', '1'); ls.removeItem('it.t'); } catch (e) { quiet(); return; }
   var ss = null; try { ss = window.sessionStorage; } catch (e) {}
 
   var get = function (k) { try { return ls.getItem(k); } catch (e) { return null; } };
@@ -170,7 +185,7 @@
 
   api.uid = function () { return uid; };
   api.visit = function () { return v ? { id: v.id, src: v.src, med: v.med, cmp: v.cmp, n: v.n } : null; };
-  api.success = function (tool, key, props) { return once('tool_success', tool, key, props); };
+  api.success = function (tool, key, props) { emit(tool, key); return once('tool_success', tool, key, props); };
   api.empty = function (tool, key, props) { return once('tool_empty', tool, key, props); };
   api.error = function (tool, key, props) { return once('tool_error', tool, key, props); };
   // league_setup_start / league_setup_complete / subscribe_request / share_click

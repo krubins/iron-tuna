@@ -76,7 +76,7 @@ function seed(db, ts, event, uid, props, internal = 0) {
   ok('an empty store answers ok', j.ok === true, JSON.stringify(j).slice(0, 200));
   ok('an empty store says nothing is collected', j.available === false && j.collectingSince === null);
   ok('seven-day return with no cohort is null, not 0', j.retention7.returnPct === null);
-  ok('confirmed subscriptions are null with a reason', j.subscriptions.confirmed === null && /confirmation/.test(j.subscriptions.confirmedNote));
+  ok('confirmed subscriptions are null with a reason when there is no subscriber table', j.subscriptions.confirmed === null && /subscriber table/.test(j.subscriptions.confirmedNote));
   ok('a missing contacts table is not a failed read', !j.readError && j.subscriptions.contactsStored === null);
   ok('an empty funnel has no percentages', j.funnel.usefulPct === null);
 }

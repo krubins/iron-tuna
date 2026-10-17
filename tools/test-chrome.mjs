@@ -179,8 +179,9 @@ console.log('\nthe nav link set is identical everywhere');
   const footOf = (f) => hrefs((read(f).match(/<nav class="foot-nav"[\s\S]*?<\/nav>/) || [''])[0]).join(',');
   const footShapes = new Set(allPages.map(footOf));
   ok('there is exactly one footer shape', footShapes.size === 1, [...footShapes].slice(0, 3).join(' / '));
-  ok('and it is the ten-item one',
-    [...footShapes][0] === '/fantasy,/dfs,/in-season/desk,/players,/faq#faq-start,/data,/faq,/privacy,/terms,/support',
+  // The Sunday email's one permanent place (growth plan Phase 5) made it eleven.
+  ok('and it is the eleven-item one',
+    [...footShapes][0] === '/fantasy,/dfs,/in-season/desk,/players,/faq#faq-start,/data,/newsletter,/faq,/privacy,/terms,/support',
     [...footShapes][0]);
 }
 

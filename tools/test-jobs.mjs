@@ -14,7 +14,7 @@ const cut = (a, b) => { const i = src.indexOf(a), j = src.indexOf(b, i); if (i <
 
 // Real ET clock helpers from the worker; stubbed jobs that record their runs.
 const runs = [];
-const JOB_FNS = Object.fromEntries(['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'usage-prior-refresh', 'dfs-refresh', 'depth-charts', 'ros-snapshot', 'board-freeze', 'line-ledger', 'calls-grade', 'rivalry-column', 'news-scan', 'snapshot-prune', 'analytics-prune', 'job-prune', 'content-tick'].map(j => [j, async () => ({ ok: true })]));
+const JOB_FNS = Object.fromEntries(['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'usage-prior-refresh', 'dfs-refresh', 'depth-charts', 'ros-snapshot', 'board-freeze', 'line-ledger', 'calls-grade', 'rivalry-column', 'news-scan', 'snapshot-prune', 'analytics-prune', 'job-prune', 'content-tick', 'newsletter-send'].map(j => [j, async () => ({ ok: true })]));
 const jobRun = async (env, name, trigger) => {
   const rec = { job: name, trigger, started: Date.now() }; runs.push(rec);
   if (name === 'schedule-refresh') await new Promise(r => setTimeout(r, 30));
