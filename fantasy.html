@@ -416,6 +416,7 @@ body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14);color:var(--ink-3)}
       <h3>Flex call of the week</h3>
       <p id="fnFlex">Reading the board&hellip;</p>
       <p class="is-note" id="fnFlexNote"></p>
+      <div id="fnFlexShare"></div>
     </div>
     <div class="hm-input">
       <h3>What a claim is worth, in your dollars</h3>
@@ -543,6 +544,7 @@ body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14);color:var(--ink-3)}
     <li><a href="/players">Players</a></li>
     <li><a href="/faq#faq-start">How It Works</a></li>
     <li><a href="/data">Data Sources</a></li>
+    <li><a href="/sunday">Sunday Email</a></li>
     <li><a href="/faq">FAQ</a></li>
     <li><a href="/privacy">Privacy</a></li>
     <li><a href="/terms">Terms</a></li>
@@ -562,6 +564,7 @@ body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14);color:var(--ink-3)}
 <script src="/it-inseason.js" defer></script>
 <script src="/it-inseason-ui.js" defer></script>
 <script src="/it-signals.js" defer></script>
+<script src="/it-share.js" defer></script>
 <script>
 /* The Fantasy lane. One board from /api/boards, filtered client-side by the
  * position segmented control — the payload is already loaded, so switching
@@ -703,6 +706,7 @@ body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14);color:var(--ink-3)}
       }
     }
     if (!best || Math.abs(best.split) < 1) {
+      $('fnFlexShare').innerHTML = '';
       $('fnFlex').textContent = 'No two flex options are close enough on projection and far enough apart in the market for there to be a call this week.';
       $('fnFlexNote').textContent = '';
       $('actFlexH').textContent = 'No flex call this week';
@@ -719,6 +723,18 @@ body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14);color:var(--ink-3)}
       return Math.abs(d) < 0.5 ? 'level with the consensus on ' + p.name
         : n1(Math.abs(d)) + (d > 0 ? ' above' : ' below') + ' the consensus on ' + p.name;
     };
+    // The call can be shared as a dated comparison (growth plan Phase 5): the
+    // server stores both players' figures at this scoring from its own board.
+    // Drawn once; a re-render with another pair replaces it.
+    $('fnFlexShare').innerHTML = '';
+    if (window.ITShare) {
+      // The scoring the board was read at (scoringNote's rule), so the stored
+      // comparison is at the scoring the reader is looking at.
+      var pair = [up.name, dn.name], scPreset = window.ITInSeason && ITInSeason.get() ? (PRESET[ITInSeason.scoring()] || 'ppr') : 'ppr';
+      ITShare.buttons($('fnFlexShare'), { tool: 'flex_call', key: scPreset + '|' + pair.join('|'), title: up.name + ' or ' + dn.name,
+        text: up.name + ' or ' + dn.name + ' at ' + sc + ': the flex call of the week.',
+        link: function () { return ITShare.finding({ kind: 'compare', scoring: scPreset, a: pair[0], b: pair[1] }); } });
+    }
     $('fnFlexNote').textContent = 'The market is ' + side(up) + ', and ' + side(dn) + '. Both numbers are ' +
       (up.vegas && up.vegas.basis && up.vegas.basis.indexOf('props') === 0
         ? 'quoted from a book.'

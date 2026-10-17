@@ -1391,6 +1391,630 @@ const CAMPAIGN_NURTURE = {
 };
 
 // ════════════════════════════════════════════════════════════════════════════
+// THE SUNDAY EMAIL AND SHARED FINDINGS START (growth plan Phase 5, 17 Oct 2026)
+// tools/test-sunday-email.mjs drives this section through the real worker.
+//
+// THE OFFER. "The five biggest Vegas-versus-expert fantasy differences every
+// Sunday morning." The five are homeExamples' own picks (the homepage's
+// examples, Phase 3) with the cap raised to EDITION_MAX, so the email and the
+// homepage cannot disagree about what counts as a difference: one game still
+// to play, no injury designation but Active or Probable, the market side
+// priced entirely off quoted props from two or more books, the gap past the
+// board's strong thresholds, and a quoted line that explains it. Fewer than
+// five is sent as fewer; a scoring with none is not sent at all.
+//
+// THE LIST. Its own table, `subscribers`, in LEADS_DB and nowhere near
+// site_events: an address is never joined to the analytics id, and the
+// analytics side only ever sees the form's success event. Double opt-in: a
+// request stores a pending row and mails a signed link; only the person who
+// can read that inbox can confirm it, and the link lands on a page with a
+// button rather than confirming on GET, because mail scanners follow links.
+// The suppression list is the existing `unsubscribes` table, which the
+// nurture sender (sendCampaignOne) already honours; unsubscribing from an
+// edition writes it and marks the row, and only a fresh confirmation removes
+// it again.
+//
+// SWITCHES. Nothing here sends anything until the owner sets RESEND_API_KEY,
+// MAIL_ADDRESS (the physical postal address CAN-SPAM requires in every
+// marketing email) and AUTH_SECRET (the link signatures). Until then the form
+// is not shown and /api/subscribe answers `closed`. The weekly send needs one
+// more, SUNDAY_EMAIL_SEND=on, so confirmations and the admin test send can be
+// tried before the first real edition goes to anyone.
+const EDITION_MAX = 5;
+const EDITION_BATCH = 100;          // Resend's batch endpoint takes at most 100
+const EDITION_PER_RUN = 400;        // four batch calls per run; the next run takes the rest
+const SUB_CONFIRM_TTL_MS = 7 * 86400000;
+const SUB_RESEND_MS = 10 * 60000;   // one confirmation per address per ten minutes
+const SUB_MAX_CONFIRMS = 5;         // and five unanswered ones a month
+const SUB_HOURLY_CAP = 200;         // confirmations mailed per hour, all addresses together
+const SUB_IP_MAX = 5;               // requests per address of origin per ten minutes
+const FINDING_IP_MAX = 30;          // findings made per address of origin per ten minutes
+const SUB_DDL = [
+  'CREATE TABLE IF NOT EXISTS subscribers (email TEXT PRIMARY KEY, status TEXT NOT NULL, scoring TEXT NOT NULL, source TEXT, created_at INTEGER NOT NULL, confirm_sent_at INTEGER, confirm_count INTEGER NOT NULL DEFAULT 0, confirmed_at INTEGER, unsubscribed_at INTEGER)',
+  'CREATE TABLE IF NOT EXISTS unsubscribes (email TEXT PRIMARY KEY, created_at INTEGER)',
+  'CREATE TABLE IF NOT EXISTS sub_hits (k TEXT NOT NULL, ts INTEGER NOT NULL)',
+  'CREATE INDEX IF NOT EXISTS sub_hits_k ON sub_hits (k, ts)',
+  'CREATE TABLE IF NOT EXISTS edition_runs (season INTEGER NOT NULL, week INTEGER NOT NULL, built_at INTEGER NOT NULL, payload TEXT NOT NULL, sent INTEGER NOT NULL DEFAULT 0, failed INTEGER NOT NULL DEFAULT 0, last_error TEXT, last_run_at INTEGER, PRIMARY KEY (season, week))',
+  'CREATE TABLE IF NOT EXISTS edition_sends (season INTEGER NOT NULL, week INTEGER NOT NULL, email TEXT NOT NULL, claimed_at INTEGER NOT NULL, sent_at INTEGER, ok INTEGER, error TEXT, PRIMARY KEY (season, week, email))',
+  'CREATE TABLE IF NOT EXISTS findings (id TEXT PRIMARY KEY, kind TEXT NOT NULL, season INTEGER, week INTEGER, preset TEXT, payload TEXT NOT NULL, origin TEXT, created_at INTEGER NOT NULL)'
+];
+let _SUB_READY = null;
+async function subReady(env) {
+  if (!env || !env.LEADS_DB) return false;
+  if (_SUB_READY === env.LEADS_DB) return true;
+  try { for (const q of SUB_DDL) await env.LEADS_DB.prepare(q).run(); _SUB_READY = env.LEADS_DB; return true; } catch (e) { return false; }
+}
+function editionConfig(env) {
+  const missing = ['RESEND_API_KEY', 'MAIL_ADDRESS', 'AUTH_SECRET'].filter(k => !(env && env[k]));
+  const mail = !missing.length && !!(env && env.LEADS_DB);
+  return { mail, signups: mail, send: mail && String(env.SUNDAY_EMAIL_SEND || '').toLowerCase() === 'on', missing,
+           sendSwitch: String((env && env.SUNDAY_EMAIL_SEND) || 'off') };
+}
+const SUB_EMAIL_RE = /^[^@\s<>"',;]+@[^@\s<>"',;]+\.[a-z]{2,}$/i;
+function subEmail(raw) {
+  const e = String(raw || '').trim().toLowerCase();
+  return e.length >= 6 && e.length <= 254 && SUB_EMAIL_RE.test(e) ? e : null;
+}
+const subPreset = (s) => HOME_EX_PRESETS.includes(String(s || '')) ? String(s) : 'ppr';
+// The confirmation link signs the address, the scoring it will receive and
+// when it was issued, so a confirmed reader can change scoring by asking
+// again and nobody else can change it for them.
+async function subConfirmToken(env, email, preset, ts) {
+  return ts + '.' + preset + '.' + await hmacSign(env.AUTH_SECRET, 'subconf:' + email + ':' + preset + ':' + ts);
+}
+async function subConfirmCheck(env, email, t, now) {
+  const m = /^(\d{10,14})\.(ppr|half|standard)\.([A-Za-z0-9_-]+)$/.exec(String(t || ''));
+  if (!m || !email || !env.AUTH_SECRET) return null;
+  const ts = Number(m[1]);
+  if (!(now - ts >= 0 && now - ts <= SUB_CONFIRM_TTL_MS)) return null;
+  const want = await subConfirmToken(env, email, m[2], ts);
+  return timingSafeEq(String(t), want) ? { preset: m[2], ts } : null;
+}
+async function subUnsubLink(env, origin, email) {
+  return origin + '/api/unsubscribe?e=' + encodeURIComponent(email) + '&t=' + encodeURIComponent(await unsubToken(env, email));
+}
+async function subMail(env, msg) {
+  try {
+    const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify(msg) });
+    if (r.ok) return { ok: true };
+    let detail = '';
+    try { const j = await r.json(); detail = (j && (j.message || j.name)) || ''; } catch (e) {}
+    return { ok: false, error: 'Resend ' + r.status + (detail ? ': ' + String(detail).slice(0, 120) : '') };
+  } catch (e) { return { ok: false, error: 'network: ' + String((e && e.message) || e).slice(0, 80) }; }
+}
+const _subFrom = (env) => env.EMAIL_FROM_EDITION || env.EMAIL_FROM_MARKETING || 'Iron Tuna <hello@irontuna.com>';
+// A per-origin count kept in D1. rl() above is a no-op until RATE_KV is bound,
+// and it is not bound, so this is the limit that actually holds. The origin is
+// stored as a keyed hash, never the address itself.
+// Findings use it too (bucket 'finding'). Without AUTH_SECRET there is no key
+// to hash with, and only rl() applies.
+async function subOriginLimited(env, request, now, bucket, max) {
+  const b = bucket || 'sub', lim = max || SUB_IP_MAX;
+  if (await rl(env, request, b, lim, 600)) return true;
+  if (!env.AUTH_SECRET || !(await subReady(env))) return false;
+  const ip = request.headers.get('cf-connecting-ip') || 'anon';
+  const k = b + ':' + (await hmacSign(env.AUTH_SECRET, 'subip:' + ip)).slice(0, 22);
+  const db = env.LEADS_DB;
+  try {
+    const n = await db.prepare('SELECT COUNT(*) AS n FROM sub_hits WHERE k = ? AND ts > ?').bind(k, now - 600000).first();
+    if (n && n.n >= lim) return true;
+    await db.prepare('INSERT INTO sub_hits (k, ts) VALUES (?, ?)').bind(k, now).run();
+    if (Math.random() < 0.05) await db.prepare('DELETE FROM sub_hits WHERE ts < ?').bind(now - 86400000).run();
+  } catch (e) {}
+  return false;
+}
+function subConfirmMail(env, link, preset) {
+  const lab = HOME_PRESET_LABEL[preset];
+  const html = '<div style="font-family:system-ui,-apple-system,Arial,sans-serif;max-width:520px;color:#1a2129;line-height:1.5">'
+    + '<h2 style="color:#0b1117;font-size:20px">Confirm the Sunday email</h2>'
+    + '<p>Someone, hopefully you, asked Iron Tuna to send this address the biggest Vegas-versus-expert fantasy differences every Sunday morning, at ' + lab + ' scoring.</p>'
+    + '<p style="margin:22px 0"><a href="' + link + '" style="background:#e3b53a;color:#1a1205;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Confirm my subscription</a></p>'
+    + '<p style="color:#566">Nothing is sent until you confirm. If this was not you, ignore this message and you will hear nothing more. The link works for seven days.</p>'
+    + '<p style="font-size:12px;color:#8595a1">' + _preEsc(env.MAIL_ADDRESS) + '</p></div>';
+  const text = 'Confirm the Sunday email\n\nSomeone, hopefully you, asked Iron Tuna to send this address the biggest Vegas-versus-expert fantasy differences every Sunday morning, at '
+    + lab + ' scoring.\n\nConfirm: ' + link + '\n\nNothing is sent until you confirm. If this was not you, ignore this message. The link works for seven days.\n\n' + env.MAIL_ADDRESS;
+  return { subject: 'Confirm the Iron Tuna Sunday email', html, text };
+}
+// POST /api/subscribe. Every valid request gets the same answer, whether the
+// address is new, pending, confirmed or suppressed, so the form cannot be used
+// to learn who is on the list. What differs is only whether a link is mailed.
+async function subscribeRequest(env, request, url) {
+  const cfg = editionConfig(env);
+  if (!cfg.signups) return { status: 503, body: { ok: false, error: 'closed' } };
+  if (IS_WASHINGTON(request)) return { status: 451, body: { ok: false, error: 'jurisdiction_unavailable' } };
+  let b = {}; try { b = await request.json(); } catch (e) {}
+  if (b && b.website) return { status: 200, body: { ok: true } };          // the hidden field only a bot fills
+  const email = subEmail(b && b.email);
+  if (!email) return { status: 400, body: { ok: false, error: 'invalid' } };
+  if (!b || b.consent !== true) return { status: 400, body: { ok: false, error: 'consent' } };
+  if (!(await subReady(env))) return { status: 503, body: { ok: false, error: 'closed' } };
+  const now = Date.now();
+  if (await subOriginLimited(env, request, now)) return { status: 429, body: { ok: false, error: 'rate' } };
+  const db = env.LEADS_DB;
+  const preset = subPreset(b.scoring);
+  const source = String(b.tool || '').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 24) || 'unknown';
+  const row = await db.prepare('SELECT status, scoring, confirm_sent_at, confirm_count FROM subscribers WHERE email = ?').bind(email).first();
+  // Already receiving it at this scoring: nothing to confirm.
+  if (row && row.status === 'confirmed' && row.scoring === preset && !(await isUnsubscribed(env, email))) return { status: 200, body: { ok: true } };
+  if (row && row.confirm_sent_at && now - row.confirm_sent_at < SUB_RESEND_MS) return { status: 200, body: { ok: true } };
+  const count = row && row.confirm_sent_at && now - row.confirm_sent_at < 30 * 86400000 ? (row.confirm_count || 0) : 0;
+  if (count >= SUB_MAX_CONFIRMS) return { status: 200, body: { ok: true } };
+  const hour = await db.prepare('SELECT COUNT(*) AS n FROM subscribers WHERE confirm_sent_at > ?').bind(now - 3600000).first();
+  if (hour && hour.n >= SUB_HOURLY_CAP) return { status: 429, body: { ok: false, error: 'busy' } };
+  if (row) {
+    // A confirmed reader asking for another scoring stays confirmed at the
+    // old one until the new link is used.
+    await db.prepare("UPDATE subscribers SET status = CASE WHEN status = 'confirmed' THEN status ELSE 'pending' END, scoring = CASE WHEN status = 'confirmed' THEN scoring ELSE ? END, source = ?, confirm_sent_at = ?, confirm_count = ? WHERE email = ?")
+      .bind(preset, source, now, count + 1, email).run();
+  } else {
+    await db.prepare("INSERT INTO subscribers (email, status, scoring, source, created_at, confirm_sent_at, confirm_count) VALUES (?, 'pending', ?, ?, ?, ?, 1)")
+      .bind(email, preset, source, now, now).run();
+  }
+  const link = url.origin + '/sunday/confirm?e=' + encodeURIComponent(email) + '&t=' + encodeURIComponent(await subConfirmToken(env, email, preset, now));
+  const m = subConfirmMail(env, link, preset);
+  const r = await subMail(env, { from: _subFrom(env), to: email, subject: m.subject, html: m.html, text: m.text });
+  if (!r.ok) {
+    // Not counted against the address: the reader may try again at once.
+    try { await db.prepare('UPDATE subscribers SET confirm_sent_at = NULL, confirm_count = ? WHERE email = ?').bind(count, email).run(); } catch (e) {}
+    return { status: 502, body: { ok: false, error: 'send_failed' } };
+  }
+  return { status: 200, body: { ok: true } };
+}
+function subPage(title, inner, status) {
+  return secure(new Response('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">'
+    + '<title>' + _preEsc(title) + ' | Iron Tuna</title>'
+    + '<div style="font-family:system-ui,-apple-system,Arial,sans-serif;max-width:480px;margin:56px auto;padding:0 18px;color:#1a2129;line-height:1.5">'
+    + '<h1 style="font-size:22px">' + _preEsc(title) + '</h1>' + inner
+    + '<p style="margin-top:28px"><a href="/" style="color:#0a7d6a">Back to Iron Tuna</a></p></div></html>',
+    { status: status || 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } }));
+}
+// GET shows a button; POST confirms. A link scanner that follows the GET
+// confirms nothing.
+async function subscribeConfirm(env, request, url) {
+  const now = Date.now();
+  let e = url.searchParams.get('e'), t = url.searchParams.get('t');
+  if (request.method === 'POST') {
+    try { const f = await request.formData(); e = f.get('e'); t = f.get('t'); } catch (x) {}
+  }
+  const email = subEmail(e);
+  const ok = editionConfig(env).mail && email ? await subConfirmCheck(env, email, t, now) : null;
+  if (!ok || !(await subReady(env))) {
+    return subPage('This link has expired', '<p>Confirmation links work for seven days. <a href="/sunday" style="color:#0a7d6a">Ask for a new one</a>.</p>', 400);
+  }
+  const lab = HOME_PRESET_LABEL[ok.preset];
+  if (request.method !== 'POST') {
+    return subPage('Confirm the Sunday email', '<p>Send the biggest Vegas-versus-expert fantasy differences to <b>' + _preEsc(email) + '</b> every Sunday morning, at ' + lab + ' scoring.</p>'
+      + '<form method="post" action="/sunday/confirm"><input type="hidden" name="e" value="' + _preEsc(email) + '"><input type="hidden" name="t" value="' + _preEsc(t) + '">'
+      + '<button type="submit" style="background:#e3b53a;color:#1a1205;border:0;padding:12px 18px;border-radius:8px;font-weight:700;font-size:16px;cursor:pointer">Confirm my subscription</button></form>');
+  }
+  const db = env.LEADS_DB;
+  const row = await db.prepare('SELECT status FROM subscribers WHERE email = ?').bind(email).first();
+  if (!row) return subPage('This link has expired', '<p><a href="/sunday" style="color:#0a7d6a">Ask for a new one</a>.</p>', 400);
+  await db.prepare("UPDATE subscribers SET status = 'confirmed', scoring = ?, confirmed_at = COALESCE(confirmed_at, ?), unsubscribed_at = NULL WHERE email = ?").bind(ok.preset, now, email).run();
+  // A confirmation is the newest word from this address, so it lifts an
+  // earlier unsubscribe. Nothing else ever does.
+  await db.prepare('DELETE FROM unsubscribes WHERE email = ?').bind(email).run();
+  return subPage('You are subscribed', '<p>The Sunday email will reach <b>' + _preEsc(email) + '</b> on Sunday mornings, at ' + lab + ' scoring. Every edition has a one-click unsubscribe link.</p>'
+    + '<p>Until then, the current differences are on the <a href="/vegas-edge#board" style="color:#0a7d6a">board</a>.</p>');
+}
+
+// ── the edition ─────────────────────────────────────────────────────────────
+// Built off the same week board and quoted lines the homepage examples read.
+async function editionBuild(env, now) {
+  const b = boardStillToPlay(await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr', through: null }));
+  if (!b || !b.ok || !b.horizon || b.horizon.key !== 'week' || (b.horizon.weeks || []).length !== 1) return { ok: false, error: 'no week board' };
+  const week = b.horizon.weeks[0];
+  const markets = await marketHistoryWeek(env, b.season, week);
+  const sets = {};
+  for (const preset of HOME_EX_PRESETS) {
+    const ex = homeExamples(b, markets, preset, EDITION_MAX);
+    if (ex == null) return { ok: false, error: 'board has no difference thresholds' };
+    sets[preset] = ex;
+  }
+  const up = b.updated || {};
+  return { ok: true, season: b.season, week, builtAt: Number.isFinite(now) ? now : Date.now(), boardAt: up.board || null, oddsAt: up.odds || null, sets };
+}
+function editionSubject(ed, preset) {
+  const n = (ed.sets[preset] || []).length;
+  return 'Week ' + ed.week + ': the ' + (n === 1 ? 'biggest Vegas-versus-expert difference' : n + ' biggest Vegas-versus-expert differences') + ' (' + HOME_PRESET_LABEL[preset] + ')';
+}
+const _edTag = (ed) => 'utm_source=newsletter&utm_medium=email&utm_campaign=' + ed.season + '-w' + String(ed.week).padStart(2, '0') + '-sunday';
+// The email body. Inline styles only and one column, because that is what
+// mail clients on a phone render faithfully. `ids` maps a player to the
+// finding stored for him, so every item links to a page that will say the
+// same thing next month.
+function editionHtml(ed, preset, ids, origin) {
+  const e = _preEsc, lab = HOME_PRESET_LABEL[preset], list = ed.sets[preset] || [];
+  const tag = _edTag(ed);
+  const stamp = [ed.boardAt ? 'board computed ' + e(_etStamp(ed.boardAt)) : null, ed.oddsAt ? 'odds read ' + e(_etStamp(ed.oddsAt)) : null].filter(Boolean).join(', ');
+  const item = (x) => {
+    const q = x.why;
+    const said = q.kind === 'td'
+      ? 'Books price an anytime touchdown at ' + e(q.prob) + '%; the consensus projects ' + e(q.consTds) + ' touchdowns, about ' + e(q.consProb) + '%.'
+      : 'Books quote ' + e(q.line) + ' ' + e(q.label) + '; the consensus projects ' + e(q.cons) + '.';
+    const id = ids && ids[x.name];
+    return '<tr><td style="padding:14px 0;border-top:1px solid #d4dde3">'
+      + '<p style="margin:0;font-size:17px"><b>' + e(x.name) + '</b> <span style="color:#566;font-size:14px">' + e(x.position + ' ' + x.team + ' ' + _homeFix(x)) + (x.kickoff ? ', ' + e(_etStamp(x.kickoff)) : '') + '</span></p>'
+      + '<p style="margin:6px 0 0;font-size:15px">Market <b>' + _homeN1(x.market) + '</b> &middot; consensus <b>' + _homeN1(x.consensus) + '</b> &middot; <b style="color:' + (x.gap > 0 ? '#0a7d6a' : '#a33') + '">' + _homeSigned(x.gap) + ' pts</b></p>'
+      + '<p style="margin:6px 0 0;font-size:13px;color:#566"><b>Derived estimate:</b> market points converted from ' + e(x.books) + ' books&rsquo; props.</p>'
+      + '<p style="margin:4px 0 0;font-size:13px;color:#566"><b>Quoted prop:</b> ' + said + (q.lastSeen ? ' Line last seen ' + e(_etStamp(q.lastSeen)) + '.' : '') + '</p>'
+      + (id ? '<p style="margin:6px 0 0;font-size:13px"><a href="' + origin + '/f/' + id + '?' + tag + '" style="color:#0a7d6a">Shareable finding</a></p>' : '')
+      + '</td></tr>';
+  };
+  return '<div style="font-family:system-ui,-apple-system,Arial,sans-serif;max-width:560px;margin:0 auto;color:#1a2129;line-height:1.45">'
+    + '<p style="margin:0 0 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#566">Iron Tuna &middot; the Sunday email</p>'
+    + '<h1 style="margin:0 0 8px;font-size:22px;color:#0b1117">Where Vegas and the experts disagree, Week ' + e(ed.week) + '</h1>'
+    + '<p style="margin:0 0 6px;font-size:14px;color:#566">' + e(ed.season) + ' season &middot; Week ' + e(ed.week) + ' &middot; ' + lab + ' scoring &middot; built ' + e(_etStamp(ed.builtAt)) + (stamp ? ' (' + stamp + ')' : '') + '.</p>'
+    + '<p style="margin:0 0 10px;font-size:14px">The players whose betting-market projection differs most from the fantasy consensus this week, widest first. Each is a disagreement between two projections, not a prediction of the result.</p>'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">' + list.map(item).join('') + '</table>'
+    + (list.length < EDITION_MAX ? '<p style="font-size:13px;color:#566">Only ' + list.length + ' cleared the bar this week. Fewer is shown as fewer.</p>' : '')
+    + '<p style="margin:18px 0"><a href="' + origin + '/vegas-edge?' + tag + '#board" style="background:#e3b53a;color:#1a1205;padding:11px 16px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">See the whole board</a></p>'
+    + '<p style="font-size:12px;color:#8595a1">Figures change after this was built; the board has the current ones. For entertainment only, not advice. 21+. Gambling problem? Call or text 1-800-MY-RESET.</p>'
+    + '</div>';
+}
+function editionText(ed, preset, ids, origin) {
+  const lab = HOME_PRESET_LABEL[preset], list = ed.sets[preset] || [], tag = _edTag(ed);
+  const lines = ['Where Vegas and the experts disagree, Week ' + ed.week,
+    ed.season + ' season, Week ' + ed.week + ', ' + lab + ' scoring, built ' + _etStamp(ed.builtAt) + '.',
+    'Disagreements between two projections, not predictions of the result.', ''];
+  for (const x of list) {
+    const q = x.why;
+    lines.push(x.name + ' (' + x.position + ' ' + x.team + ' ' + _homeFix(x) + (x.kickoff ? ', ' + _etStamp(x.kickoff) : '') + ')');
+    lines.push('  Market ' + _homeN1(x.market) + ', consensus ' + _homeN1(x.consensus) + ', ' + _homeSigned(x.gap).replace('−', '-') + ' pts');
+    lines.push('  Derived estimate: market points converted from ' + x.books + " books' props.");
+    lines.push('  Quoted prop: ' + (q.kind === 'td' ? 'books price an anytime touchdown at ' + q.prob + '%.' : 'books quote ' + q.line + ' ' + q.label + '; the consensus projects ' + q.cons + '.'));
+    if (ids && ids[x.name]) lines.push('  ' + origin + '/f/' + ids[x.name] + '?' + tag);
+    lines.push('');
+  }
+  if (list.length < EDITION_MAX) lines.push('Only ' + list.length + ' cleared the bar this week.', '');
+  lines.push('The whole board: ' + origin + '/vegas-edge?' + tag + '#board', '', 'For entertainment only, not advice. 21+. Gambling problem? Call or text 1-800-MY-RESET.');
+  return lines.join('\n');
+}
+// One recipient's message: the body plus the footer every marketing email
+// carries (why they got it, one-click unsubscribe, the postal address).
+async function editionMessage(env, ed, preset, ids, origin, email, test) {
+  const unsub = await subUnsubLink(env, origin, email);
+  const foot = '<div style="font-family:system-ui,-apple-system,Arial,sans-serif;max-width:560px;margin:0 auto"><hr style="border:none;border-top:1px solid #d4dde3;margin:20px 0 10px"/>'
+    + '<p style="font-size:12px;color:#8595a1;line-height:1.5">You receive this because you confirmed the Sunday email at irontuna.com. '
+    + '<a href="' + unsub + '" style="color:#8595a1">Unsubscribe</a>. To change scoring, sign up again at <a href="' + origin + '/sunday" style="color:#8595a1">irontuna.com/sunday</a>.<br/>' + _preEsc(env.MAIL_ADDRESS) + '</p></div>';
+  return {
+    from: _subFrom(env), to: email,
+    subject: (test ? '[Test] ' : '') + editionSubject(ed, preset),
+    html: editionHtml(ed, preset, ids, origin) + foot,
+    text: editionText(ed, preset, ids, origin) + '\n\n--\nYou receive this because you confirmed the Sunday email at irontuna.com.\nUnsubscribe: ' + unsub + '\n' + env.MAIL_ADDRESS,
+    headers: { 'List-Unsubscribe': '<' + unsub + '>', 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' }
+  };
+}
+// Store each item of an edition as a finding, so the links in it resolve to a
+// page that never changes. Returns { preset: { name: id } }.
+async function editionFindings(env, ed) {
+  const out = {};
+  for (const preset of HOME_EX_PRESETS) {
+    out[preset] = {};
+    for (const x of ed.sets[preset] || []) {
+      const rec = { kind: 'gap', season: ed.season, week: ed.week, preset, capturedAt: ed.builtAt, boardAt: ed.boardAt, oddsAt: ed.oddsAt, x };
+      const id = await findingStore(env, rec, 'edition');
+      if (id) out[preset][x.name] = id;
+    }
+  }
+  return out;
+}
+// The stored edition for this week, built once. The first build of the week
+// is the edition: a retry an hour later sends the same figures, not a newer
+// set that some subscribers would get and others would not.
+async function editionForWeek(env, now) {
+  const built = await editionBuild(env, now);
+  if (!built.ok) return built;
+  const db = env.LEADS_DB;
+  await db.prepare('INSERT OR IGNORE INTO edition_runs (season, week, built_at, payload) VALUES (?, ?, ?, ?)').bind(built.season, built.week, built.builtAt, JSON.stringify(built)).run();
+  const row = await db.prepare('SELECT payload FROM edition_runs WHERE season = ? AND week = ?').bind(built.season, built.week).first();
+  let ed = built;
+  try { if (row && row.payload) ed = JSON.parse(row.payload); } catch (e) {}
+  ed.ok = true;
+  return ed;
+}
+// THE SUNDAY SEND, run by the schedule. Duplicate-safe: each (season, week,
+// address) is claimed with one insert on a primary key before anything is
+// mailed, so two runs, a retry or a rerun from /admin can never mail the same
+// edition to the same address twice. A batch Resend refused outright is
+// released for the next run; one whose answer never came back is marked
+// failed and not retried, because it may have gone out.
+async function runSundayEdition(env, now, origin) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const site = origin || 'https://irontuna.com';
+  const cfg = editionConfig(env);
+  if (!cfg.send) return { ok: true, skipped: cfg.mail ? 'SUNDAY_EMAIL_SEND is not "on"' : 'mail not configured', missing: cfg.missing };
+  if (!(await subReady(env))) return { ok: false, error: 'no database' };
+  const ed = await editionForWeek(env, at);
+  if (!ed.ok) return { ok: false, error: 'edition not built: ' + ed.error };
+  const ids = await editionFindings(env, ed);
+  const db = env.LEADS_DB;
+  const rows = ((await db.prepare("SELECT email, scoring FROM subscribers WHERE status = 'confirmed' AND email NOT IN (SELECT email FROM edition_sends WHERE season = ? AND week = ?) AND email NOT IN (SELECT email FROM unsubscribes) ORDER BY email LIMIT ?")
+    .bind(ed.season, ed.week, EDITION_PER_RUN).all()).results) || [];
+  let sent = 0, failed = 0, empty = 0, lastError = null;
+  const ready = [];
+  for (const r of rows) {
+    const preset = subPreset(r.scoring);
+    if (!(ed.sets[preset] || []).length) { empty++; continue; }     // nothing qualified at this scoring: no email
+    const c = await db.prepare('INSERT OR IGNORE INTO edition_sends (season, week, email, claimed_at) VALUES (?, ?, ?, ?)').bind(ed.season, ed.week, r.email, at).run();
+    if (c && c.meta && c.meta.changes === 0) continue;               // another run has it
+    ready.push({ email: r.email, preset });
+  }
+  for (let i = 0; i < ready.length; i += EDITION_BATCH) {
+    const chunk = ready.slice(i, i + EDITION_BATCH);
+    const msgs = [];
+    for (const x of chunk) msgs.push(await editionMessage(env, ed, x.preset, ids[x.preset], site, x.email, false));
+    let res;
+    try {
+      const r = await fetch('https://api.resend.com/emails/batch', { method: 'POST', headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify(msgs) });
+      res = r.ok ? { ok: true } : { ok: false, definite: true, error: 'Resend ' + r.status };
+    } catch (e) { res = { ok: false, definite: false, error: 'network: ' + String((e && e.message) || e).slice(0, 80) }; }
+    for (const x of chunk) {
+      if (res.ok) await db.prepare('UPDATE edition_sends SET sent_at = ?, ok = 1 WHERE season = ? AND week = ? AND email = ?').bind(Date.now(), ed.season, ed.week, x.email).run();
+      else if (res.definite) await db.prepare('DELETE FROM edition_sends WHERE season = ? AND week = ? AND email = ?').bind(ed.season, ed.week, x.email).run();
+      else await db.prepare('UPDATE edition_sends SET ok = 0, error = ? WHERE season = ? AND week = ? AND email = ?').bind(res.error, ed.season, ed.week, x.email).run();
+    }
+    if (res.ok) sent += chunk.length; else { failed += chunk.length; lastError = res.error; }
+  }
+  await db.prepare('UPDATE edition_runs SET sent = sent + ?, failed = failed + ?, last_error = COALESCE(?, last_error), last_run_at = ? WHERE season = ? AND week = ?')
+    .bind(sent, failed, lastError, at, ed.season, ed.week).run();
+  const out = { ok: failed === 0, season: ed.season, week: ed.week, sent, failed, noDifferences: empty, more: rows.length === EDITION_PER_RUN };
+  if (failed) out.error = failed + ' not sent: ' + lastError;
+  return out;
+}
+
+// ── findings: dated, immutable, shareable ───────────────────────────────────
+// A finding is what Iron Tuna said at one moment, stored once and never
+// recomputed: /f/<id> reads the row and nothing else. The id is a hash of the
+// content, so the same figures shared twice are one page and different
+// figures are never the same page. The live view (the player page and the
+// board) is linked from it and labelled as the live view; nothing on a
+// finding page changes when the board does.
+//
+// Only the server makes one, from its own board. A share request names a
+// player (or two) and a scoring; it never carries numbers.
+async function findingId(rec) {
+  const { capturedAt, ...content } = rec;
+  const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(content)));
+  return Array.from(new Uint8Array(h)).slice(0, 6).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function findingStore(env, rec, origin) {
+  if (!(await subReady(env))) return null;
+  const id = await findingId(rec);
+  try {
+    await env.LEADS_DB.prepare('INSERT OR IGNORE INTO findings (id, kind, season, week, preset, payload, origin, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(id, rec.kind, rec.season, rec.week, rec.preset, JSON.stringify(rec), origin, rec.capturedAt).run();
+  } catch (e) { return null; }
+  return id;
+}
+async function findingRead(env, id) {
+  if (!/^[0-9a-f]{12}$/.test(String(id || '')) || !(await subReady(env))) return null;
+  try {
+    const r = await env.LEADS_DB.prepare('SELECT payload FROM findings WHERE id = ?').bind(id).first();
+    return r && r.payload ? JSON.parse(r.payload) : null;
+  } catch (e) { return null; }
+}
+// One side of a comparison, at one scoring, off the week board. The market
+// figure is given only when it is priced the way the examples require
+// (entirely off quoted props from two or more books); otherwise it is null
+// and the page says the market has not priced him fully.
+function findingSide(p, preset) {
+  const w = (p.weeks || [])[0];
+  if ((p.weeks || []).length !== 1 || !w || w.bye || w.gameState !== 'upcoming' || !p.ironTuna || !p.ironTuna.stats || !p.consensus || !p.consensus.stats) return null;
+  const rules = scoringRules(preset), r1 = (v) => Math.round(v * 10) / 10;
+  const vp = w.vegasProjection || {};
+  const priced = !!(p.vegas && p.vegas.basis === 'props' && p.vegas.stats && vp.status === 'full' && !(vp.missing || []).length && vp.books >= HOME_EX_MIN_BOOKS);
+  const it = scoreStats(p.ironTuna.stats, p.position, rules), c = scoreStats(p.consensus.stats, p.position, rules);
+  if (!Number.isFinite(it) || !Number.isFinite(c)) return null;
+  return { name: p.name, position: p.position, team: p.team, opponent: w.opponent, home: !!w.home, kickoff: w.kickoff || null,
+           injury: p.injury ? String(p.injury.status || '') : null, ironTuna: r1(it), consensus: r1(c),
+           market: priced ? r1(scoreStats(p.vegas.stats, p.position, rules)) : null, books: priced ? vp.books : null };
+}
+async function findingCreate(env, body) {
+  const kind = body && body.kind === 'compare' ? 'compare' : 'gap';
+  const preset = subPreset(body && body.scoring);
+  const b = boardStillToPlay(await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr', through: null }));
+  if (!b || !b.ok || !b.horizon || b.horizon.key !== 'week' || (b.horizon.weeks || []).length !== 1) return { status: 503, body: { ok: false, error: 'no_board' } };
+  const week = b.horizon.weeks[0], up = b.updated || {}, now = Date.now();
+  const base = { season: b.season, week, preset, capturedAt: now, boardAt: up.board || null, oddsAt: up.odds || null };
+  const byName = (n) => b.players.find(p => p.name === String(n || ''));
+  let rec;
+  if (kind === 'gap') {
+    // Only a player who clears every example rule right now can be shared as
+    // a difference: the share cannot outrun what the homepage would show.
+    const ex = homeExamples(b, await marketHistoryWeek(env, b.season, week), preset, Infinity) || [];
+    const x = ex.find(r => r.name === String(body.player || ''));
+    if (!x) return { status: 404, body: { ok: false, error: 'not_current' } };
+    rec = { kind, ...base, x };
+  } else {
+    const pa = byName(body.a), pb = byName(body.b);
+    if (!pa || !pb || pa === pb) return { status: 404, body: { ok: false, error: 'not_on_board' } };
+    const sa = findingSide(pa, preset), sb = findingSide(pb, preset);
+    if (!sa || !sb) return { status: 404, body: { ok: false, error: 'not_current' } };
+    rec = { kind, ...base, players: [sa, sb].sort((x, y) => y.ironTuna - x.ironTuna || (x.name < y.name ? -1 : 1)) };
+  }
+  const id = await findingStore(env, rec, 'share');
+  if (!id) return { status: 503, body: { ok: false, error: 'store' } };
+  return { status: 200, body: { ok: true, id, url: 'https://irontuna.com/f/' + id } };
+}
+function findingTitle(f) {
+  const lab = HOME_PRESET_LABEL[f.preset] || 'PPR';
+  if (f.kind === 'gap') return f.x.name + ': market ' + _homeN1(f.x.market) + ', consensus ' + _homeN1(f.x.consensus) + ' (Week ' + f.week + ', ' + lab + ')';
+  return f.players[0].name + ' vs ' + f.players[1].name + ' (Week ' + f.week + ', ' + lab + ')';
+}
+function findingDesc(f) {
+  const when = 'Captured ' + _etStamp(f.capturedAt) + '.';
+  if (f.kind === 'gap') {
+    return 'The betting market projects ' + f.x.name + ' ' + _homeN1(Math.abs(f.x.gap)) + ' points ' + (f.x.gap > 0 ? 'above' : 'below') + ' the fantasy consensus for Week ' + f.week + ' at ' + HOME_PRESET_LABEL[f.preset] + '. ' + when;
+  }
+  const [a, z] = f.players;
+  return 'Iron Tuna projects ' + a.name + ' ' + _homeN1(a.ironTuna) + ' and ' + z.name + ' ' + _homeN1(z.ironTuna) + ' for Week ' + f.week + ' at ' + HOME_PRESET_LABEL[f.preset] + '. ' + when;
+}
+// The page body. Every figure comes from the stored record.
+function findingBodyHtml(f, id) {
+  const e = _preEsc, lab = HOME_PRESET_LABEL[f.preset];
+  const per = e(f.season) + ' season &middot; Week ' + e(f.week) + ' &middot; ' + lab + ' scoring';
+  const stamp = '<p class="fd-when">Captured ' + e(_etStamp(f.capturedAt)) + (f.boardAt ? ' from the board computed ' + e(_etStamp(f.boardAt)) : '') + (f.oddsAt ? ' and odds read ' + e(_etStamp(f.oddsAt)) : '') + '. These figures are stored and do not change.</p>';
+  let h = '<p class="fd-k">Dated finding &middot; ' + per + '</p>';
+  if (f.kind === 'gap') {
+    const x = f.x, q = x.why;
+    const said = q.kind === 'td'
+      ? 'Books price an anytime touchdown at ' + e(q.prob) + '%; the consensus projects ' + e(q.consTds) + ' touchdowns, about ' + e(q.consProb) + '%.'
+      : 'Books quote ' + e(q.line) + ' ' + e(q.label) + '; the consensus projects ' + e(q.cons) + '.';
+    h += '<h1>' + e(x.name) + '</h1><p class="fd-who">' + e(x.position + ' ' + x.team + ' ' + _homeFix(x)) + (x.kickoff ? ' &middot; ' + e(_etStamp(x.kickoff)) : '') + '</p>'
+      + '<div class="fd-nums"><div><b>' + _homeN1(x.market) + '</b><span>Market</span></div><div><b>' + _homeN1(x.consensus) + '</b><span>Consensus</span></div><div class="fd-gap' + (x.gap > 0 ? ' up' : '') + '"><b>' + _homeSigned(x.gap) + '</b><span>Difference, pts</span></div></div>'
+      + '<p class="fd-lab"><span class="fd-tag">Derived estimate</span> Market points converted from ' + e(x.books) + ' books&rsquo; props.</p>'
+      + '<p class="fd-lab"><span class="fd-tag q">Quoted prop</span> ' + said + (q.lastSeen ? ' Line last seen ' + e(_etStamp(q.lastSeen)) + '.' : '') + '</p>'
+      + stamp
+      + '<p class="fd-note">A disagreement between two projections, not a prediction of the result.</p>'
+      + '<p class="fd-live">The live view: <a href="/player/' + e(_homeSlug(x.name)) + '">' + e(x.name) + '&rsquo;s page</a> and <a href="/vegas-edge#board">this week&rsquo;s board</a>, which move as the market does.</p>';
+  } else {
+    const side = (p) => '<div class="fd-side"><h2>' + e(p.name) + '</h2><p class="fd-who">' + e(p.position + ' ' + p.team + ' ' + _homeFix(p)) + (p.kickoff ? ' &middot; ' + e(_etStamp(p.kickoff)) : '') + (p.injury ? ' &middot; ' + e(p.injury) : '') + '</p>'
+      + '<dl><dt>Iron Tuna</dt><dd>' + _homeN1(p.ironTuna) + '</dd><dt>Consensus</dt><dd>' + _homeN1(p.consensus) + '</dd><dt>Market</dt><dd>'
+      + (p.market == null ? '<span class="fd-na">not fully priced off props</span>' : _homeN1(p.market) + ' <span class="fd-tag">Derived estimate</span>') + '</dd></dl></div>';
+    const [a, z] = f.players;
+    h += '<h1>' + e(a.name) + ' or ' + e(z.name) + '</h1>'
+      + '<div class="fd-pair">' + side(a) + side(z) + '</div>'
+      + '<p class="fd-note">' + (a.ironTuna === z.ironTuna ? 'Iron Tuna projected the two level.' : 'Iron Tuna projected ' + e(a.name) + ' ' + _homeN1(a.ironTuna - z.ironTuna) + ' points ahead.')
+      + ' Market figures are derived estimates converted from books&rsquo; props, shown only when every stat was quoted by two or more books.</p>'
+      + stamp
+      + '<p class="fd-live">The live view: <a href="/player/' + e(_homeSlug(a.name)) + '">' + e(a.name) + '</a>, <a href="/player/' + e(_homeSlug(z.name)) + '">' + e(z.name) + '</a> and <a href="/fantasy#startsit">Start / Sit</a>, which move as the projections do.</p>';
+  }
+  return h;
+}
+// The share image: 1200x630, the figures, the week, the scoring, the capture
+// time and the name, on the site's ink. SVG, so the worker can draw it with
+// no image library; the page turns it into a PNG in the reader's browser when
+// they share it as a picture.
+function findingSvg(f) {
+  const e = _preEsc, lab = HOME_PRESET_LABEL[f.preset];
+  const T = (x, y, s, w, fill, txt, anchor) => '<text x="' + x + '" y="' + y + '" font-size="' + s + '" font-weight="' + w + '" fill="' + fill + '"' + (anchor ? ' text-anchor="' + anchor + '"' : '') + '>' + txt + '</text>';
+  let body = '';
+  if (f.kind === 'gap') {
+    const x = f.x;
+    body = T(72, 190, 64, 700, '#ffffff', e(x.name))
+      + T(72, 240, 30, 400, '#9fb0bc', e(x.position + ' ' + x.team + ' ' + _homeFix(x)))
+      + T(72, 390, 96, 700, x.gap > 0 ? '#3ccf9e' : '#ff8a7a', _homeSigned(x.gap) + ' pts')
+      + T(72, 450, 34, 400, '#ffffff', 'Market ' + _homeN1(x.market) + '  ·  Consensus ' + _homeN1(x.consensus))
+      + T(72, 494, 24, 400, '#9fb0bc', 'Market points derived from ' + e(x.books) + ' books’ props');
+  } else {
+    const col = (p, x0) => T(x0, 200, 48, 700, '#ffffff', e(p.name)) + T(x0, 242, 26, 400, '#9fb0bc', e(p.position + ' ' + p.team + ' ' + _homeFix(p)))
+      + T(x0, 330, 72, 700, '#e3b53a', _homeN1(p.ironTuna)) + T(x0, 368, 24, 400, '#9fb0bc', 'Iron Tuna projection')
+      + T(x0, 430, 28, 400, '#ffffff', 'Consensus ' + _homeN1(p.consensus)) + T(x0, 470, 28, 400, '#ffffff', p.market == null ? 'Market: not fully priced' : 'Market ' + _homeN1(p.market));
+    body = col(f.players[0], 72) + col(f.players[1], 640) + '<line x1="600" y1="150" x2="600" y2="490" stroke="#2a3a46" stroke-width="2"/>';
+  }
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="Helvetica, Arial, sans-serif">'
+    + '<rect width="1200" height="630" fill="#0b1117"/><rect x="0" y="0" width="1200" height="8" fill="#e3b53a"/>'
+    + T(72, 92, 28, 700, '#e3b53a', 'IRON TUNA') + T(1128, 92, 26, 400, '#9fb0bc', e(f.season) + ' · Week ' + e(f.week) + ' · ' + lab, 'end')
+    + body
+    + T(72, 576, 22, 400, '#9fb0bc', 'Captured ' + e(_etStamp(f.capturedAt)) + '  ·  irontuna.com  ·  A projection, not a prediction')
+    + '</svg>';
+}
+// finding.html with the record written in: head tags, then the body. The
+// shell stays noindex: a finding is a dated snapshot, not a page to rank.
+function findingShellFill(html, f, id) {
+  const e = _preEsc, url = 'https://irontuna.com/f/' + id, title = findingTitle(f), desc = findingDesc(f);
+  return html
+    .replace(/<title>[^<]*<\/title>/, () => '<title>' + e(title) + ' | Iron Tuna</title>')
+    .replace(/<meta name="description" content="[^"]*">/, () => '<meta name="description" content="' + e(desc) + '">')
+    .replace(/<link rel="canonical" href="[^"]*">/, () => '<link rel="canonical" href="' + url + '">')
+    .replace(/<meta property="og:title" content="[^"]*">/, () => '<meta property="og:title" content="' + e(title) + '">')
+    .replace(/<meta property="og:description" content="[^"]*">/, () => '<meta property="og:description" content="' + e(desc) + '">')
+    .replace(/<meta property="og:url" content="[^"]*">/, () => '<meta property="og:url" content="' + url + '">')
+    .replace(/<meta name="twitter:title" content="[^"]*">/, () => '<meta name="twitter:title" content="' + e(title) + '">')
+    .replace(/<meta name="twitter:description" content="[^"]*">/, () => '<meta name="twitter:description" content="' + e(desc) + '">')
+    .replace('<div class="fd-body" id="fdBody"></div>', () => '<div class="fd-body" id="fdBody" data-id="' + e(id) + '" data-kind="' + e(f.kind) + '" data-title="' + e(title) + '">' + findingBodyHtml(f, id) + '</div>')
+    .replace('<div class="fd-share" id="fdShare" hidden>', '<div class="fd-share" id="fdShare">')
+    .replace('<img class="fd-img" id="fdImg" alt="" hidden>', () => '<img class="fd-img" id="fdImg" src="/f/' + e(id) + '.svg" width="1200" height="630" alt="' + e(title) + '">');
+}
+
+// ── /admin's Sunday email panel ─────────────────────────────────────────────
+async function editionAdminStatus(env, now) {
+  const cfg = editionConfig(env);
+  const out = { ok: true, config: { mailConfigured: cfg.mail, missing: cfg.missing, sendSwitch: cfg.sendSwitch, sending: cfg.send },
+    counts: null, lastRuns: [], schedule: null };
+  try { const rep = jobScheduleReport(jobScheduleFrom(env), now); out.schedule = rep.jobs.find(j => j.job === 'sunday-edition') || null; } catch (e) {}
+  if (await subReady(env)) {
+    const db = env.LEADS_DB;
+    const c = ((await db.prepare('SELECT status, COUNT(*) AS n FROM subscribers GROUP BY status').all()).results) || [];
+    out.counts = { pending: 0, confirmed: 0, unsubscribed: 0 };
+    for (const r of c) out.counts[r.status] = r.n || 0;
+    const sup = await db.prepare('SELECT COUNT(*) AS n FROM unsubscribes').first();
+    out.counts.suppressed = (sup && sup.n) || 0;
+    out.lastRuns = (((await db.prepare('SELECT season, week, built_at, sent, failed, last_error, last_run_at FROM edition_runs ORDER BY season DESC, week DESC LIMIT 4').all()).results) || [])
+      .map(r => ({ season: r.season, week: r.week, builtAt: r.built_at, sent: r.sent, failed: r.failed, lastError: r.last_error, lastRunAt: r.last_run_at }));
+  }
+  return out;
+}
+// The routes. Null when the path is not one of them.
+async function emailShareRoutes(request, env, url) {
+  const p = url.pathname;
+  if (p === '/api/subscribe') {
+    const c = corsHeaders(request.headers.get('Origin'));
+    if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+    // GET: is the form open? Says nothing about any address.
+    if (request.method === 'GET') return json({ ok: true, open: editionConfig(env).signups && !IS_WASHINGTON(request) }, 200, { ...c, 'cache-control': 'no-store' });
+    if (request.method !== 'POST') return json({ ok: false }, 405, c);
+    const r = await subscribeRequest(env, request, url);
+    return json(r.body, r.status, { ...c, 'cache-control': 'no-store' });
+  }
+  if (p === '/sunday/confirm') return subscribeConfirm(env, request, url);
+  if (p === '/api/finding') {
+    const c = corsHeaders(request.headers.get('Origin'));
+    if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+    if (request.method !== 'POST') return json({ ok: false }, 405, c);
+    if (IS_WASHINGTON(request)) return WA_MARKET_BLOCK();
+    // Each distinct pair and scoring is a stored row, so the limit is what
+    // bounds the table, not only the traffic.
+    if (await subOriginLimited(env, request, Date.now(), 'finding', FINDING_IP_MAX)) return json({ ok: false, error: 'rate' }, 429, c);
+    let b = {}; try { b = await request.json(); } catch (e) {}
+    const r = await findingCreate(env, b);
+    return json(r.body, r.status, { ...c, 'cache-control': 'no-store' });
+  }
+  const fm = /^\/f\/([0-9a-f]{12})(\.svg)?$/.exec(p);
+  if (fm) {
+    if (IS_WASHINGTON(request)) return WA_MARKET_BLOCK();
+    const f = await findingRead(env, fm[1]);
+    if (!f) return subPage('Finding not found', '<p>No finding has that address. The current differences are on the <a href="/vegas-edge#board" style="color:#0a7d6a">board</a>.</p>', 404);
+    // Immutable, so a shared cache may keep it for a long time.
+    if (fm[2]) return secure(new Response(findingSvg(f), { headers: { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'public, max-age=31536000, immutable' } }));
+    const shell = await env.ASSETS.fetch(new Request(url.origin + '/finding'));
+    const r = new Response(findingShellFill(await shell.text(), f, fm[1]), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=3600' } });
+    return secure(r);
+  }
+  if (p === '/api/admin/edition') {
+    if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, {});
+    const now = Date.now();
+    if (url.searchParams.get('format') === 'html') {
+      const ed = await editionBuild(env, now);
+      if (!ed.ok) return subPage('No edition to preview', '<p>' + _preEsc(ed.error) + '</p>', 200);
+      const preset = subPreset(url.searchParams.get('scoring'));
+      const m = await editionMessage({ ...env, MAIL_ADDRESS: env.MAIL_ADDRESS || '[MAIL_ADDRESS not set]', AUTH_SECRET: env.AUTH_SECRET || 'preview' }, ed, preset, null, url.origin, 'reader@example.com', false);
+      return secure(new Response('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' + _preEsc(m.subject) + '</title>'
+        + '<p style="font:13px system-ui;color:#566;max-width:560px;margin:12px auto">Preview, built now. Subject: <b>' + _preEsc(m.subject) + '</b>. Shareable finding links appear in the sent edition.</p>' + m.html,
+        { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } }));
+    }
+    return json(await editionAdminStatus(env, now), 200, { 'cache-control': 'no-store' });
+  }
+  if (p === '/api/admin/edition-test' && request.method === 'POST') {
+    if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, {});
+    const cfg = editionConfig(env);
+    if (!cfg.mail) return json({ ok: false, error: 'not_configured', missing: cfg.missing }, 400, {});
+    let b = {}; try { b = await request.json(); } catch (e) {}
+    const to = subEmail(b.to);
+    if (!to) return json({ ok: false, error: 'bad_test_email' }, 400, {});
+    const ed = await editionBuild(env, Date.now());
+    if (!ed.ok) return json({ ok: false, error: ed.error }, 200, {});
+    const preset = subPreset(b.scoring);
+    const r = await subMail(env, await editionMessage(env, ed, preset, null, url.origin, to, true));
+    return json({ ok: r.ok, error: r.error || null, subject: editionSubject(ed, preset), items: (ed.sets[preset] || []).length }, 200, {});
+  }
+  return null;
+}
+// THE SUNDAY EMAIL AND SHARED FINDINGS END
+// ════════════════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════════════════
 // TUNA MARKET SIGNAL START
 // Self-contained section: tools/test-tuna-market.mjs executes this deployed code.
 const TMS_SOURCE = 'https://the-odds-api.com/';
@@ -10715,7 +11339,9 @@ const HOME_EX_STAT = {
   rec: { m: 'rec', label: 'receptions' }, recYd: { m: 'recYd', label: 'receiving yards' },
   rushTD: { m: 'anytimeTD', td: true }, recTD: { m: 'anytimeTD', td: true }
 };
-function homeExamples(b, markets, preset) {
+// `max` is the cap: three on the homepage, EDITION_MAX in the Sunday email,
+// none when a share asks whether one player still qualifies.
+function homeExamples(b, markets, preset, max) {
   if (!b || !b.ok || !Array.isArray(b.players) || !b.horizon || b.horizon.key !== 'week' || (b.horizon.weeks || []).length !== 1) return null;
   const D = b.delta || {}, band = b.prominentBand || {};
   if (!Number.isFinite(D.minPointsStrong) || !Number.isFinite(D.strongPct)) return null;
@@ -10765,7 +11391,7 @@ function homeExamples(b, markets, preset) {
                consensus: r1(c), market: r1(v), gap: r1(gap), books: vp.books, priced: (vp.priced || []).slice(), why });
   }
   out.sort((a, x) => Math.abs(x.gap) - Math.abs(a.gap) || (a.name < x.name ? -1 : 1));
-  return out.slice(0, HOME_EX_MAX);
+  return out.slice(0, max == null ? HOME_EX_MAX : max);
 }
 // THE SAMPLE MY WEEK. A first-time reader has no league, so the homepage shows
 // what My Week does with one, built from real players on this week's board and
@@ -14818,7 +15444,8 @@ const JOB_FNS = {
   'news-scan':            env => runNewsScan(env),
   'calls-grade':          env => runCallsGrade(env),
   'rivalry-column':       env => runRivalryColumn(env),
-  'content-tick':         env => runContentTick(env)
+  'content-tick':         env => runContentTick(env),
+  'sunday-edition':       env => runSundayEdition(env)
 };
 const _jobSummary = r => { try { return JSON.stringify(r).slice(0, 800); } catch (e) { return null; } };
 // How long a job may run before the log calls it dead. A cron invocation has
@@ -15195,7 +15822,12 @@ const JOB_SCHEDULE = [
   // phase 3: the desk, which reads everything above. Quarter-hourly so a
   // 12:15 and a 7:30 slot exist in Eastern time; a tick with nothing due
   // costs one pure evaluation per kind.
-  { job: 'content-tick',         days: null,                   hours: 'hourly', minutes: [0, 15, 30, 45], phase: 3 }
+  { job: 'content-tick',         days: null,                   hours: 'hourly', minutes: [0, 15, 30, 45], phase: 3 },
+  // The Sunday email, after the 7 AM odds pull and before the 9:30 London
+  // kickoff. 8 AM is the retry: the send is claimed per address, so a second
+  // run mails only whoever the first did not reach. Sends nothing until
+  // SUNDAY_EMAIL_SEND is "on" (runSundayEdition).
+  { job: 'sunday-edition',       days: ['Sun'],                hours: [7, 8],                         phase: 3 }
 ];
 const JOB_DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 // Validate one entry. Returns the clean entry or a string saying what is wrong.
@@ -15924,14 +16556,20 @@ async function adminUsage(env, url) {
 
   // Email. A sign-up is counted off the form's own success event (no address
   // ever reaches the analytics tables); the contacts table is counted, not
-  // read, as a cross-check. There is no confirmation step yet, so a confirmed
-  // subscription is unavailable rather than zero.
+  // read, as a cross-check. Confirmed subscriptions (Phase 5) are counted off
+  // the Sunday email's own table, never joined to an analytics id: those
+  // confirmed in the window, and the list as it stands. Null, not zero, when
+  // the table is not there to count.
   // Its own try: a database with no contacts table yet is not a failed read.
-  let ct = null;
+  let ct = null, sb = null;
   try { ct = ((await db.prepare("SELECT type, COUNT(*) AS n FROM contacts WHERE created_at >= ? AND type != 'purchase' GROUP BY type").bind(since).all()).results) || []; } catch (e) {}
+  try { sb = await db.prepare("SELECT SUM(status = 'confirmed' AND confirmed_at >= ?) AS fresh, SUM(status = 'confirmed') AS list, SUM(status = 'pending') AS pending FROM subscribers").bind(since).first(); } catch (e) {}
   out.subscriptions = {
-    confirmed: null,
-    confirmedNote: 'No confirmation step exists yet (planned for the email phase), so confirmed subscriptions cannot be counted.',
+    confirmed: sb ? (sb.fresh || 0) : null,
+    confirmedList: sb ? (sb.list || 0) : null,
+    pending: sb ? (sb.pending || 0) : null,
+    confirmedNote: sb ? 'Confirmed means the reader used the link in the confirmation email (double opt-in). Counted from the subscriber list, never joined to analytics.'
+      : 'No Sunday email list exists yet, so there is no confirmation to count.',
     signupEvents: fu.subscribed || 0,
     contactsStored: ct ? ct.reduce((s, r) => s + (r.n || 0), 0) : null,
     contactsByType: (ct || []).map(r => ({ type: r.type || '', count: r.n || 0 })),
@@ -17419,6 +18057,13 @@ export default {
         return new Response(null, { status: 301, headers: { 'Location': analystUrl(ANALYSTS[__an[1]]) + (url.search || ''), 'Cache-Control': 'public, max-age=3600' } });
       }
     }
+    // The Sunday email and shared findings (growth plan Phase 5).
+    if (/^\/(api\/(subscribe|finding|admin\/edition(-test)?)|sunday\/confirm|f\/)/.test(url.pathname)) {
+      const er = await emailShareRoutes(request, env, url);
+      if (er) return er;
+    }
+    // The shell /f/<id> is written into is not a page of its own.
+    if (url.pathname === '/finding' || url.pathname === '/finding.html') return subPage('Finding not found', '<p>The current differences are on the <a href="/vegas-edge#board" style="color:#0a7d6a">board</a>.</p>', 404);
     // The saved league: /api/leagues/* and the admin board's read of it.
     if (url.pathname.startsWith('/api/leagues') || url.pathname === '/api/admin/leagues') {
       const lr = await leagueRoutes(request, env, url, ctx);
@@ -18273,6 +18918,9 @@ export default {
       const t = url.searchParams.get('t') || '';
       const ok = !!email && !!env.AUTH_SECRET && timingSafeEq(t, await hmacSign(env.AUTH_SECRET, 'unsub:' + email));
       if (ok && env.LEADS_DB) { try { await env.LEADS_DB.prepare('INSERT OR IGNORE INTO unsubscribes (email, created_at) VALUES (?, ?)').bind(email, Date.now()).run(); } catch (e) {} }
+      // The Sunday email's own row says so too, for /admin's counts; the
+      // unsubscribes row above is what every sender checks.
+      if (ok && (await subReady(env))) { try { await env.LEADS_DB.prepare("UPDATE subscribers SET status = 'unsubscribed', unsubscribed_at = ? WHERE email = ?").bind(Date.now(), email).run(); } catch (e) {} }
       const msg = ok ? 'You’re unsubscribed. You won’t receive marketing emails from Iron Tuna.' : 'This unsubscribe link is invalid or expired.';
       return new Response('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unsubscribe — Iron Tuna</title><div style="font-family:system-ui,Arial;max-width:480px;margin:64px auto;padding:0 22px;text-align:center;color:#1a2129"><h2>' + (ok ? 'Done' : 'Hmm') + '</h2><p style="color:#566">' + msg + '</p><p><a href="https://irontuna.com/" style="color:#0b9">Back to Iron Tuna</a></p></div>', { headers: { 'content-type': 'text/html; charset=utf-8' } });
     }

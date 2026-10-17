@@ -14,7 +14,7 @@
 // build-chrome.mjs --check already fails when a page's chrome is stale against
 // the generator. This file asserts the things that would still be true of a
 // consistently-wrong generator: that the link set is the five-item one and the
-// footer the ten-item one, that nothing retired has crept back into either,
+// footer the eleven-item one, that nothing retired has crept back into either,
 // that the mobile disclosure nav is wired up, and that the one header button
 // says what it actually does.
 import fs from 'fs';
@@ -67,7 +67,7 @@ console.log('\nevery destination is reachable from every page');
   // articles, the player directory, how it works, the data inventory, the FAQ,
   // the two legal documents and support.
   const MUST_FOOT = ['/fantasy', '/dfs', '/in-season/desk', '/players',
-    '/faq#faq-start', '/data', '/faq', '/privacy', '/terms', '/support'];
+    '/faq#faq-start', '/data', '/sunday', '/faq', '/privacy', '/terms', '/support'];
   const badNav = [], badFoot = [];
   for (const f of pages) {
     const nav = hrefs(header(read(f)));
@@ -83,7 +83,7 @@ console.log('\nevery destination is reachable from every page');
   // THE OPERATOR'S WAY IN. front.html carried a quiet Admin link in its own
   // footer; the 2026-10-08 design pass moved the page onto the shared chrome,
   // which had never had one, and the only link into /admin from the site went
-  // with it. It rides the legal line (not the link row, so the ten-item shape
+  // with it. It rides the legal line (not the link row, so the eleven-item shape
   // below holds) with rel=nofollow, because /admin is noindex.
   const noAdmin = allPages.filter((f) => !/<p class="foot-legal">[\s\S]*?<a class="foot-admin" href="\/admin" rel="nofollow">Admin<\/a>/.test(footer(read(f))));
   ok('every footer carries the Admin link, nofollow, on the legal line', noAdmin.length === 0, noAdmin.slice(0, 6).join(', '));
@@ -179,8 +179,8 @@ console.log('\nthe nav link set is identical everywhere');
   const footOf = (f) => hrefs((read(f).match(/<nav class="foot-nav"[\s\S]*?<\/nav>/) || [''])[0]).join(',');
   const footShapes = new Set(allPages.map(footOf));
   ok('there is exactly one footer shape', footShapes.size === 1, [...footShapes].slice(0, 3).join(' / '));
-  ok('and it is the ten-item one',
-    [...footShapes][0] === '/fantasy,/dfs,/in-season/desk,/players,/faq#faq-start,/data,/faq,/privacy,/terms,/support',
+  ok('and it is the eleven-item one',
+    [...footShapes][0] === '/fantasy,/dfs,/in-season/desk,/players,/faq#faq-start,/data,/sunday,/faq,/privacy,/terms,/support',
     [...footShapes][0]);
 }
 

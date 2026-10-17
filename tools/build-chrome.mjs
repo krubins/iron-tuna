@@ -165,6 +165,9 @@ const FOOT_LINKS = [
   { label: 'Players', href: '/players' },
   { label: 'How It Works', href: '/faq#faq-start' },
   { label: 'Data Sources', href: '/data' },
+  // The Sunday email's one permanent place (growth plan Phase 5). Every other
+  // offer of it appears only after a useful result.
+  { label: 'Sunday Email', href: '/sunday' },
   { label: 'FAQ', href: '/faq' },
   { label: 'Privacy', href: '/privacy' },
   { label: 'Terms', href: '/terms' },

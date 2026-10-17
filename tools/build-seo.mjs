@@ -96,7 +96,9 @@ const WEBSITE = {
 // and drops the noindex (analystSeo/analystHeader/analystLd in _worker.js), so
 // those eight URLs ARE indexed — but the file on disk is not the thing indexed
 // and must stay as it is.
-const NOINDEX = new Set(['admin.html', 'lead.html', 'player.html', 'my-insights.html', 'post-draft.html', 'analyst.html', 'player-intel.html']);
+// finding.html is the shell /f/<id> is written into (growth plan Phase 5): a
+// dated snapshot shared by link, not a page to rank, and empty at its own name.
+const NOINDEX = new Set(['admin.html', 'lead.html', 'player.html', 'my-insights.html', 'post-draft.html', 'analyst.html', 'player-intel.html', 'finding.html']);
 
 // Evergreen strategy guides. datePublished/dateModified come from git so they
 // stay honest as the guides are revised.

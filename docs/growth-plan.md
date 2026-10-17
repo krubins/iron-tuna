@@ -45,8 +45,8 @@ expectations and fantasy consensus. The retention feature is My Week.
 | 1 | Analytics and admin dashboard | **Done** (2026-10-17, merged as #442) | `claude/growth-phase-1` |
 | 2 | Reliability and search visibility | **Done** (2026-10-17, merged as #443) | `claude/growth-phase-2` |
 | 3 | First-visit experience | **Done** (2026-10-17, merged as #444) | `claude/growth-phase-3` |
-| 4 | Repeat usage (My Week) | **Done** (2026-10-17, awaiting review and merge) | `claude/growth-phase-4` |
-| 5 | Email and sharing | Not started | |
+| 4 | Repeat usage (My Week) | **Done** (2026-10-17, merged as #445) | `claude/growth-phase-4` |
+| 5 | Email and sharing | **Done** (2026-10-17, awaiting review and merge) | `claude/growth-phase-5` |
 | 6 | Distribution and evaluation | Not started | |
 
 ---
@@ -221,11 +221,20 @@ beside every percentage and `n/a` where there is no denominator:
 
 ## Outstanding configuration and access
 
-- **Merge and deploy** `claude/growth-phase-4` (owner). Phases 1 to 3 merged
-  as #442, #443 and #444. On 2026-10-17 production held no outcome events yet;
+- **Merge and deploy** `claude/growth-phase-5` (owner). Phases 1 to 4 merged
+  as #442 to #445. On 2026-10-17 production held no outcome events yet;
   check /admin's Tools table shows rows within a day, and if not, check that
   `/api/track` is accepting them. Retention needs 8 days of collection before
   the first mature cohort.
+- **Turn on the Sunday email** (owner, Phase 5). Set the Worker secrets
+  `RESEND_API_KEY` and `AUTH_SECRET` (already set if sign-in emails work) and
+  the var `MAIL_ADDRESS` (the physical postal address CAN-SPAM requires in
+  every marketing email). Verify the sending domain in Resend and, optionally,
+  set `EMAIL_FROM_EDITION` (default `Iron Tuna <hello@irontuna.com>`). With
+  those three set, the sign-up form appears and confirmations go out. Send a
+  test from /admin, Operator tools, Sunday email. Only then set
+  `SUNDAY_EMAIL_SEND=on`; the first edition goes the following Sunday at
+  7 AM ET (retry 8 AM).
 - **Open /admin once from each browser you browse the site with** after deploy,
   so each is excluded by cookie and by id.
 - **D1 read allowance.** The new route reads `site_events` only (indexed on
@@ -545,12 +554,147 @@ Miller (consensus 0.9) and every no-line fade were suppressed.
 - Read /admin after a week: `home_myweek` clicks, and `lineup` / `waiver`
   results from returning browsers by NFL week.
 
-## Next steps: Phase 5 (email and sharing)
+## Phase 5: email and sharing (2026-10-17)
 
-Start here when told "Start next phase". The Phase 5 requirements are under
-"Later phases" below. Phase 4 leaves the email edition one rule to reuse:
-only call something available, or a difference current, when the data behind
-it is complete, and say so when it is not.
+### What the audit found
+
+- The email plumbing existed but was dormant and draft-season shaped: a
+  nurture campaign (`sendCampaignOne`, `/api/campaign-send`) to every lead,
+  an `unsubscribes` table, and a signed unsubscribe link. No list of its own,
+  no confirmation step, no weekly content, no schedule.
+- `rl()` limits by IP only through `RATE_KV`, which `wrangler.jsonc` does not
+  bind, so no email form had a working rate limit.
+- Sharing was one copy-link button on `/fantasy` (its board row). No page
+  held a finding that would not change, and no share image existed short of
+  the PNGs built offline for the X poster.
+- Valid prospective history already exists: `board-freeze` stores the board
+  before each kickoff. Nothing here reconstructs a past prediction.
+
+### What changed
+
+- **One section in `_worker.js`**, "THE SUNDAY EMAIL AND SHARED FINDINGS",
+  with its own tables in LEADS_DB (`subscribers`, `sub_hits`, `edition_runs`,
+  `edition_sends`, `findings`), separate from `site_events`. An address is
+  never joined to the analytics id; analytics sees only `subscribe_request`.
+- **Sign-up** (`POST /api/subscribe`): consent box required, address checked,
+  a hidden field for bots, one answer for every valid request (the form
+  cannot tell anyone who is on the list), one confirmation per address per
+  ten minutes and five a month, five requests per origin per ten minutes in
+  D1 (origin kept as a keyed hash), 200 confirmations an hour in all. Refused
+  in Washington, like every other betting-market surface.
+- **Double opt-in.** The link is signed over address, scoring and time (seven
+  days). It lands on `/sunday/confirm`, a page with a button: GET confirms
+  nothing, so a mail scanner cannot. Confirming lifts an earlier unsubscribe;
+  a confirmed reader changing scoring stays on the old one until the new link
+  is used. `/admin`'s funnel now counts confirmed subscriptions.
+- **Unsubscribe and suppression.** The existing signed `/api/unsubscribe`
+  (GET or the one-click POST) writes `unsubscribes`, which every sender
+  checks, and marks the list row.
+- **The edition.** `homeExamples` takes a cap; the email uses five, so the
+  homepage and the email apply the same rules. Per scoring: season, week,
+  scoring, build time with board and odds times, up to five items (name,
+  fixture, kickoff, market, consensus, gap, "Derived estimate" and "Quoted
+  prop" labels, a dated finding link tagged `utm_source=newsletter`), "Only N
+  cleared the bar" when fewer, the gambling line, footer with why, unsubscribe
+  and postal address, `List-Unsubscribe` headers, and a text part. A scoring
+  with nothing qualifying gets no email.
+- **The send** (`sunday-edition`, `JOB_SCHEDULE` Sunday 7 and 8 AM ET, phase
+  3, after the 7 AM odds pull and before the 9:30 London kickoff). Off unless
+  mail is configured and `SUNDAY_EMAIL_SEND=on`; then a logged no-op. The
+  first build of the week is stored and is the edition. Each address is
+  claimed with one insert on (season, week, email) before mailing, so no
+  rerun mails anyone twice. Resend's batch endpoint, 100 per call, 400 per
+  run. A refused batch is released for the retry; one with no answer is
+  marked failed and not resent. Failures go to `job_runs` and `edition_runs`.
+- **Admin.** Operator tools gains "Sunday email": whether mail is configured
+  and sending is on, the schedule, list counts (never addresses), the last
+  editions with sent, failed and last error, a preview built now that sends
+  nothing, and a test send to one address marked "[Test]" and not recorded.
+- **Sign-up placement.** `it-signup.js`. The permanent place is `/sunday`
+  (new page, footer link "Sunday Email"). Offers after a useful result: under
+  the homepage examples, under the Vegas Edge board once it has players, and
+  on a finding page. Never a popup. "Not now" rests it 30 days in this
+  browser; it stops once this browser has asked. Nothing is drawn while
+  sign-ups are closed; `/sunday` says they are not open yet.
+- **Findings** (`/f/<id>`, new shell `finding.html`, noindex). Made only by
+  the server from its own board when a share button is pressed: a single
+  player only if he passes every example rule at that moment, or a comparison
+  of two players on the week board (Iron Tuna, consensus, and the market only
+  when fully priced off props). The id is a hash of the content, so the same
+  figures are one page. Thirty per origin per ten minutes (the same D1
+  limit as sign-ups), since each distinct pair is a stored row. The page and its image read the stored row and
+  nothing else, state the capture time and that the figures do not change,
+  and link the live views (player page, board, Start / Sit) apart from
+  themselves. Title, description, canonical and Open Graph tags are the
+  finding's.
+- **Share image** (`/f/<id>.svg`, 1200x630): player or pair, numbers, week,
+  scoring, capture time, "IRON TUNA", "A projection, not a prediction".
+- **Share controls** (`it-share.js`): Copy link (falls back to a selected
+  field), Share (where the browser has a share sheet), Save image (PNG drawn
+  from the SVG in the browser; shared as a file where supported, else
+  downloaded). Each sends `share_click` with its method. On the homepage
+  examples, the `/fantasy` flex call (as a comparison) and finding pages.
+- `privacy.html` describes the list, its separation from analytics, the
+  suppression list and Resend.
+
+### Phase 5 verification (2026-10-17)
+
+- `REQUIRE_BROWSER=1 node tools/test-sunday-email.mjs` (new, in CI): 142
+  checks. Node, on the worker's own section over an in-memory D1 with Resend
+  recorded: sign-up validation, consent, the hidden field, one answer for
+  every request, the address and origin limits, Washington, a failed
+  confirmation; GET confirms nothing, POST does, tampered, borrowed, swapped
+  and expired tokens refused, scoring changes, lifted suppression; the
+  edition's cap, fewer, labels, footer, headers, no em dash; the send off
+  without the switch, confirmed only, suppressed skipped, no address mailed
+  twice (rerun, a claim held elsewhere), the stored edition wins over a moved
+  board, refused versus unanswered batches, batches of 100, an empty scoring;
+  findings only for a current qualifier, one id for the same figures, the
+  page and image from the stored row, noindex, 404, Washington, the origin
+  limit; /admin's gate, counts, preview and test send. Real worker: routes,
+  unsubscribe marks the list, /admin's confirmed count, the job entry.
+  Chromium: /sunday closed and open, validation, the request and the event
+  (no address), the homepage share buttons, clipboard and offer ("Not now"
+  rests it), the flex call's comparison, the finding page (image, PNG
+  download, copy link, events), 390px with no sideways scroll, no page
+  errors.
+- Full CI node suite less `test-dry-run`: 77 of 77 pass (`test-chrome`,
+  `test-data-sources`, `test-jobs`, `test-seo`, `test-usage` updated for the
+  deliberate changes: the footer link, the SVG namespace identifier, the new
+  job, the noindex shell, the confirmed count). `test-dry-run.mjs`: 115 of
+  115 (run because the job table changed).
+- Generators: `build-chrome` (the footer link on 150 pages) and `build-seo`
+  (sitemap, `/sunday`) regenerated; all `--check` clean; `build-front` and
+  `build-worker-faces` produce no diff.
+- No email was sent and nothing was deployed: there are no
+  credentials in this environment, and the standing rules forbid both.
+
+### Still open from Phase 5
+
+- **Social previews use the site image.** X, Facebook and iMessage do not
+  render SVG previews, and the Worker has no PNG rasterizer, so a finding's
+  `og:image` is still `og.png`. The share image reaches people through "Save
+  image" and native sharing. A per-finding PNG needs a rasterizer at the edge
+  (a resvg WebAssembly module, or Cloudflare Browser Rendering); that is a
+  dependency decision for the owner.
+- **Delivery is untested against Resend.** The batch call, headers and
+  bounce behavior are written to Resend's API but exercised only against a
+  recorder. Use the /admin test send before turning sending on.
+- **No bounce or complaint handling.** Resend webhooks for bounces and
+  complaints are not wired to `unsubscribes`. Add before the list is large.
+- **Capacity.** 400 addresses a run and two runs a Sunday reach 800. Before
+  the list nears that, add a 9 AM entry (still before the 9:30 London kickoff)
+  or raise `EDITION_PER_RUN`; the claim makes either safe.
+- **One send per week.** The edition goes Sunday morning only. A Thursday game
+  has been played by then, so it is never in it; that is the offer as written.
+- **The Vegas Edge offer** is covered by a source check, not a browser run.
+
+## Next steps: Phase 6 (distribution and evaluation)
+
+Start here when told "Start next phase". The Phase 6 requirements are under
+"Later phases" below. Phase 5 leaves two pieces to reuse: dated findings
+(`findingCreate`, `/f/<id>`, the SVG image) for each weekly draft's link and
+image, and the UTM convention above for every link the drafts carry.
 
 ## Phase 2 requirements, as given (for reference)
 

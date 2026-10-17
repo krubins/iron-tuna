@@ -319,6 +319,9 @@ footer.site {margin-top:0}
       <div class="hm-ex-sets" id="hmExSets"></div>
       <p class="hm-fine" id="hmExAsOf"></p>
       <p class="hm-fine">Shown only for a healthy player with a game still to play, a market side priced entirely off quoted props from two or more books, and a gap of at least 2 points and 15%. A difference is a disagreement between two projections, not a prediction of the result.</p>
+      <!-- The Sunday email's offer (growth plan Phase 5), drawn by it-signup.js
+           under the examples it is made of; nothing while sign-ups are closed. -->
+      <div id="hmSub"></div>
     </div>
     <form class="search-field hm-find" role="search" autocomplete="off" action="/player" method="get">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
@@ -453,6 +456,7 @@ footer.site {margin-top:0}
     <li><a href="/players">Players</a></li>
     <li><a href="/faq#faq-start">How It Works</a></li>
     <li><a href="/data">Data Sources</a></li>
+    <li><a href="/sunday">Sunday Email</a></li>
     <li><a href="/faq">FAQ</a></li>
     <li><a href="/privacy">Privacy</a></li>
     <li><a href="/terms">Terms</a></li>
@@ -472,6 +476,8 @@ footer.site {margin-top:0}
      is guarded, so a band that paints first cannot throw. -->
 <script src="/it-action.js" defer></script>
 <script src="/player-search.js" defer></script>
+<script src="/it-share.js" defer></script>
+<script src="/it-signup.js" defer></script>
 <script>
 // ══ the homepage ═══════════════════════════════════════════════════════════
 // One rule for every live block: IT IS EITHER FULL OF REAL CURRENT DATA OR IT
@@ -535,6 +541,22 @@ footer.site {margin-top:0}
     var saved = null;
     try { saved = localStorage.getItem(SCORING_KEY); } catch (e) {}
     if (saved && saved !== 'ppr') setScoring(saved, false);
+    // Each example can be shared as a dated finding (growth plan Phase 5). The
+    // server makes the finding from its own board when a button is pressed,
+    // and refuses one for a player who no longer qualifies.
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.ITShare) {
+        var cards = document.querySelectorAll('#hmExSets .hm-ex[data-player]');
+        for (var c = 0; c < cards.length; c++) (function (li) {
+          var list = li.closest('[data-scoring]'), sc = list ? list.getAttribute('data-scoring') : 'ppr';
+          var who = li.getAttribute('data-player');
+          ITShare.buttons(li, { tool: 'home_examples', key: sc + '|' + who, title: who + ': market versus consensus',
+            text: who + ': where the betting market and the fantasy consensus disagree.',
+            link: function () { return ITShare.finding({ kind: 'gap', scoring: sc, player: who }); } });
+        })(cards[c]);
+      }
+      if (window.ITSignup) ITSignup.offer($('hmSub'), { tool: 'home_examples' });
+    });
   }
 
   // ── the tiles ────────────────────────────────────────────────────────────

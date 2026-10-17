@@ -56,6 +56,9 @@ const ALLOWED = {
   // side ever fetches it. Listed because this test matches host STRINGS, and
   // a rule that let an unexplained host through would not be worth having.
   'schema.org':               { kind: 'service', why: 'JSON-LD vocabulary identifier, never fetched' },
+  // The SVG namespace the finding share image declares (growth plan Phase 5).
+  // An identifier in an xmlns attribute, like schema.org above; never fetched.
+  'www.w3.org':               { kind: 'service', why: 'SVG namespace identifier, never fetched' },
   'irontuna.com':             { kind: 'own',     why: 'us' },
   'www.irontuna.com':         { kind: 'own',     why: 'us' },
   // Green sources from Addendum 13.1. Listed ahead of use so adopting them in

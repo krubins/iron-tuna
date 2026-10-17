@@ -318,6 +318,9 @@ p{color:var(--sec);margin:0 0 16px}
 <p>Iron Tuna prices players against the <b>betting market</b> first and the consensus projection feeds second. A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news; a ranking carries no such penalty. When a priced market and an unpriced list disagree, the disagreement is the thing worth reading.</p>
 <p class="is-note">The week, the game states and the byes on this page come from the NFL schedule itself, not from the calendar: a week is current until its own last game has finished. Game lines and totals are the market’s, pulled on a schedule and cached, never fetched from your browser. Where a number is derived rather than quoted, the page says so.</p>
 
+<!-- The Sunday email's offer (growth plan Phase 5), drawn once the board
+     above has players on it; nothing while sign-ups are closed. -->
+<div id="veSub"></div>
 <section id="tuna-market" data-kind="" aria-label="Tuna Market Signal"></section>
 </div><!-- /.wrap -->
 </main>
@@ -331,6 +334,7 @@ p{color:var(--sec);margin:0 0 16px}
     <li><a href="/players">Players</a></li>
     <li><a href="/faq#faq-start">How It Works</a></li>
     <li><a href="/data">Data Sources</a></li>
+    <li><a href="/sunday">Sunday Email</a></li>
     <li><a href="/faq">FAQ</a></li>
     <li><a href="/privacy">Privacy</a></li>
     <li><a href="/terms">Terms</a></li>
@@ -345,6 +349,7 @@ p{color:var(--sec);margin:0 0 16px}
   <!--/chrome:foot-->
 </div></footer>
 <script src="/it-season.js" defer></script>
+<script src="/it-signup.js" defer></script>
 <script>
 (function () {
   var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
@@ -379,6 +384,7 @@ p{color:var(--sec);margin:0 0 16px}
       // when either side of it has a player; empty when neither does.
       var veRows = (j.vsExperts.buys || []).length + (j.vsExperts.fades || []).length;
       itm(veRows ? 'success' : 'empty', 'vegas_edge', j.week || 'board', { rows: veRows });
+      if (veRows && window.ITSignup) ITSignup.offer($('veSub'), { tool: 'vegas_edge' });
       if (j.week) $('veWeek').textContent = j.week;
       $('veNote').innerHTML = (j.week ? '<b>' + e(j.week) + '.</b> ' : '') + e(j.note || 'Player props are priced this week; every number below says whether it is quoted or derived.') +
         (j.playedNote ? ' ' + e(j.playedNote) : '');

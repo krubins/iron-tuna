@@ -277,6 +277,24 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     <div class="note">Access is granted first, then the link is sent — that order matters, because a sign-in link is only ever issued to an address that already has access. Untick "Email it to them" to get the link without sending anything, for pasting into a DM. Full access is instant either way; the link only saves them the sign-in step.</div>
   </div>
 
+  <div class="card" id="edCard">
+    <h2>Sunday email</h2>
+    <p class="meta" id="edMeta">Loading&hellip;</p>
+    <div class="tblwrap"><table id="edRuns"></table></div>
+    <div class="field">
+      <label for="edScoring">Scoring
+        <select id="edScoring"><option value="ppr">PPR</option><option value="half">Half PPR</option><option value="standard">Standard</option></select>
+      </label>
+      <button class="btn" id="edPreview" type="button">Preview this week&rsquo;s edition</button>
+    </div>
+    <div class="field">
+      <input id="edTestTo" type="email" placeholder="you@example.com" autocomplete="off" spellcheck="false">
+      <button class="btn primary" id="edTestBtn" type="button">Send a test to this address</button>
+    </div>
+    <div class="msg" id="edMsg"></div>
+    <div class="note">The preview is built now from the current board and sends nothing. A test goes to one address with "[Test]" in the subject and is not recorded as a send. The real edition goes out Sunday morning only when RESEND_API_KEY, MAIL_ADDRESS and AUTH_SECRET are set and SUNDAY_EMAIL_SEND is "on"; each address is sent each week's edition at most once.</div>
+  </div>
+
   <div class="card" id="dfsCard">
     <h2>DFS salaries</h2>
     <p class="meta">Paste a DraftKings or FanDuel lobby CSV export for the main slate. The site's rows are stored for the current week and <a href="/in-season/dfs">the DFS page</a> reads the newest import. Nothing here submits an entry anywhere.</p>
@@ -488,8 +506,45 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   var opsLoaded = false;
   function opsLoad(){
     opsLoaded = true;
-    loadDashboard(); hlthLoad(); dfsLoad();
+    loadDashboard(); hlthLoad(); dfsLoad(); edLoad();
   }
+
+  // The Sunday email (growth plan Phase 5): whether it can send, the list's
+  // counts (never addresses), the last editions, a preview and a test send.
+  function edLoad(){
+    var key = getKey();
+    if (!key) return;
+    fetch('/api/admin/edition?key=' + encodeURIComponent(key))
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (!j || !j.ok) { $('edMeta').textContent = 'Unavailable: ' + ((j && j.error) || 'no answer'); return; }
+        var c = j.config || {}, n = j.counts, s = j.schedule;
+        $('edMeta').textContent = (c.mailConfigured ? 'Mail is configured. ' : 'Mail is not configured (missing ' + (c.missing || []).join(', ') + '), so the sign-up form is hidden. ') +
+          (c.sending ? 'Weekly sending is ON.' : 'Weekly sending is off (SUNDAY_EMAIL_SEND is "' + c.sendSwitch + '").') +
+          (s && s.when ? ' Scheduled ' + s.when + '.' : '') +
+          (n ? ' List: ' + num(n.confirmed) + ' confirmed, ' + num(n.pending) + ' awaiting confirmation, ' + num(n.unsubscribed) + ' unsubscribed; ' + num(n.suppressed) + ' addresses suppressed in all.' : ' No list yet.');
+        var runs = j.lastRuns || [];
+        $('edRuns').innerHTML = '<tr><th>Edition</th><th>Built</th><th class="num">Sent</th><th class="num">Failed</th><th>Last error</th></tr>' +
+          (runs.length ? runs.map(function(r){ return '<tr><td>' + esc(r.season + ' week ' + r.week) + '</td><td>' + esc(new Date(r.builtAt).toLocaleString()) + '</td><td class="num">' + num(r.sent) + '</td><td class="num">' + num(r.failed) + '</td><td>' + esc(r.lastError || '') + '</td></tr>'; }).join('')
+            : '<tr><td colspan="5" class="empty">No edition has been built.</td></tr>');
+      })
+      .catch(function(e){ $('edMeta').textContent = 'Unavailable: ' + (e && e.message); });
+  }
+  $('edPreview').addEventListener('click', function(){
+    window.open('/api/admin/edition?format=html&scoring=' + encodeURIComponent($('edScoring').value) + '&key=' + encodeURIComponent(getKey()), '_blank', 'noopener');
+  });
+  $('edTestBtn').addEventListener('click', function(){
+    var to = $('edTestTo').value.trim();
+    if (!to) { $('edMsg').textContent = 'Enter an address.'; return; }
+    $('edMsg').textContent = 'Sending…';
+    fetch('/api/admin/edition-test?key=' + encodeURIComponent(getKey()), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ to: to, scoring: $('edScoring').value }) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        $('edMsg').textContent = j && j.ok ? 'Sent "' + j.subject + '" (' + j.items + ' item' + (j.items === 1 ? '' : 's') + ').'
+          : 'Not sent: ' + ((j && (j.error + (j.missing ? ' (' + j.missing.join(', ') + ')' : ''))) || 'no answer');
+      })
+      .catch(function(e){ $('edMsg').textContent = 'Not sent: ' + (e && e.message); });
+  });
 
   function tile(label, val, sub, hero){
     return '<div class="tile' + (hero ? ' hero' : '') + '"><div class="lbl">' + esc(label) + '</div><div class="val">' + val + '</div>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>';
@@ -827,7 +882,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
         r7.newBrowsers ? num(r7.returned) + ' of ' + num(r7.newBrowsers) + ' new browsers' : 'no cohort is 7 days old yet') +
       tile('Returning + useful, last full week', lastFull ? num(lastFull.returningUseful) : '<span style="color:var(--muted)">n/a</span>',
         lastFull ? 'of ' + num(lastFull.returning) + ' returning, week of ' + esc(lastFull.weekStart) : 'no full week collected yet') +
-      tile('Email sign-ups', num(sub.signupEvents || 0), 'unconfirmed; confirmed: not measured') +
+      tile('Email sign-ups', num(sub.signupEvents || 0), sub.confirmed == null ? 'requests; confirmed: not measured'
+        : num(sub.confirmed) + ' confirmed in this window; ' + num(sub.confirmedList) + ' on the list') +
       tile('Empty or failed results', cp(bad, att), 'of ' + num(att) + ' tool outputs');
     $('useNote').textContent = 'A visitor here is one browser, identified by a random id kept in its own storage. A cleared or private browser, or a second device, reads as a new visitor, so returns are undercounted; a browser that blocks storage or scripts is not counted at all (the traffic numbers above still include it). ' +
       'A one-page visit is not treated as a failure: what counts as useful is a populated result, wherever it happened.';

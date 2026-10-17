@@ -798,6 +798,12 @@ jobs:
       - name: Parse it-myweek.js
         if: ${{ !cancelled() }}
         run: node --check it-myweek.js
+      - name: Parse it-share.js
+        if: ${{ !cancelled() }}
+        run: node --check it-share.js
+      - name: Parse it-signup.js
+        if: ${{ !cancelled() }}
+        run: node --check it-signup.js
 
       # The same board, asked about one player. The column prints twelve cases;
       # a card has to answer for all four hundred, and both read one
@@ -907,6 +913,18 @@ jobs:
         env:
           REQUIRE_BROWSER: '1'
         run: node tools/test-myweek.mjs
+
+      # Growth plan Phase 5: the Sunday email and shared findings. The worker's
+      # section on an in-memory D1 with Resend recorded (sign-up, double
+      # opt-in, the edition, a send that never mails one address twice,
+      # immutable findings, /admin), the real worker's routes, then /sunday,
+      # the homepage's share buttons and offer, the flex call's comparison and
+      # a finding page in Chromium.
+      - name: Sunday email and sharing
+        if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
+        env:
+          REQUIRE_BROWSER: '1'
+        run: node tools/test-sunday-email.mjs
 
       # it-metrics.js in a real browser: attribution and UTM stripping, one
       # visit across internal clicks, one success per result per visit, failure
