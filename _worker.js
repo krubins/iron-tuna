@@ -5688,12 +5688,26 @@ async function marketHistory(env, subject, market) {
 }
 // Every market a subject has, in one query -- what a player card or a market
 // record needs, rather than one round trip per stat.
-async function marketHistoryAll(env, subject) {
+//
+// With a season and week, only the rows pulled in that week. Without them it
+// is every row the store holds, which is the whole season: on 17 Oct 2026 the
+// weekly-intel page for a receiver on his Week 6 bye printed his Week 5 lines,
+// last seen six days earlier, under "Current props", and an "Open" that was
+// the first line of the season rather than of the week. A row's week is the
+// week it was pulled in, and books post a player's prop in the week of his
+// game, so the week filter is the week's market.
+async function marketHistoryAll(env, subject, season, week) {
   if (!(await snapshotReady(env))) return {};
+  // Two whole statements rather than one assembled, so tools/test-worker-sql
+  // can count each one's placeholders against its binds.
   try {
-    const q = await env.LEADS_DB.prepare(
-      'SELECT ts, book, subject, subject_type, market, line, over_odds, under_odds ' +
-      'FROM odds_snapshots WHERE subject = ? ORDER BY ts ASC LIMIT 6000').bind(_snapLookup(subject)).all();
+    const q = Number.isFinite(season) && Number.isFinite(week)
+      ? await env.LEADS_DB.prepare(
+        'SELECT ts, book, subject, subject_type, market, line, over_odds, under_odds ' +
+        'FROM odds_snapshots WHERE subject = ? AND season = ? AND week = ? ORDER BY ts ASC LIMIT 6000').bind(_snapLookup(subject), season, week).all()
+      : await env.LEADS_DB.prepare(
+        'SELECT ts, book, subject, subject_type, market, line, over_odds, under_odds ' +
+        'FROM odds_snapshots WHERE subject = ? ORDER BY ts ASC LIMIT 6000').bind(_snapLookup(subject)).all();
     const byMarket = {};
     for (const r of (q.results || [])) (byMarket[r.market] = byMarket[r.market] || []).push(r);
     const out = {};
@@ -7872,7 +7886,8 @@ async function boardsContext(env, opts) {
   ]);
   return { sched, state, ratings: teamRatingsFrom(sched), avail: availWk.table, week: availWk.weekly, usage,
            overlay: overlay ? overlay.overlay : null, weekMarkets, priorMarkets, nameIndex: _oddsProjectionIndex(),
-           pool: _availPool(PROJECTIONS), base: PROJECTIONS, rules: scoringRules(o.preset, o.custom) };
+           pool: _availPool(PROJECTIONS), base: PROJECTIONS, rules: scoringRules(o.preset, o.custom),
+           oddsAt: overlay && overlay.updatedAt ? overlay.updatedAt : null };
 }
 let _BOARDS_MEMO = new Map();
 async function boardsPayload(env, opts) {
@@ -7881,7 +7896,13 @@ async function boardsPayload(env, opts) {
   const hit = _BOARDS_MEMO.get(key);
   if (hit && Date.now() - hit.at < 300000) return hit.out;
   const ctx = await boardsContext(env, o);
-  const out = ctx ? buildBoards(ctx, o) : { ok: false, error: 'no_schedule', contract: BOARDS_CONTRACT };
+  let out = ctx ? buildBoards(ctx, o) : { ok: false, error: 'no_schedule', contract: BOARDS_CONTRACT };
+  // WHEN, for every page that prints a board (Phase 2 of the growth plan,
+  // 17 Oct 2026): `board` is when this answer was computed, `odds` when the
+  // projection overlay it priced against was last pulled (null when there is
+  // none, and the page says so rather than implying a market it did not read).
+  // Additive; nothing read the payload's top level for a time before.
+  if (out && out.ok) out = { ...out, updated: { board: Date.now(), odds: ctx.oddsAt || null } };
   if (_BOARDS_MEMO.size > 40) _BOARDS_MEMO = new Map();
   _BOARDS_MEMO.set(key, { at: Date.now(), out });
   return out;
@@ -8874,7 +8895,14 @@ function buildTake(rows, props, usage) {
   const s = [];
   const w = rows.week, r = rows.ros, pf = rows.playoffs;
   const pos = (w || r || pf || {}).position || '';
-  if (w) {
+  // A bye or a listed absence is the answer for the week, not a rank: a man
+  // with no game projects zero, and ranking him WR99 "with the market in
+  // agreement" (17 Oct 2026, Ja'Marr Chase on the Week 6 bye) reads as a
+  // verdict on him rather than on the calendar.
+  const w0 = w && w.weeks && w.weeks[0];
+  if (w0 && w0.bye) s.push(`He is on bye in Week ${w0.week}, so there is no projection for him this week.`);
+  else if (w0 && w0.out) s.push(`He is listed ${(w.injury && (w.injury.thisWeek || w.injury.status)) || 'out'} for Week ${w0.week}, so there is no projection for him this week.`);
+  else if (w) {
     s.push(`This week Iron Tuna has him ${pos}${w.ironTuna.rank}; the consensus says ${pos}${w.consensus.rank} and the market ${pos}${w.vegas.rank} (${w.vegas.basis}, ${w.vegas.confidence.toLowerCase()} confidence).`);
     if (w.marketDelta && w.marketDelta.significant) {
       s.push(`Market Delta ${w.marketDelta.points > 0 ? '+' : ''}${w.marketDelta.points} points, ${w.marketDelta.rank > 0 ? '+' : ''}${w.marketDelta.rank} slots: ${w.marketDelta.classification.toLowerCase()}.`);
@@ -8899,7 +8927,7 @@ function buildTake(rows, props, usage) {
     s.push(`Fantasy playoffs (Weeks 15-17): ${pos}${pf.ironTuna.rank}, ${pf.games} games` + (pf.scheduleDifficulty ? `, ${pf.scheduleDifficulty.label.toLowerCase()} schedule` : '') + `, ${pf.vegas.basis === 'ratings' ? 'no book has posted those games yet' : pf.vegas.basis}.`);
   }
   const propsN = Object.keys(props || {}).length;
-  if (!propsN && w) s.push('No sportsbook has a prop on him this week; his Vegas number is the game line\'s scoring environment applied to his line.');
+  if (!propsN && w && !(w0 && (w0.bye || w0.out))) s.push('No sportsbook has a prop on him this week; his Vegas number is the game line\'s scoring environment applied to his line.');
   return s.join(' ');
 }
 async function playerIntelPayload(env, name, position, opts) {
@@ -8907,27 +8935,36 @@ async function playerIntelPayload(env, name, position, opts) {
   const pos = String(position || '').toUpperCase().replace('DST', 'DEF');
   const key = _oddsNorm(name) + '|' + pos;
   const rows = {};
+  let season = null, week = null, updated = null;
   for (const hz of Object.keys(HORIZONS)) {
     const b = await boardsPayload(env, { horizon: hz, position: 'ALL', preset: o.preset || 'ppr', through: o.through || null });
     if (!b.ok) continue;
+    if (hz === 'week') { season = b.season; week = b.currentWeek; updated = b.updated || null; }
     const row = b.players.find(p => p.key === key);
     if (row) rows[hz] = row;
   }
   if (!Object.keys(rows).length) return { ok: false, error: 'off_board', name, position: pos };
-  const hist = await marketHistoryAll(env, name);
+  // This week's market only (see marketHistoryAll). No week, no props: a
+  // line from another week is never shown as this week's.
+  const hist = Number.isFinite(season) && Number.isFinite(week) ? await marketHistoryAll(env, name, season, week) : {};
   const mk = marketPropsFrom(hist);
   const usage = await usageCacheRead(env);
   const u = usage && usage.players ? usage.players[key] : null;
   const w = rows.week || null;
+  const w0 = w && w.weeks ? w.weeks[0] : null;
   return {
-    ok: true, contract: 1,
+    ok: true, contract: 1, season, week, updated,
     player: { name: (w || rows.ros || rows.playoffs || rows.next3).name, position: pos === 'DEF' ? 'DST' : pos, team: (w || rows.ros || rows.playoffs || rows.next3).team, key },
     horizons: rows,
     thisWeek: w ? {
       ironTuna: w.ironTuna, consensus: w.consensus, vegas: w.vegas, marketDelta: w.marketDelta, why: w.why,
       opponent: w.weeks[0] ? w.weeks[0].opponent : null, home: w.weeks[0] ? w.weeks[0].home : null,
       environment: w.weeks[0] ? w.weeks[0].env : null, kickoff: w.weeks[0] ? w.weeks[0].kickoff : null, gameStatus: w.weeks[0] ? w.weeks[0].status : null,
-      vegasProjection: w.weeks[0] ? w.weeks[0].vegasProjection : null, injury: w.injury, roleTrend: w.roleTrend
+      vegasProjection: w.weeks[0] ? w.weeks[0].vegasProjection : null, injury: w.injury, roleTrend: w.roleTrend,
+      // What the week IS for him, so the page can say so instead of printing
+      // a zero as a rank: no game (bye), listed out, or a game that has
+      // already kicked off (the numbers are then the pregame ones).
+      week: w0 ? w0.week : week, bye: !!(w0 && w0.bye), out: !!(w0 && w0.out), gameState: w0 ? w0.gameState || null : null
     } : null,
     props: mk.props, movement: mk.movement, propsAsOf: mk.asOf,
     tdProbability: w && w.vegas.td ? { probability: w.vegas.td.probability, basis: 'anytime-td-market', books: w.vegas.td.books }
@@ -10534,6 +10571,145 @@ function playersIndexHtml(idx) {
       + '</ul></section>';
   }
   return out;
+}
+// ── principal answers in the first HTML (growth plan Phase 2, 17 Oct 2026) ──
+// /rankings, a player's weekly page and a desk piece each assembled their
+// answer in the browser, so the HTML a crawler (or a reader on a slow phone)
+// received said "Reading the board…" and nothing else, and every desk piece
+// answered with the desk's own title and a canonical pointing at the desk.
+// These write the same answer into the shell at the edge, in the markup the
+// page's own script writes, so hydration replaces it without a second layout.
+// PUBLIC DATA ONLY: the default board at PPR, never a saved league, and the
+// response stays no-store like every other HTML page.
+const _preEsc = (x) => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// it-season.js's kickoff(): "Sat, 10/17, 1:00 PM ET". The same Intl call, so
+// a pre-rendered time is the string the page writes over it.
+function _etStamp(ms) {
+  if (!Number.isFinite(ms)) return '';
+  try {
+    const d = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'numeric', day: 'numeric' }).format(new Date(ms));
+    const t = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }).format(new Date(ms));
+    return d + ', ' + t + ' ET';
+  } catch (e) { return ''; }
+}
+
+// The player page's freshness line for a reader with no saved league, byte
+// for byte what player-intel.html's render() writes in that case.
+function playerIntelFresh(j) {
+  const w = j.thisWeek, wk = (w && w.week) || j.week, up = j.updated || {};
+  return [wk ? 'Week ' + _preEsc(wk) : null, 'points at PPR',
+    up.board ? 'board computed ' + _preEsc(_etStamp(up.board)) : null,
+    up.odds ? 'market read ' + _preEsc(_etStamp(up.odds)) : 'no market read on file'].filter(Boolean).join(' &middot; ')
+    + '. <a href="/rankings#method">How these are built</a> &middot; <a href="/my-league#settings">Score it at my league</a>';
+}
+
+// rankings.html's classify(), for the Market Delta column.
+function _rkClassify(cPts, cRank, vPts, vRank, D) {
+  const pts = (Number.isFinite(vPts) && Number.isFinite(cPts)) ? Math.round((vPts - cPts) * 10) / 10 : null;
+  const rank = (Number.isFinite(vRank) && Number.isFinite(cRank)) ? cRank - vRank : null;
+  const pct = (pts != null && cPts > 0) ? pts / cPts : null;
+  const su = (rank != null && rank >= D.strongRank) || (pct != null && pct >= D.strongPct && pts >= D.minPointsStrong);
+  const sd = (rank != null && rank <= -D.strongRank) || (pct != null && pct <= -D.strongPct && pts <= -D.minPointsStrong);
+  const lu = (rank != null && rank >= D.leanRank) || (pct != null && pct >= D.leanPct && pts >= D.minPointsLean);
+  const ld = (rank != null && rank <= -D.leanRank) || (pct != null && pct <= -D.leanPct && pts <= -D.minPointsLean);
+  let cls = D.classes[2];
+  if (su && !sd) cls = D.classes[0]; else if (sd && !su) cls = D.classes[4]; else if (lu && !ld) cls = D.classes[1]; else if (ld && !lu) cls = D.classes[3];
+  return { points: pts, rank, classification: cls };
+}
+const RK_PRE_POS = 'QB';   // the position rankings.html opens on
+const RK_PRE_COLS = [['rank', '#'], ['player', 'Player'], ['team', 'Team'], ['opp', 'Opponent'], ['it', 'Iron Tuna proj'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['conf', 'Confidence'], ['inj', 'Injury'], ['trend', 'Trend']];
+// The view rankings.html opens on with no saved league and no hash: This
+// Week, quarterbacks, the Iron Tuna board, PPR. The page does not print the
+// payload's `points`: it scores each stat line itself (it-league.js, the
+// engine scoreStats is pinned to by tools/test-scoring.mjs), and on 17 Oct
+// 2026 the two differed by up to half a point (Stafford 21.0 against 21.5),
+// enough to swap consensus ranks. So the stat lines are scored here, the same
+// way, and ranked the way the page ranks them, over the rows the week board
+// still carries (points descending, name to break a tie): the pre-rendered
+// QB4 is the QB4 the script settles on. Null when there is nothing to rank:
+// the page's own empty state is then the honest answer.
+function rankingsPrerender(b) {
+  if (!b || !b.ok || !Array.isArray(b.players) || !b.horizon || b.horizon.key !== 'week') return null;
+  const rules = scoringRules('ppr');
+  const sc = (x, p) => x && x.stats ? scoreStats(x.stats, p.position === 'DST' ? 'DEF' : p.position, rules) : null;
+  const rows = b.players.map(p => ({ p, i: sc(p.ironTuna, p), c: sc(p.consensus, p), v: sc(p.vegas, p) }))
+    .filter(r => r.i != null && Number.isFinite(r.i));
+  const groups = {};
+  for (const r of rows) (groups[r.p.position] = groups[r.p.position] || []).push(r);
+  for (const f of ['c', 'v', 'i']) for (const g of Object.values(groups)) {
+    g.slice().sort((a, x) => (x[f] - a[f]) || (a.p.name < x.p.name ? -1 : 1)).forEach((r, ix) => { r[f + 'Rank'] = ix + 1; });
+  }
+  const list = (groups[RK_PRE_POS] || []).sort((a, x) => a.iRank - x.iRank);
+  if (!list.length) return null;
+  const e = _preEsc, n1 = (v) => v == null || !Number.isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1);
+  const slug = (n) => String(n).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const cell = (r, key) => {
+    const p = r.p, w0 = (p.weeks || []).find(w => !w.bye && !w.out);
+    switch (key) {
+      case 'rank': return '<td class="num">' + r.iRank + '</td>';
+      case 'player': return '<td class="p"><a href="/player/' + slug(p.name) + '"><b>' + e(p.name) + '</b></a><span>' + e(p.position) + '</span></td>';
+      case 'team': return '<td>' + e(p.team) + '</td>';
+      case 'opp': return '<td>' + ((p.byes || []).length && !w0 ? '<span class="is-status">BYE</span>' : w0 ? e((w0.home ? 'vs ' : 'at ') + w0.opponent) : '—') + '</td>';
+      case 'it': return '<td class="num"><b>' + n1(r.i) + '</b></td>';
+      case 'crank': return '<td class="num">' + e(p.position) + r.cRank + '</td>';
+      case 'vrank': return '<td class="num">' + e(p.position) + r.vRank + ' <span class="is-status">' + e(p.vegas.basis) + '</span></td>';
+      case 'delta': {
+        const d = r.delta, cls = /BUY/.test(d.classification) ? 'buy' : /FADE|LOWER/.test(d.classification) ? 'fade' : /HIGHER/.test(d.classification) ? 'buy' : 'agree';
+        return '<td class="cls ' + cls + '">' + (d.rank == null ? '' : (d.rank > 0 ? '+' : '') + d.rank + ' slots · ') + (d.points == null ? '' : (d.points > 0 ? '+' : '') + d.points + ' pts<br>') + e(d.classification)
+          + (p.why && p.why.summary && d.classification !== 'MARKET AGREES' ? '<div class="rk-why" title="' + e(p.why.summary) + '">' + e(p.why.summary) + '</div>' : '') + '</td>';
+      }
+      case 'conf': return '<td><span class="rk-conf ' + e(p.vegas.confidence) + '">' + e(p.ironTuna.confidence) + '</span></td>';
+      case 'inj': return '<td>' + (p.injury ? '<span class="rk-inj">' + e(p.injury.status) + (p.injury.gamesOut ? ' (' + p.injury.gamesOut + ')' : '') + '</span>' : '—') + '</td>';
+      case 'trend': { const t = p.roleTrend || { label: 'no data' }; return '<td class="rk-trend ' + e(t.label) + '">' + (t.label === 'no data' ? '<span class="is-status">no usage yet</span>' : e(t.label) + (t.pct != null ? ' ' + (t.pct > 0 ? '+' : '') + t.pct + '%' : '')) + '</td>'; }
+    }
+    return '<td></td>';
+  };
+  for (const r of list) r.delta = _rkClassify(r.c, r.cRank, r.v, r.vRank, b.delta);
+  const head = RK_PRE_COLS.map(c => '<th data-key="' + c[0] + '"' + (/^(it|ppg|games|crank|vrank)$/.test(c[0]) ? ' class="num"' : '') + (c[0] === 'rank' ? ' aria-sort="ascending"' : '') + '>' + c[1] + '</th>').join('');
+  const body = list.slice(0, 200).map(r => '<tr>' + RK_PRE_COLS.map(c => cell(r, c[0]).replace(/^<td/, '<td data-k="' + c[0] + '" data-l="' + c[1] + '"')).join('') + '</tr>').join('');
+  const wk = b.horizon.weeks || [];
+  const note = 'Scored at <b>PPR</b> &middot; ' + e(b.horizon.label) + (wk.length ? ' (week' + (wk.length > 1 ? 's ' + wk[0] + '–' + wk[wk.length - 1] : ' ' + wk[0]) + ')' : '') + ' &middot; showing the <b>Iron Tuna</b> board.';
+  return { head, body, note, asOf: rankingsAsOf(b) };
+}
+// rankings.html's freshness line (#rkAsOf), the same words its script writes.
+function rankingsAsOf(b) {
+  const up = (b && b.updated) || {};
+  return [up.board ? 'Board computed ' + _preEsc(_etStamp(up.board)) : null,
+    up.odds ? 'betting market read ' + _preEsc(_etStamp(up.odds)) : 'no betting-market read on file, so the Vegas column is the fitted game environment']
+    .filter(Boolean).join(' &middot; ') + '.';
+}
+
+// A desk piece's head and its first screen: headline, kicker, publication
+// time and dek, the four things desk.html's piece() paints before the body.
+// A held or skipped piece is not an article and stays out of the index.
+function deskPieceHead(j) {
+  if (!j || !j.ok) return null;
+  const title = j.headline || j.title || 'The In-Season Desk';
+  const url = 'https://irontuna.com' + (j.url || '/in-season/desk');
+  const published = j.status === 'published';
+  let when = '';
+  try {
+    if (j.publishedAt) when = new Date(j.publishedAt).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET';
+  } catch (e) { when = ''; }
+  const e = _preEsc;
+  const desc = j.dek || ('Iron Tuna’s ' + (j.title || 'desk') + ' for Week ' + j.week + '.');
+  const ld = published ? '<script type="application/ld+json">' + JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'Article', '@id': url, url, headline: String(title).slice(0, 110),
+    description: desc, inLanguage: 'en-US', isAccessibleForFree: true,
+    ...(j.publishedAt ? { datePublished: new Date(j.publishedAt).toISOString() } : {}),
+    // The bylines are AI personas and the page says so; the article is the
+    // publication's, so the author is the organization, not a persona.
+    author: { '@id': 'https://irontuna.com/#organization' }, publisher: { '@id': 'https://irontuna.com/#organization' },
+    isPartOf: { '@id': 'https://irontuna.com/#website' },
+  }).replace(/</g, '\\u003c') + '</' + 'script>' : '';
+  return {
+    title: title + ' | Iron Tuna', desc, url, ogt: title, ogd: desc, published, ld,
+    eyebrow: 'The Desk · ' + (j.game ? 'Recap' : 'Week ' + j.week),
+    h1: e(title),
+    lede: 'Published ' + (when ? e(when) : 'not yet') + '.',
+    kicker: 'Weekly Fantasy &middot; ' + e(j.title) + ' &middot; Week ' + e(j.week) + (j.game ? ' &middot; Final' : '') + (j.edition > 1 ? ' &middot; update ' + e(j.edition) : ''),
+    dek: j.dek ? '<p class="dk-dek">' + e(j.dek) + '</p>' : '',
+  };
 }
 // ── data freshness ─────────────────────────────────────────────────────────
 // Every packet carries where each input came from and how old it is, graded
@@ -18943,6 +19119,11 @@ export default {
       // slug is resolved against the generated index (fetched through the asset
       // binding) and the card's numbers come off the served board.
       let __m = __SPA_SEO[__seoKey] || analystSeo(env, __seoKey);
+      // An address that names a player the index does not know is a 404 with
+      // the shell's own "no player by that name" and its lookup box, not a 200
+      // with noindex (a soft 404 to a search engine). Only when the index was
+      // actually read: a failed read is not evidence the player is unknown.
+      let __miss = false;
       if (!__m) {
         const __pm = /^\/player\/([A-Za-z0-9._-]+)$/.exec(__seoKey);
         if (__pm) {
@@ -18957,7 +19138,33 @@ export default {
           // describes the shell that was actually served.
           const __wk = POST_DRAFT_OPEN(env) || postDraftPreview(env, url, request);
           if (__p) __m = __wk ? playerSeo(env, __p, null, true) : playerSeo(env, __p, await playerBoardRow(env, __p));
+          else if (__idx) __miss = true;
+          // In season the week's answer goes into the HTML too: the take and
+          // its freshness line, off the same payload the page fetches.
+          if (__m && __m.week && !IS_WASHINGTON(request)) {
+            try { const __pi = await playerIntelPayload(env, __p.n, __p.p); if (__pi && __pi.ok) __m.intel = __pi; } catch (e) {}
+          }
         }
+      }
+      // /in-season/desk/<kind>[/<week>[/<game>]]: the piece's own head, its
+      // own canonical (the dated address, also for the undated "latest" one)
+      // and its first screen. The desk front itself is left as it is.
+      if (!__m && (POST_DRAFT_OPEN(env) || postDraftPreview(env, url, request))) {
+        const __dm = /^\/in-season\/desk\/([a-z-]+)(?:\/(\d{1,2})(?:\/([a-z0-9-]{1,40}))?)?$/.exec(__seoKey);
+        if (__dm && (CONTENT_KINDS[__dm[1]] || LEGACY_CONTENT[__dm[1]])) {
+          try {
+            const __sc = await scheduleCacheRead(env);
+            const __dj = await contentPiecePayload(env, __dm[1], __sc ? __sc.season : null, __dm[2] ? parseInt(__dm[2], 10) : null, __dm[3] || null);
+            const __dh = deskPieceHead(__dj);
+            if (__dh) __m = { ...__dh, desk: __dh };
+            else if (__dj && __dj.error === 'not_found') __miss = true;
+          } catch (e) {}
+        }
+      }
+      if (__miss && !__m) {
+        const __r = new Response(resp.body, { status: 404, headers: resp.headers });
+        __r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        return secure(__r);
       }
       if (__m) {
         let __html = await resp.text();
@@ -18984,9 +19191,15 @@ export default {
         // way at /player itself and at any slug the index does not know.
         if (__m.player && __m.week) {
           // The weekly-intel shell: indexable at this address, its name and club
-          // line pre-rendered for the crawlers that run no script, and the rest
+          // line pre-rendered for the crawlers that run no script, and since
+          // 17 Oct 2026 the week's take and how fresh it is; the tables are
           // left to the page, which fetches this week's board on load.
           const __ph = playerHeader(__m.player, null);
+          if (__m.intel) __html = __html
+            .replace('<p class="pi-note" id="piFresh"></p>', () => '<p class="pi-note" id="piFresh">' + playerIntelFresh(__m.intel) + '</p>')
+            .replace('<div class="pi-take" id="piTake" hidden></div>', () => __m.intel.take
+              ? '<div class="pi-take" id="piTake"><h2>Iron Tuna Take</h2>' + _preEsc(__m.intel.take) + '</div>'
+              : '<div class="pi-take" id="piTake" hidden></div>');
           __html = __html
             .replace('<meta name="robots" content="noindex,follow">',
               '<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">')
@@ -19018,6 +19231,20 @@ export default {
           // a "This week's intel" pair here; in season the address IS that
           // page, so there is no card left to put the buttons on.)
         }
+        if (__m.desk) {
+          const __d = __m.desk;
+          __html = __html
+            .replace('<p class="is-eyebrow" id="dkEyebrow">The Desk &middot; In-Season</p>', () => '<p class="is-eyebrow" id="dkEyebrow">' + _preEsc(__d.eyebrow) + '</p>')
+            .replace(/<h1 id="dkTitle"([^>]*)>[^<]*<\/h1>/, (m0, a) => '<h1 id="dkTitle"' + a + '>' + __d.h1 + '</h1>')
+            .replace(/<p class="is-lede" id="dkLede">[\s\S]*?<\/p>/, () => '<p class="is-lede" id="dkLede">' + __d.lede + '</p>')
+            .replace('<div class="is-actions" id="dkActions">', '<div class="is-actions" id="dkActions" hidden>')
+            .replace('<article class="dk-piece" id="dkPiece" hidden>', '<article class="dk-piece" id="dkPiece">')
+            .replace('<p class="dk-kicker" id="dkKicker"></p>', () => '<p class="dk-kicker" id="dkKicker">' + __d.kicker + '</p>')
+            .replace('<div id="dkBody"></div>', () => '<div id="dkBody">' + __d.dek + '</div>')
+            .replace('<div class="is-vacant" id="dkEmpty">', '<div class="is-vacant" id="dkEmpty" hidden>');
+          if (!__d.published) __html = __html.replace(/<meta name="robots" content="[^"]*">/, '<meta name="robots" content="noindex,follow">');
+          if (__d.ld) __html = __html.replace('</head>', () => __d.ld + '\n</head>');
+        }
         if (__m.analyst) {
           __html = __html
             .replace(/<meta name="robots" content="noindex"\s*\/?>/,
@@ -19034,6 +19261,32 @@ export default {
       // /players — the hub every card hangs off. The shell ships with an empty
       // host for the same reason the rankings shells do: the list is generated
       // on every projections update and a copy on disk would go stale.
+      // /rankings: the opening view (This Week, quarterbacks, PPR) in the
+      // table, with the week, the scoring and when the board was computed.
+      // Only when the served shell is the rankings page (out of season the
+      // address serves the section's waiting page) and outside Washington,
+      // where the market columns are not shown.
+      if (__seoKey === '/rankings' && !IS_WASHINGTON(request)) {
+        let __pre = null;
+        try {
+          __pre = rankingsPrerender(boardStillToPlay(await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr', through: null })));
+        } catch (e) { __pre = null; }
+        const __src = await resp.text();
+        let __h = __src;
+        if (__pre && __src.indexOf('<tbody id="rkBody"></tbody>') > 0) {
+          __h = __src
+            .replace('<table class="is-table rk-table" id="rkTable" hidden>', '<table class="is-table rk-table" id="rkTable">')
+            .replace('<thead><tr id="rkHead"></tr></thead>', () => '<thead><tr id="rkHead">' + __pre.head + '</tr></thead>')
+            .replace('<tbody id="rkBody"></tbody>', () => '<tbody id="rkBody">' + __pre.body + '</tbody>')
+            .replace('<p class="is-empty" id="rkEmpty">Reading the board&hellip;</p>', '<p class="is-empty" id="rkEmpty" hidden>Reading the board&hellip;</p>')
+            .replace('<p class="rk-fine" id="rkScoringNote"></p>', () => '<p class="rk-fine" id="rkScoringNote">' + __pre.note + '</p>')
+            .replace('<p class="rk-fine" id="rkAsOf"></p>', () => '<p class="rk-fine" id="rkAsOf">' + __pre.asOf + '</p>');
+        }
+        const __r = new Response(__h, resp);
+        __r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        __r.headers.delete('content-length');
+        return secure(__r);
+      }
       if (__seoKey === '/players') {
         const __idx = await playerIndex(env, url);
         if (__idx) {

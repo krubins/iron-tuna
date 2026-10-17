@@ -42,8 +42,8 @@ expectations and fantasy consensus. The retention feature is My Week.
 
 | # | Phase | Status | Branch |
 |---|---|---|---|
-| 1 | Analytics and admin dashboard | **Done** (2026-10-17, awaiting review and merge) | `claude/growth-phase-1` |
-| 2 | Reliability and search visibility | Not started | |
+| 1 | Analytics and admin dashboard | **Done** (2026-10-17, merged as #442) | `claude/growth-phase-1` |
+| 2 | Reliability and search visibility | **Done** (2026-10-17, awaiting review and merge) | `claude/growth-phase-2` |
 | 3 | First-visit experience | Not started | |
 | 4 | Repeat usage (My Week) | Not started | |
 | 5 | Email and sharing | Not started | |
@@ -221,19 +221,142 @@ beside every percentage and `n/a` where there is no denominator:
 
 ## Outstanding configuration and access
 
-- **Merge and deploy** `claude/growth-phase-1` (owner). The dashboard reads
-  "Nothing collected yet" until the first visit after deploy; retention needs
-  8 days of collection before the first mature cohort.
+- **Merge and deploy** `claude/growth-phase-2` (owner). Phase 1 merged as
+  #442 and is live, but on 2026-10-17 production held no outcome events yet;
+  check /admin's Tools table shows rows within a day, and if not, check that
+  `/api/track` is accepting them. Retention needs 8 days of collection before
+  the first mature cohort.
 - **Open /admin once from each browser you browse the site with** after deploy,
   so each is excluded by cookie and by id.
 - **D1 read allowance.** The new route reads `site_events` only (indexed on
   `event, ts`), a few thousand rows a day at current volume. If the account is
   ever back on the D1 free tier, the 90-day view is the expensive one.
-- **Search Console** (Phase 2) needs owner access to the property.
+- **Search Console**: the Phase 2 owner checks above need access to the property.
 
-## Next steps: Phase 2 (reliability and search visibility)
+## Phase 2: reliability and search visibility (2026-10-17)
 
-Start here when told "Start next phase". Requirements, from the brief:
+### What the audit found (live site, Saturday of Week 6)
+
+Read with raw HTTP and in Chromium at 390px against production, before any change.
+
+| Lead or check | Finding | Action |
+|---|---|---|
+| Rankings said Week 3 while others said Week 6 | Not reproduced. `/api/season`, `/api/boards`, `/`, `/rankings`, `/position`, `/vegas-edge`, `/fantasy` and `/previews` all said Week 6. Every page dates itself off the one `/api/season` read (`it-season.js`) or the board's own `currentWeek`. Likely the pre-2026-10-11 rankings pages, since removed. | None needed |
+| Player weekly page on a bye | Ja'Marr Chase (CIN bye) read "WR99, 0.0 pts, LOW", "Market Delta: market agrees" and "The market and the consensus agree on him this week." | Fixed: bye and listed-out weeks are stated, not ranked |
+| Player "Current props" | Showed his Week 5 lines, last seen six days earlier, as current. `marketHistoryAll` read every week the store holds, so "Open" was also the season's first line, not the week's. | Fixed: this week's rows only |
+| Initial HTML | No principal page carried its answer: `/rankings` shipped "Reading the board…", the player page a name only. | Fixed for `/rankings`, player pages, desk pieces |
+| Timestamps | The boards payload carried no time at all, so no page could say when its numbers were computed. | Fixed: `updated` on the payload, printed on both pages |
+| Desk articles | Every `/in-season/desk/<kind>/<week>` served the desk's own title and a canonical of `/in-season/desk`: to a search engine, one page. None is in the sitemap. | Fixed head, canonical, first screen and Article markup. Sitemap entry still open (below) |
+| Unknown `/player/<slug>` | 200 with noindex (a soft 404). | Fixed: 404, same page |
+| Sitemap (563 URLs, all fetched) | All 200, self-canonical, titled and described, none noindex, except `/hub`, which canonicalises to `/auctiondraft`. | `/hub` removed |
+| `/rankings/`, `/rankings.html` | 307 to `/rankings` (Cloudflare's asset `html_handling`). A permanent 301/308 would consolidate more firmly. | Not changed: config, see below |
+| Retired `/weekly-*-rankings` | 301 to `/rankings#…` | None needed |
+| robots.txt, `/admin`, `/in-season/*` aliases | Open to all crawlers; `/admin` noindex,nofollow; aliases canonicalise to the bare page. | None needed |
+| `www.` and `http://` | Could not be tested from this session (the proxy refuses `www.irontuna.com`; `http://` was answered through the proxy). | Owner check below |
+
+### What changed
+
+- **`/api/boards` payload** gains `updated: { board, odds }` (additive): when the
+  answer was computed and when the projection overlay it priced was pulled, null
+  when none was. `/rankings` prints it under the scoring note; the player page in
+  its freshness line. A payload without it (a synced league's board) prints
+  nothing.
+- **`/rankings` initial HTML**: the worker pre-renders the opening view (This
+  Week, quarterbacks, Iron Tuna board, PPR) into the table, with the scoring
+  note and the time line. It scores the stat lines with `scoreStats` exactly as
+  the page does, ranks over the rows the week board still carries, and lifts
+  the page's Market Delta rule (`_rkClassify`). Against live Week 6 data all 40
+  rows were identical before and after hydration at 390px and 1280px. Default
+  board only; a saved league is still applied in the browser. Not in
+  Washington.
+- **Player weekly page** (`player-intel.html`, `playerIntelPayload`,
+  `buildTake`): a bye or a listed-out week shows "On bye in Week 6" or "Listed
+  Out for Week 6" with no rank and no Market Delta; a kicked-off game says its
+  numbers are pregame; props are this week's only (`marketHistoryAll` takes
+  season and week), titled "This week's props", stamped "last seen", and absent
+  for a bye or an absence with the reason. A freshness line under the name gives
+  the week, the scoring, both times, a link to the method (`/rankings#method`)
+  and "Score it at my league". The take moved above the detail and is
+  pre-rendered with the freshness line. Payload gains `season`, `week`,
+  `updated`, and `thisWeek.week`, `bye`, `out`, `gameState` (all additive).
+- **Desk pieces**: title, description, canonical and social tags from the piece
+  itself (the undated "latest" address canonicalises to its dated one); the
+  eyebrow, headline, kicker, publication time and dek pre-rendered; Article
+  JSON-LD for published pieces, authored by the organization rather than an AI
+  persona. A held or skipped piece is noindex. A piece that does not exist is a
+  404.
+- **Structured data**: only the Article markup above, which the page visibly
+  supports. Rankings got none: an ItemList of a board that reorders by scoring
+  would describe one view of many.
+- `sitemap.xml` loses `/hub`.
+
+### Phase 2 verification (2026-10-17)
+
+- `node tools/test-prerender.mjs` (new, in CI): 61 checks. The Market Delta rule
+  against the page's own on 2,000 cases; the time format against
+  `it-season.js`; ranking by scored stat lines (fixture `points` deliberately
+  wrong), tie by name, BYE, escaping, and no pre-render for a failed, empty or
+  other-horizon board; the take for a bye, an absence and a game; the
+  freshness line and the page's own copy of it; this week's props by real SQL
+  on SQLite; the desk head, Article markup and held-piece handling; the real
+  worker end to end with no data (unknown player 404, known player 200 with no
+  invented take, `/rankings` and a desk piece falling back to the plain shell,
+  no-store headers, desk front untouched).
+- Full CI node suite less `test-dry-run`: 74 of 74 pass. `build-chrome`,
+  `build-ranks`, `build-seo`, `build-bylines --check` clean; `build-front` and
+  `build-worker-faces` produce no diff; every `node --check` target parses.
+- Browser, against live production data through the branch's pre-render and
+  pages (a scratch harness, not committed): `/rankings` 40 of 40 rows identical
+  with and without script, note and time line identical, no page errors, no
+  sideways scroll at 390 or 1280; player pages for a bye (Chase), a listed-out
+  quarterback (Lamar Jackson) and a playing one (Josh Allen) with identical
+  freshness line and take before and after hydration; a desk piece with
+  identical title, headline, kicker and publication line, body filled on
+  hydration.
+- Not run: `test-dry-run.mjs` (nothing here touches the newsroom schedule).
+- **Before-and-after events**: Phase 1 is live (`it-metrics.js` serves on
+  `/rankings`), but production `site_events` held no `tool_success`,
+  `tool_empty` or `tool_error` rows on 2026-10-17. There is no "before" to
+  compare. Read the Tools table on /admin after this deploys; the comparison
+  that matters is `rankings` and player-page errors per visit over the first
+  full week.
+
+### Owner checks (Search Console and configuration)
+
+1. Search Console, URL Inspection, live test: `/rankings`, one
+   `/player/<slug>`, one `/in-season/desk/<kind>/<week>`. Confirm the rendered
+   HTML carries the table, the take, and the piece's own canonical.
+2. Search Console, Pages report: watch "Duplicate, Google chose different
+   canonical" for desk pieces fall, and "Soft 404" for `/player/*` clear.
+3. Resubmit `sitemap.xml` (it lost `/hub`).
+4. Confirm `www.irontuna.com` and `http://irontuna.com` redirect permanently to
+   `https://irontuna.com` (Cloudflare: a redirect rule, and Always Use HTTPS).
+   Not testable from this session.
+5. Optional: set the asset `html_handling` so `/page/` and `/page.html` answer
+   308 rather than 307, or add a redirect rule. Low value; the canonical tags
+   already name the clean address.
+
+### Still open from Phase 2
+
+- **Desk pieces in the sitemap.** They are database rows, not files, so
+  `build-seo` cannot list them. A worker-served `/sitemap-desk.xml`, listed in
+  `robots.txt`, would; it was left out to keep this phase to fixing what exists.
+- **`/position`, `/vegas-edge`, `/fantasy` are still client-rendered.**
+  `/position` reads its position from the hash, which the worker never sees, so
+  a pre-render would have to guess. `/vegas-edge` is the next candidate (Phase 3
+  leans on it).
+- The rest of the desk body stays client-rendered: its sections are typed data
+  that only `desk.html` knows how to lay out.
+
+## Next steps: Phase 3 (first visit)
+
+Start here when told "Start next phase". The Phase 3 requirements are under
+"Later phases" below. Two things Phase 2 leaves for it: `/vegas-edge`, the
+destination of the homepage's primary action, has no answer in its initial
+HTML yet, and `updated` on the boards payload is the timestamp each homepage
+example should carry.
+
+## Phase 2 requirements, as given (for reference)
 
 1. Investigate consistency of season, current NFL week, schedule status,
    projections and cache invalidation across `/`, `/rankings`, `/position`,
