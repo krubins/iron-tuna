@@ -241,8 +241,12 @@
       return root.fetch('/api/roster-read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
         .then(function (r) { return r.json(); })
         .then(adopt)
-        .catch(function () { msg('The reader did not answer. Try again in a moment.', true); });
+        .catch(function () { msg('The reader did not answer. Try again in a moment.', true); fail('network'); });
     }
+    // A failed read tells the page too, so it can offer the typed path beside
+    // the retry (growth plan Phase 4): a reader whose screenshot will not read
+    // should not be left with nothing but the same button.
+    function fail(kind) { if (typeof o.onFail === 'function') { try { o.onFail(kind, state); } catch (e) {} } }
 
     function read(files) {
       var list = [].slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); }).slice(0, 8);
@@ -253,7 +257,7 @@
       var note = textEl ? (textEl.value || '').trim().slice(0, 2000) : '';
       Promise.all(list.map(shrink))
         .then(function (images) { return send(note ? { images: images, text: note } : { images: images }); })
-        .catch(function () { msg('That image could not be read in this browser.', true); });
+        .catch(function () { msg('That image could not be read in this browser.', true); fail('image'); });
     }
 
     // The typed path. Whole rosters as words — most league pages print them as
@@ -269,14 +273,14 @@
     // the same screenshot is sent twice, and nothing tells that apart from a
     // league holding two teams of the same name.
     function adopt(j) {
-      if (!j || !j.ok) { msg((j && j.error) || 'The reader could not read that.', true); return; }
+      if (!j || !j.ok) { msg((j && j.error) || 'The reader could not read that.', true); fail((j && j.error) || 'not_ok'); return; }
       state.teams = (j.teams || []).map(function (t) {
         return { name: String(t.name == null ? '' : t.name).slice(0, 60),
                  players: (t.players || []).map(function (p) { return { name: p.name, position: p.pos || null, team: p.team || null }; }).filter(function (p) { return p && p.name; }) };
       }).filter(function (t) { return t.players.length; });
       state.mine = -1; state.partial = !!j.partial;
       render();
-      if (!state.teams.length) { msg('No rosters in that image.', true); return; }
+      if (!state.teams.length) { msg('No rosters in that image.', true); fail('empty'); return; }
       var n = state.teams.reduce(function (a, t) { return a + t.players.length; }, 0);
       msg('Read ' + state.teams.length + ' team' + (state.teams.length === 1 ? '' : 's') + ', ' + n + ' players.' +
         (state.partial ? ' The reader ran out of room, so the last team may be short — split the grid and send the pieces together.' : '') +

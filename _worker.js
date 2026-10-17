@@ -16044,6 +16044,10 @@ async function leagueReady(env) {
 // A league is the reader's own entry and never refreshes itself, so the only
 // age that matters is how long ago they last touched it.
 const LEAGUE_STALE_MS = 12 * 3600 * 1000;              // "may be outdated" after this
+// A league the reader saved by hand is never refreshed for them. Past a week
+// its rosters have missed at least one waiver run, so My Week says so beside
+// every recommendation rather than treating a stale room as current.
+const LEAGUE_ROSTER_STALE_MS = 7 * 86400000;
 // The session behind a request: the same cookie /api/auth/me reads, checked
 // against the sessions table so a signed-out device stays signed out.
 async function leagueSessionEmail(request, env) {
@@ -16749,11 +16753,26 @@ async function leagueBoard(env, L, horizon, through) {
     }
     const st = idx.get(r.key);
     r.roster = st ? { status: st.isUser ? 'mine' : 'rostered', teamId: st.teamId, teamName: st.teamName, slot: st.slot, slotLabel: st.slotLabel, isUser: st.isUser, isOpponent: st.isOpponent }
-                  : { status: idx.waiver.has(r.key) ? 'waiver' : 'available', teamId: null, teamName: null, slot: null, isUser: false, isOpponent: false };
+                  : { status: !idx.poolKnown ? 'unverified' : idx.waiver.has(r.key) ? 'waiver' : 'available', teamId: null, teamName: null, slot: null, isUser: false, isOpponent: false };
     return r;
   });
   leagueRankRows(rows);
-  return { ...out, scoring: { preset: 'league', label: L.label }, league: { id: L.id, name: L.name, provider: L.provider, userTeamId: L.userTeamId }, players: rows };
+  return { ...out, scoring: { preset: 'league', label: L.label }, league: { id: L.id, name: L.name, provider: L.provider, userTeamId: L.userTeamId }, pool: leaguePool(L), players: rows };
+}
+// THE FREE-AGENT POOL IS KNOWN only when every team in the league has a
+// saved roster at least as long as its starting lineup (growth plan Phase 4,
+// 17 Oct 2026). A manual league is usually one roster: the reader's own, in a
+// twelve-team room. Reading "not on a saved roster" as "available" there
+// called every player on eleven other teams a free agent and priced FAAB bids
+// on them. With the pool unknown, a player on no saved roster is
+// `unverified`: the advice still says what he would add, and says to check
+// availability rather than to claim him.
+function leaguePool(L) {
+  const want = Number(L.numTeams) || (L.teams || []).length;
+  const need = Math.max(1, leagueStarterSlots(L.settings && L.settings.roster).length);
+  const rostered = (L.rosters || []).filter(r => (r.players || []).length > 0).length;
+  const complete = (L.rosters || []).filter(r => (r.players || []).length >= need).length;
+  return { known: want >= 2 && (L.teams || []).length >= want && complete >= want, teams: want, rostered, complete };
 }
 // key -> where he is in this league. `waiver` is derived: a player dropped in
 // the last two days has not cleared waivers yet in most rooms.
@@ -16763,6 +16782,7 @@ function leagueRosterIndex(L) {
   const oppId = leagueOpponentId(L);
   for (const r of L.rosters || []) for (const p of r.players || []) if (p.key) m.set(p.key, { teamId: r.teamId, teamName: names.get(r.teamId) || r.teamId, slot: p.slot, slotLabel: p.slotLabel, isUser: r.teamId === L.userTeamId, isOpponent: r.teamId === oppId });
   m.waiver = new Set();
+  m.poolKnown = leaguePool(L).known;
   const cutoff = Date.now() - 2 * 86400000;
   for (const x of L.transactions || []) if (x.ts && x.ts >= cutoff) for (const d of x.drops || []) if (d.key && !m.has(d.key)) m.waiver.add(d.key);
   return m;
@@ -16809,6 +16829,15 @@ function leagueOptimize(players, roster, pts) {
   const bench = rows.filter(r => !used.has(r));
   const total = starters.reduce((n, r) => n + r.v, 0);
   return { slots, starters, bench, total: _oddsRound(total) };
+}
+// When the advice was computed and from what, for the line under each module
+// on My Week: the board's own times, and when the league itself was last
+// saved, which is the one input only the reader can refresh.
+function leagueAsOf(b, L) {
+  const up = (b && b.updated) || {};
+  const saved = (L.sync && (L.sync.lastOkAt || L.sync.lastAt)) || L.updatedAt || null;
+  return { board: up.board || null, odds: up.odds || null, week: b && b.currentWeek != null ? b.currentWeek : null, leagueSaved: saved,
+           leagueStale: !!saved && Date.now() - saved > LEAGUE_ROSTER_STALE_MS };
 }
 function leagueConfidence(margin, base) {
   const rel = base > 0 ? margin / base : 0;
@@ -16862,10 +16891,11 @@ async function leagueLineup(env, L, board) {
   const currentTotal = slotsKnown ? _oddsRound(mine.filter(p => p.slot === 'starter').reduce((n, p) => n + p.points, 0)) : null;
   return {
     ok: true, contract: LEAGUE_CONTRACT, week: b.currentWeek, analyst: 'dalton',
-    lineup: opt.starters.map(s => ({ slot: s.slot, name: s.p ? s.p.name : null, position: s.pos, team: s.p ? s.p.team : null, projected: _oddsRound(s.v), why: s.p ? _lgWhy(s.p.row) : null, empty: !!s.empty })),
-    bench: opt.bench.map(r => ({ name: r.p.name, position: r.pos, team: r.p.team, projected: _oddsRound(r.v), ranked: r.p.ranked, bye: r.p.bye, out: r.p.out, slot: r.p.slot })),
+    lineup: opt.starters.map(s => ({ slot: s.slot, key: s.p ? s.p.key : null, name: s.p ? s.p.name : null, position: s.pos, team: s.p ? s.p.team : null, projected: _oddsRound(s.v), why: s.p ? _lgWhy(s.p.row) : null, injury: s.p && s.p.injury ? s.p.injury.status || null : null, empty: !!s.empty })),
+    bench: opt.bench.map(r => ({ key: r.p.key, name: r.p.name, position: r.pos, team: r.p.team, projected: _oddsRound(r.v), ranked: r.p.ranked, bye: r.p.bye, out: r.p.out, slot: r.p.slot, injury: r.p.injury ? r.p.injury.status || null : null })),
     reserve: mine.filter(p => p.slot === 'ir' || p.slot === 'taxi').map(p => ({ name: p.name, position: p.position, slot: p.slot })),
     projectedTotal: opt.total, currentTotal, slotsKnown, improvement: slotsKnown ? _oddsRound(opt.total - currentTotal) : null, decisions, changes,
+    scoring: L.label, asOf: leagueAsOf(b, L),
     unranked: mine.filter(p => !p.ranked && p.slot !== 'ir').map(p => p.name)
   };
 }
@@ -16897,7 +16927,7 @@ async function _leaguePickups(env, L, opts) {
   const baseW = leagueOptimize(mineW, roster).total, base3 = leagueOptimize(mine3, roster).total, baseR = leagueOptimize(mineR, roster);
   const ptsOf = (b, key) => { const r = b.players.find(p => p.key === key); return r ? r.ironTuna.points : 0; };
   const byKeyW = new Map(bw.players.map(p => [p.key, p])), byKey3 = new Map(b3.players.map(p => [p.key, p]));
-  const avail = br.players.filter(p => (p.roster.status === 'available' || p.roster.status === 'waiver') && usable.has(p.pos) && p.games > 0);
+  const avail = br.players.filter(p => (p.roster.status === 'available' || p.roster.status === 'waiver' || p.roster.status === 'unverified') && usable.has(p.pos) && p.games > 0);
   avail.sort((a, b) => b.ironTuna.points - a.ironTuna.points);
   const cands = [];
   const perPos = {};
@@ -16941,7 +16971,7 @@ async function _leaguePickups(env, L, opts) {
     if (drop) why.push('projects ' + c.ironTuna.points + ' rest of season to ' + drop.p.name + '’s ' + _oddsRound(dropR));
     if (stash) why.push('a stash: does not start for you now, but your best bench upgrade at ' + c.pos);
     if (c.roleTrend && c.roleTrend.applied && c.roleTrend.label) why.push('usage trend: ' + c.roleTrend.label);
-    rows.push({ key: c.key, name: c.name, position: c.pos, team: c.team, status: c.roster.status, injury: inj, priority, score: _oddsRound(ppg),
+    rows.push({ key: c.key, name: c.name, position: c.pos, team: c.team, status: c.roster.status, verified: c.roster.status !== 'unverified', injury: inj, priority, score: _oddsRound(ppg),
                 projected: { week: cw ? cw.ironTuna.points : 0, next3: c3 ? c3.ironTuna.points : 0, ros: c.ironTuna.points, rosRank: c.ironTuna.rank },
                 gain: { week: gainW, next3: gain3, ros: gainR, bench: benchGain }, cracksLineup: gainW > 0, stash,
                 drop: drop ? { name: drop.p.name, position: drop.pos, team: drop.p.team, ros: _oddsRound(dropR) } : (rosterFull ? null : { open: true }),
@@ -16950,7 +16980,8 @@ async function _leaguePickups(env, L, opts) {
   const order = { High: 0, Medium: 1, Low: 2, Stash: 3 };
   rows.sort((a, b) => order[a.priority] - order[b.priority] || b.score - a.score);
   return { ok: true, contract: LEAGUE_CONTRACT, analyst: 'grant', week: bw.currentWeek, league: { id: L.id, name: L.name, numTeams: L.numTeams, faab: L.settings.faab, waiverType: L.settings.waiverType, budgetLeft: budget },
-           rosterFull, rosterSize: leagueRosterSize(roster), rostered: mineR.length, pickups: rows.slice(0, o.limit || 20), availableCount: avail.length };
+           rosterFull, rosterSize: leagueRosterSize(roster), rostered: mineR.length, pickups: rows.slice(0, o.limit || 20), availableCount: avail.length,
+           pool: leaguePool(L), scoring: L.label, asOf: leagueAsOf(bw, L) };
 }
 // This week's matchup: both best lineups at the league's scoring, the slots
 // that swing it, the opponent's injury exposure, and who on waivers helps.
@@ -16974,13 +17005,13 @@ async function leagueMatchup(env, L) {
   swing.sort((x, y) => Math.abs(y.edge) - Math.abs(x.edge));
   const risk = (opt) => opt.starters.filter(s => s.p && s.p.injury && s.p.injury.status && /out|doubtful|questionable|ir|pup|sus/i.test(String(s.p.injury.status))).map(s => ({ name: s.p.name, position: s.pos, status: s.p.injury.status, projected: _oddsRound(s.v) }));
   let upgrades = [];
-  try { const pk = await leaguePickups(env, L, { limit: 40 }); if (pk.ok) upgrades = pk.pickups.filter(p => p.cracksLineup).slice(0, 3).map(p => ({ name: p.name, position: p.position, gainThisWeek: p.gain.week, drop: p.drop && p.drop.name ? p.drop.name : null })); } catch (e) {}
+  try { const pk = await leaguePickups(env, L, { limit: 40 }); if (pk.ok) upgrades = pk.pickups.filter(p => p.cracksLineup).slice(0, 3).map(p => ({ name: p.name, position: p.position, gainThisWeek: p.gain.week, drop: p.drop && p.drop.name ? p.drop.name : null, verified: p.verified !== false })); } catch (e) {}
   const verdict = diff == null ? 'no opponent found this week' : Math.abs(diff) < 4 ? 'toss-up' : Math.abs(diff) < 10 ? (diff > 0 ? 'lean you' : 'lean opponent') : (diff > 0 ? 'you are favored' : 'opponent is favored');
   return { ok: true, contract: LEAGUE_CONTRACT, week: m ? m.week : b.currentWeek, analyst: 'dalton',
            you: { teamId: L.userTeamId, name: (names.get(L.userTeamId) || {}).name || 'You', projected: mine.total, record: names.get(L.userTeamId) ? [names.get(L.userTeamId).wins, names.get(L.userTeamId).losses] : null, injuryRisk: risk(mine) },
            opponent: theirs ? { teamId: oppId, name: (names.get(oppId) || {}).name || 'Opponent', manager: (names.get(oppId) || {}).manager || null, projected: theirs.total, record: names.get(oppId) ? [names.get(oppId).wins, names.get(oppId).losses] : null, injuryRisk: risk(theirs),
                                lineup: theirs.starters.map(s => ({ slot: s.slot, name: s.p ? s.p.name : null, position: s.pos, projected: _oddsRound(s.v) })) } : null,
-           edge: diff, verdict, swing: swing.slice(0, 5), upgrades,
+           edge: diff, verdict, swing: swing.slice(0, 5), upgrades, pool: leaguePool(L), scoring: L.label, asOf: leagueAsOf(b, L),
            note: 'Projected totals are the best lineup each side could set at your scoring, not the lineup they have set. Treat a gap under four points as a coin flip.' };
 }
 // Last-minute intel for this roster: who on it is out, doubtful or
@@ -17158,9 +17189,9 @@ function leagueAvailabilityLookup(L, items) {
     if (!key && it.name) { for (const pos of it.position ? [leaguePos(it.position)] : ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']) { const r = leagueResolvePlayer({ name: it.name, position: pos, team: it.team }); if (r.key) { key = r.key; break; } } }
     if (!key) { out.push({ name: it.name || null, key: null, status: 'unknown' }); continue; }
     const st = idx.get(key);
-    out.push({ name: it.name || key, key, status: st ? (st.isUser ? 'mine' : 'rostered') : (idx.waiver.has(key) ? 'waiver' : 'available'),
+    out.push({ name: it.name || key, key, status: st ? (st.isUser ? 'mine' : 'rostered') : (!idx.poolKnown ? 'unverified' : idx.waiver.has(key) ? 'waiver' : 'available'),
                teamName: st ? st.teamName : null, teamId: st ? st.teamId : null, slot: st ? st.slot : null, isUser: !!(st && st.isUser), isOpponent: !!(st && st.teamId === oppId),
-               label: st ? (st.isUser ? 'On your roster' + (st.slot === 'starter' ? ' (starting)' : st.slot === 'ir' ? ' (IR)' : ' (bench)') : (st.teamId === oppId ? 'On your opponent’s roster' : 'Rostered by ' + (names.get(st.teamId) || st.teamName))) : (idx.waiver.has(key) ? 'On waivers in your league' : 'Available in your league') });
+               label: st ? (st.isUser ? 'On your roster' + (st.slot === 'starter' ? ' (starting)' : st.slot === 'ir' ? ' (IR)' : ' (bench)') : (st.teamId === oppId ? 'On your opponent’s roster' : 'Rostered by ' + (names.get(st.teamId) || st.teamName))) : (!idx.poolKnown ? 'Not on a saved roster: check availability in your league' : idx.waiver.has(key) ? 'On waivers in your league' : 'Available in your league') });
   }
   return out;
 }

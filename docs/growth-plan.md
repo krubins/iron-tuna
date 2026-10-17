@@ -44,8 +44,8 @@ expectations and fantasy consensus. The retention feature is My Week.
 |---|---|---|---|
 | 1 | Analytics and admin dashboard | **Done** (2026-10-17, merged as #442) | `claude/growth-phase-1` |
 | 2 | Reliability and search visibility | **Done** (2026-10-17, merged as #443) | `claude/growth-phase-2` |
-| 3 | First-visit experience | **Done** (2026-10-17, awaiting review and merge) | `claude/growth-phase-3` |
-| 4 | Repeat usage (My Week) | Not started | |
+| 3 | First-visit experience | **Done** (2026-10-17, merged as #444) | `claude/growth-phase-3` |
+| 4 | Repeat usage (My Week) | **Done** (2026-10-17, awaiting review and merge) | `claude/growth-phase-4` |
 | 5 | Email and sharing | Not started | |
 | 6 | Distribution and evaluation | Not started | |
 
@@ -221,8 +221,8 @@ beside every percentage and `n/a` where there is no denominator:
 
 ## Outstanding configuration and access
 
-- **Merge and deploy** `claude/growth-phase-3` (owner). Phases 1 and 2 merged
-  as #442 and #443. On 2026-10-17 production held no outcome events yet;
+- **Merge and deploy** `claude/growth-phase-4` (owner). Phases 1 to 3 merged
+  as #442, #443 and #444. On 2026-10-17 production held no outcome events yet;
   check /admin's Tools table shows rows within a day, and if not, check that
   `/api/track` is accepting them. Retention needs 8 days of collection before
   the first mature cohort.
@@ -454,13 +454,103 @@ Miller (consensus 0.9) and every no-line fade were suppressed.
   presets, not their own scoring, on the homepage (every other board restates
   in their points).
 
-## Next steps: Phase 4 (repeat usage)
+## Phase 4: repeat usage, My Week (2026-10-17)
 
-Start here when told "Start next phase". The Phase 4 requirements are under
-"Later phases" below. Phase 3 leaves it a labelled sample of what My Week
-should look like (flex call, market alert, pickups only with a known pool),
-and `home_sample` as the surface to measure whether the sample leads to a
-saved league.
+### What the audit found
+
+- **"Available" was a guess.** A player on no saved roster was called
+  available everywhere (My Week's pickups and matchup, the rankings tag, the
+  player page, story callouts). A manual league is usually the reader's own
+  roster in a twelve-team room, so every player on eleven other teams was
+  called a free agent and priced for FAAB. My Leagues' own copy said so
+  ("without them the free-agent pool is everyone not on your team").
+- No module said at what scoring or from how fresh a board its advice was, and
+  nothing flagged a league the reader had not re-saved in weeks.
+- My Week had no memory: a returning reader saw the same page with no hint of
+  what had moved.
+- A failed roster read or save left only a red message and the same button.
+
+### What changed
+
+- **The free-agent pool (`leaguePool`, `_worker.js`).** Known only when every
+  team in the league has a saved roster at least as long as its starting
+  lineup. Otherwise a player on no saved roster is `unverified`, not
+  `available`: in the league board, the pickup advisor (each pickup carries
+  `verified`), matchup upgrades, playoff bench moves and the availability
+  lookup ("Not on a saved roster: check availability in your league"). The
+  advice still says what he would add. Rankings, the player page and story
+  callouts no longer tag such a player "Available"; the player page links to
+  saving every roster instead.
+- **My Week's pickups card** reads "Worth checking on your wire" when the pool
+  is unknown, says how many of the league's rosters are saved and that Iron
+  Tuna cannot tell who is a free agent, writes "If available:" with a "check
+  availability" tag instead of ADD, and links to saving every roster.
+- **Rationale, scoring and freshness on each recommendation.** Lineup,
+  pickups and matchup answers gain `scoring` and `asOf` (week, board computed,
+  odds read, league saved, `leagueStale`); lineup rows gain `key` and `injury`
+  (all additive). Each card on My Week ends with "At <scoring> · Week N ·
+  board computed ... · odds read ... · league saved ...", in red with an
+  "update them" link when the league was last saved over a week ago
+  (`LEAGUE_ROSTER_STALE_MS`).
+- **Since your last visit (`it-myweek.js`, new).** One small snapshot per
+  league in this browser (`it.mw.snap.<id>`), never on the server. Reports
+  only material, supported changes: an injury designation appeared, changed
+  or cleared; a player moved into or out of the best lineup; a player was
+  added to or dropped from the saved roster; a starter's projection moved 2
+  points and 20%. A first visit says it set the baseline; a new NFL week sets
+  a new one; a changed scoring is said and its restated points are not called
+  moves. Capped at eight lines.
+- **Persistence explained.** The section says the baseline is kept in this
+  browser only and that the league itself is saved to the reader's account
+  and follows them to any signed-in device.
+- **League switcher and prominence.** The existing switcher (it-sync strip)
+  keeps a separate baseline per league. My Week remembers the active league's
+  name in this browser (`it.myweek`), and the homepage then shows "Your week
+  in <league>" under the primary action (surface `home_myweek`); it clears
+  when the account has no league or the reader is signed out.
+- **Recovery from failed imports.** `it-roster-grid.js` reports a failed read
+  (`onFail`); My Leagues then offers "Type your roster instead", which opens
+  the by-hand form with the reader's team as read already in it, and the same
+  on a failed save. The form's copy now says what missing rosters cost.
+
+### Phase 4 verification (2026-10-17)
+
+- `REQUIRE_BROWSER=1 node tools/test-myweek.mjs` (new, in CI): 41 checks.
+  Node: what the diff reports and what it does not (Probable, sub-threshold
+  moves, the swap as projection moves), cleared designations, new week,
+  changed scoring, bad input, no em dash. Browser at 390px against stubbed
+  league APIs: two leagues in the switcher; first visit; no change; injury
+  and projection lines; changed scoring; new week; switching league keeps a
+  separate baseline; one roster of ten (card copy, "If available", playoff
+  note); a league saved nine days ago flagged stale; the homepage link
+  appears and clears; the rosters box's typed path on a failed read; no
+  sideways scroll; no page errors.
+- `tools/test-league-sync.mjs`: 118 checks (the manual-league pickup check
+  rewritten for the unknown pool, plus pool known for a full room, a short
+  roster leaving it unknown, the board and lookup saying "check", scoring and
+  freshness on the answers, the stale flag, and the lineup's `key` and
+  `injury`).
+- Full CI node suite less `test-dry-run`: 76 of 76 pass. Generators clean.
+- Not run: `test-dry-run.mjs` (newsroom untouched); `test-faab` (FAAB maths
+  untouched).
+
+### Still open from Phase 4
+
+- `/faab`'s league line now says how many rosters it has and to check before
+  bidding when the pool is unknown. The Trade Finder reads rostered players
+  only, so it is unaffected; its page was not reviewed further.
+- "Since your last visit" covers the lineup answer only (roster, lineup,
+  injuries, projections). Waiver-wire changes are not compared, because the
+  wire is only known for a full room.
+- Read /admin after a week: `home_myweek` clicks, and `lineup` / `waiver`
+  results from returning browsers by NFL week.
+
+## Next steps: Phase 5 (email and sharing)
+
+Start here when told "Start next phase". The Phase 5 requirements are under
+"Later phases" below. Phase 4 leaves the email edition one rule to reuse:
+only call something available, or a difference current, when the data behind
+it is complete, and say so when it is not.
 
 ## Phase 2 requirements, as given (for reference)
 

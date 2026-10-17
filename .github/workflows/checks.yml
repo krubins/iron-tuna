@@ -795,6 +795,9 @@ jobs:
       - name: Parse it-sync.js
         if: ${{ !cancelled() }}
         run: node --check it-sync.js
+      - name: Parse it-myweek.js
+        if: ${{ !cancelled() }}
+        run: node --check it-myweek.js
 
       # The same board, asked about one player. The column prints twelve cases;
       # a card has to answer for all four hundred, and both read one
@@ -893,6 +896,17 @@ jobs:
         env:
           REQUIRE_BROWSER: '1'
         run: node tools/test-homepage.mjs
+
+      # Growth plan Phase 4: My Week for a returning reader. "Since your last
+      # visit" (it-myweek.js) in node, then my-week.html against stubbed league
+      # APIs: two leagues and the switcher, one roster of ten (pickups say to
+      # check availability), changed scoring, a new week, a stale league, the
+      # homepage's way back, and the rosters box's typed path on a failed read.
+      - name: My Week, returning
+        if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
+        env:
+          REQUIRE_BROWSER: '1'
+        run: node tools/test-myweek.mjs
 
       # it-metrics.js in a real browser: attribution and UTM stripping, one
       # visit across internal clicks, one success per result per visit, failure

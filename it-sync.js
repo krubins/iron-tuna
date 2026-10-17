@@ -113,7 +113,9 @@
         if (!j || !j.ok) return null;
         var mine = [], avail = [], opp = [];
         j.players.forEach(function (p) {
-          if (!p || p.status === 'unknown') return;
+          // `unverified`: on no saved roster in a league whose rosters are not
+          // all saved, so nobody can say he is available. No tag.
+          if (!p || p.status === 'unknown' || p.status === 'unverified') return;
           var cls = p.status === 'mine' ? 'mine' : p.status === 'available' || p.status === 'waiver' ? 'avail' : p.isOpponent ? 'opp' : 'other';
           var short = p.status === 'mine' ? 'Your roster' : p.status === 'available' ? 'Available' : p.status === 'waiver' ? 'On waivers' : p.isOpponent ? 'Your opponent' : 'Rostered';
           (names[p.name] || []).forEach(function (a) { if (a.querySelector('.its-tag')) return; var t = doc.createElement('span'); t.className = 'its-tag ' + cls; t.title = p.label; t.textContent = short; a.insertAdjacentElement('afterend', t); });
