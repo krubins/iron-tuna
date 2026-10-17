@@ -177,7 +177,7 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js", "it-league.js", "it-season.js", "it-sync.js", "it-inseason.js", "it-inseason-import.js", "it-inseason-ui.js", "my-league.html", "in-season.html", "site.css"];
+            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js", "it-league.js", "it-season.js", "it-sync.js", "it-metrics.js", "it-inseason.js", "it-inseason-import.js", "it-inseason-ui.js", "my-league.html", "in-season.html", "site.css"];
             let bad = 0;
             for (const f of files) {
               const buf = fs.readFileSync(f);
@@ -818,6 +818,19 @@ jobs:
         if: ${{ !cancelled() }}
         run: node tools/test-analytics.mjs
 
+      # /api/admin/usage and the outcome events behind it (docs/growth-plan.md,
+      # Phase 1): unavailable is null not zero, a rerender is one output, the
+      # operator is excluded, and no event can carry an email or a roster.
+      - name: Meaningful-use analytics
+        if: ${{ !cancelled() }}
+        run: node tools/test-usage.mjs
+
+      # it-metrics.js rides on every public page (build-seo stamps it), so a
+      # syntax error there would silently stop every outcome event site-wide.
+      - name: Parse it-metrics.js
+        if: ${{ !cancelled() }}
+        run: node --check it-metrics.js
+
       # /api/admin/comp grants access and then puts a working sign-in link in
       # someone's inbox, so its failure modes are the ones that look like
       # success: a link mailed to an address the grant never reached, an email
@@ -865,6 +878,16 @@ jobs:
         env:
           REQUIRE_BROWSER: '1'
         run: node tools/test-homepage.mjs
+
+      # it-metrics.js in a real browser: attribution and UTM stripping, one
+      # visit across internal clicks, one success per result per visit, failure
+      # events, automation sending nothing, and the Meaningful use section of
+      # /admin drawn off the real worker's payload at 390 and 1280.
+      - name: Outcome metrics, in the browser
+        if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
+        env:
+          REQUIRE_BROWSER: '1'
+        run: node tools/test-metrics.mjs
 
       # tools/test-boards-render.mjs is the same idea aimed at the in-season
       # boards. It arrived with the September 2026 pass that gave /fantasy,

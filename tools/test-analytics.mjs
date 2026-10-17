@@ -114,9 +114,12 @@ const track = (h, body) => h.hit('/api/track', { method: 'POST', headers: { 'use
   await view(h, '/faq?utm_source=Newsletter', IPHONE, '2.2.2.3', { referer: 'https://x.com/i' });
   await view(h, '/guides', CHROME, '4.4.4.4');
   await h.settle();
-  const src = Object.fromEntries((await traffic(h)).sources.map(s => [s.source, s.views]));
+  const tj = await traffic(h);
+  const src = Object.fromEntries(tj.sources.map(s => [s.source, s.views]));
   ok('referrer host is recorded without www', src['google.com'] === 1, JSON.stringify(src));
-  ok('clicks between our own pages are not arrivals', src[''] === 2, JSON.stringify(src));
+  // 2026-10-17: an internal hop used to be stored as '' and so read as direct.
+  ok('clicks between our own pages are not arrivals', src[''] === 1 && !('(internal)' in src), JSON.stringify(src));
+  ok('internal hops are counted on their own', tj.internalHops === 1, String(tj.internalHops));
   ok('utm_source wins over the referrer, lowercased', src['newsletter'] === 1, JSON.stringify(src));
 }
 

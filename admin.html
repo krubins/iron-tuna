@@ -50,6 +50,14 @@ h2{font-size:18px;margin:0 0 12px;letter-spacing:.01em}
 .tile .sub{color:var(--muted);font-size:13.5px;margin-top:2px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:860px){.grid2{grid-template-columns:1fr}}
+/* A grid item defaults to min-width:auto, so a wide table inside one pushed the
+   whole page sideways on a phone instead of scrolling in its own .tblwrap. */
+.grid2>*{min-width:0}
+.tile{min-width:0}
+.tile .val{overflow-wrap:anywhere}
+/* The usage tables wrap on a phone so the counts stay on screen rather than
+   behind a sideways scroll; labels are short enough to take two lines. */
+@media(max-width:560px){table[id^="use"] th,table[id^="use"] td{white-space:normal;padding:7px 6px;font-size:14px}}
 .tblwrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:15px;margin:4px 0 0}
 th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
@@ -178,6 +186,52 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     <h2>Clicks &amp; actions</h2>
     <div class="tblwrap"><table id="evTbl"></table></div>
     <div class="note">Named events the site fires — nav clicks, paywall views, coach usage, shares. "People" counts distinct anonymous browser IDs, so one person clicking twice is 2 events but 1 person.</div>
+  </div>
+
+  <!-- What people did, not what they loaded (docs/growth-plan.md, Phase 1).
+       Read from /api/admin/usage, off the outcome events it-metrics.js sends.
+       Its own fetch, so a slow or refused read here leaves the traffic above. -->
+  <h1 class="sec" id="use">Meaningful use</h1>
+  <p class="meta" id="useMeta">Loading…</p>
+  <div class="tiles" id="useTiles"></div>
+  <p class="note" id="useNote" style="margin:-4px 0 18px"></p>
+
+  <div class="card">
+    <h2>Where visitors came from, and what they did</h2>
+    <div class="tblwrap"><table id="useSrcTbl"></table></div>
+    <div class="note">One row per source and medium as the visit began: a UTM tag first, then the outside site that linked, then direct. Moving between our own pages never starts a visit or changes its source; "(continued)" is a visit opened from one of our pages after the earlier visit had lapsed, so its source is unknown. A useful visit produced at least one populated result. Rows under 20 visitors are marked as small samples.</div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>From a visit to a saved league</h2>
+      <div class="tblwrap"><table id="useFunnelTbl"></table></div>
+      <div class="note">Browsers in the window. Each step is a share of all visitors and of the step above it. Steps are counted in the window, not in order, so a reader who saved a league last month and used a tool today counts at both.</div>
+    </div>
+    <div class="card">
+      <h2>Seven-day return</h2>
+      <div class="tblwrap"><table id="useRetTbl"></table></div>
+      <div class="note" id="useRetNote"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Tools: results, empty answers and failures</h2>
+    <div class="tblwrap"><table id="useToolTbl"></table></div>
+    <div class="note">An output is one result for one input in one visit, so a rerender, a retry or a reload of the same board counts once. Empty means the tool answered with nothing to show; failed means it did not answer. Clicks are not counted here; they are in Clicks &amp; actions above.</div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Returning browsers that did something useful, by NFL week</h2>
+      <div class="tblwrap"><table id="useWeekTbl"></table></div>
+      <div class="note">Weeks run Tuesday to Monday (UTC). Returning means the browser was first seen before the week began.</div>
+    </div>
+    <div class="card">
+      <h2>Shares and email</h2>
+      <div class="tblwrap"><table id="useShareTbl"></table></div>
+      <div class="note" id="useSubNote"></div>
+    </div>
   </div>
 
   <!-- Everything that is not the audience. Ken, 2026-10-10: the Admin link
@@ -397,13 +451,14 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     var key = getKey();
     if (!key) { showGate(''); return; }
     $('gateErr').textContent = '';
-    fetch('/api/admin/traffic?days=' + trafDays + '&key=' + encodeURIComponent(key))
+    fetch('/api/admin/traffic?days=' + trafDays + '&key=' + encodeURIComponent(key) + uidParam())
       .then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
       .then(function(res){
         if (res.status === 403 || (res.j && res.j.error === 'forbidden')) { setKey(''); showGate('That password was rejected. Try again.'); return; }
         showDash();
         if (!res.j || !res.j.ok) { trafficUnavailable(res.j); return; }
         renderTraffic(res.j);
+        loadUsage();
         if ($('ops').open) opsLoad();
       })
       .catch(function(e){ showGate('Network error: ' + esc(e && e.message)); });
@@ -586,11 +641,12 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     var key = getKey();
     if (!key) return;
     $('trafMeta').textContent = 'Loading traffic…';
-    fetch('/api/admin/traffic?days=' + trafDays + '&key=' + encodeURIComponent(key))
+    fetch('/api/admin/traffic?days=' + trafDays + '&key=' + encodeURIComponent(key) + uidParam())
       .then(function(r){ return r.json(); })
       .then(function(j){
         if (!j || !j.ok) { trafficUnavailable(j); return; }
         renderTraffic(j);
+        loadUsage();
       })
       .catch(function(e){ $('trafMeta').textContent = 'Traffic unavailable: ' + (e && e.message); });
   }
@@ -694,7 +750,13 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       '<tr><th>Source</th><th class="num">Views</th><th class="num">Users</th></tr>' +
       srcs.map(function(r){
         return '<tr><td>' + (r.source ? esc(r.source) : '<span style="color:var(--muted)">Direct / no referrer</span>') + '</td><td class="num">' + num(r.views) + '</td><td class="num">' + num(r.users) + '</td></tr>';
-      }).join('');
+      }).join('') +
+      // Since 2026-10-17 a click between our own pages is not filed as direct.
+      // Older rows still are, so the direct line overstates for windows before then.
+      '<tr><td colspan="3" class="note" style="white-space:normal">' + num(d.internalHops || 0) + ' views came from moving between our own pages and are not counted as arrivals. Views recorded before 17 Oct 2026 could not be told apart and still read as direct.</td></tr>';
+    var la = d.likelyAutomated;
+    if (la && la.userDays) $('timeNote').textContent += ' Likely automated: ' + num(la.userDays) + ' user-day' + (la.userDays === 1 ? '' : 's') + ' with ' + num(la.views) +
+      ' views (' + la.minViews + '+ pages averaging under ' + la.gapSec + ' seconds apart). They are still in the totals above; the Meaningful use section below counts only browsers that ran the page script.';
 
     var ctry = d.countries || [];
     $('ctryChips').innerHTML = ctry.map(function(r){ return '<span class="chip">' + esc(r.country) + ' <b>' + num(r.views) + '</b></span>'; }).join('');
@@ -705,6 +767,112 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       evs.map(function(r){
         return '<tr><td>' + esc(r.event) + '</td><td class="num">' + num(r.count) + '</td><td class="num">' + num(r.people) + '</td></tr>';
       }).join('');
+  }
+
+  // ── meaningful use (/api/admin/usage) ──────────────────────────────────
+  // This browser's first-party id, sent so the worker can hold back the
+  // outcome events it sent before the it_owner cookie existed. Absent when
+  // this browser has never loaded a public page; nothing is sent then.
+  function uidParam(){ try { var u = localStorage.getItem('it.uid') || ''; return /^[a-z0-9]{6,24}$/.test(u) ? '&uid=' + u : ''; } catch(e){ return ''; } }
+  function loadUsage(){
+    var key = getKey();
+    if (!key) return;
+    $('useMeta').textContent = 'Loading…';
+    fetch('/api/admin/usage?days=' + trafDays + '&key=' + encodeURIComponent(key) + uidParam())
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (!j || !j.ok) {
+          $('useMeta').textContent = j && j.error === 'd1_limit'
+            ? 'Not readable today: the D1 daily read allowance is spent. Nothing is lost; reads return at midnight UTC.'
+            : 'Meaningful use unavailable: ' + ((j && (j.detail || j.error)) || 'unknown error');
+          return;
+        }
+        renderUsage(j);
+      })
+      .catch(function(e){ $('useMeta').textContent = 'Meaningful use unavailable: ' + (e && e.message); });
+  }
+  // A count with its share, or "not measured" when there is no denominator.
+  // Zero and unavailable are different answers and read differently here.
+  function cp(n, d){ return d ? num(n) + ' <span style="color:var(--muted)">(' + (Math.round(1000 * n / d) / 10) + '%)</span>' : (n ? num(n) : '<span style="color:var(--muted)">n/a</span>'); }
+  function pctOf(p){ return p == null ? '<span style="color:var(--muted)">n/a</span>' : p + '%'; }
+  var TOOL_NAMES = { rankings: 'Rankings board', position: 'Position page rail', vegas_edge: 'Vegas Edge differences', fantasy_board: 'Fantasy week board',
+    lineup: 'My Week lineup', waiver: 'Waiver pickups (saved league)', faab: 'FAAB bid advisor', trade: 'My Week trade matches', matchup: 'My Week matchup',
+    my_week_alerts: 'My Week alerts', playoffs: 'My Week playoffs', trade_finder: 'Trade Finder', trade_evaluator: 'Trade Evaluator',
+    league_scoring: 'League scoring save', league_rosters: 'League rosters save', compare: 'Player comparison' };
+  function toolName(t){ return TOOL_NAMES[t] || t || '(unnamed)'; }
+  function renderUsage(d){
+    var v = d.visitors || {}, f = d.funnel || {}, r7 = d.retention7 || {}, sub = d.subscriptions || {};
+    $('useMeta').textContent = !d.available
+      ? 'Nothing collected yet. Counting starts with the first visit after the page script (it-metrics.js) is deployed.'
+      : 'Last ' + d.days + ' days · collecting since ' + new Date(d.collectingSince).toLocaleDateString() + (d.includeMe ? ' · including your own browsers' : '') +
+        (d.readError ? ' · PARTIAL: a read was refused, so some tables below are empty, not zero: ' + (d.readError.detail || '') : '');
+    var weeks = d.weekly || [], lastFull = null;
+    for (var i = weeks.length - 1; i >= 0; i--) if (!weeks[i].partial) { lastFull = weeks[i]; break; }
+    var toolsAll = d.tools || [], att = 0, bad = 0;
+    toolsAll.forEach(function(t){ att += t.attempts; bad += t.empty + t.error; });
+    $('useTiles').innerHTML = !d.available ? '' :
+      tile('Visitors (browsers)', num(v.visitors), num(v.visits) + ' visits', true) +
+      tile('New / returning', num(v.newVisitors) + ' / ' + num(v.returningVisitors), 'returning = seen here before') +
+      tile('Got a useful result', cp(f.useful || 0, f.visitors), 'visitors with a populated tool result') +
+      tile('Saved league settings', cp(f.setupCompleted || 0, f.visitors), num(f.setupStarted || 0) + ' started setup') +
+      tile('7-day return', r7.returnPct == null ? '<span style="color:var(--muted)">n/a</span>' : r7.returnPct + '%',
+        r7.newBrowsers ? num(r7.returned) + ' of ' + num(r7.newBrowsers) + ' new browsers' : 'no cohort is 7 days old yet') +
+      tile('Returning + useful, last full week', lastFull ? num(lastFull.returningUseful) : '<span style="color:var(--muted)">n/a</span>',
+        lastFull ? 'of ' + num(lastFull.returning) + ' returning, week of ' + esc(lastFull.weekStart) : 'no full week collected yet') +
+      tile('Email sign-ups', num(sub.signupEvents || 0), 'unconfirmed; confirmed: not measured') +
+      tile('Empty or failed results', cp(bad, att), 'of ' + num(att) + ' tool outputs');
+    $('useNote').textContent = 'A visitor here is one browser, identified by a random id kept in its own storage. A cleared or private browser, or a second device, reads as a new visitor, so returns are undercounted; a browser that blocks storage or scripts is not counted at all (the traffic numbers above still include it). ' +
+      'A one-page visit is not treated as a failure: what counts as useful is a populated result, wherever it happened.';
+
+    var src = d.sources || [];
+    $('useSrcTbl').innerHTML = !src.length ? '<tr><td class="empty">' + (d.available ? 'No visits in this window.' : 'Nothing collected yet.') + '</td></tr>' :
+      '<tr><th>Source</th><th>Medium</th><th class="num">Visitors</th><th class="num">Visits</th><th class="num">Useful visits</th><th class="num">Saved a league</th></tr>' +
+      src.map(function(r){
+        return '<tr><td>' + esc(r.source) + (r.visitors < 20 ? ' <span class="badge">small sample</span>' : '') + '</td><td>' + esc(r.medium) + '</td><td class="num">' + num(r.visitors) + '</td><td class="num">' + num(r.visits) +
+          '</td><td class="num">' + cp(r.usefulVisits, r.visits) + '</td><td class="num">' + cp(r.leagueVisitors, r.visitors) + '</td></tr>';
+      }).join('');
+
+    var fv = f.visitors || 0;
+    // [label, browsers, share of the step above (null where there is none)]
+    var steps = [['Visited', fv, null], ['Got a useful result', f.useful || 0, f.usefulPct],
+      ['Started league setup', f.setupStarted || 0, f.usefulThenStartedPct], ['Saved league settings', f.setupCompleted || 0, f.startedToCompletedPct],
+      ['Signed up for email (unconfirmed)', f.emailSignups || 0, null]];
+    $('useFunnelTbl').innerHTML = !d.available ? '<tr><td class="empty">Nothing collected yet.</td></tr>' :
+      '<tr><th>Step</th><th class="num">Browsers</th><th class="num">Of visitors</th><th class="num">Of step above</th></tr>' +
+      steps.map(function(s, k){ return '<tr><td>' + esc(s[0]) + '</td><td class="num">' + num(s[1]) + '</td><td class="num">' + (k ? pctOf(fv ? Math.round(1000 * s[1] / fv) / 10 : null) : '') +
+        '</td><td class="num">' + (k && k < 4 ? pctOf(s[2]) : '') + '</td></tr>'; }).join('');
+    // "Of step above" for setup started is the share of browsers with a useful
+    // result that also started setup; for saved, the share of starters who saved.
+
+    var cs = (r7.cohorts || []).slice().reverse().slice(0, 21);
+    $('useRetTbl').innerHTML = !cs.length ? '<tr><td class="empty">' + (d.available ? 'No new browsers in this window.' : 'Nothing collected yet.') + '</td></tr>' :
+      '<tr><th>First seen</th><th class="num">New browsers</th><th class="num">Came back in 7 days</th><th class="num">Came back and used a tool</th></tr>' +
+      cs.map(function(c){
+        return '<tr><td>' + esc(c.day) + (c.mature ? '' : ' <span class="badge">maturing</span>') + '</td><td class="num">' + num(c.cohort) + '</td><td class="num">' + (c.mature ? cp(c.returned, c.cohort) : num(c.returned) + ' so far') +
+          '</td><td class="num">' + (c.mature ? cp(c.returnedUseful, c.cohort) : num(c.returnedUseful) + ' so far') + '</td></tr>';
+      }).join('');
+    $('useRetNote').textContent = 'A browser returned when it began a visit on any of the seven days after the day it was first seen (UTC); a second visit the same day does not count. Only cohorts with all seven days behind them are in the rate' +
+      (r7.maturingBrowsers ? '; ' + num(r7.maturingBrowsers) + ' newer browsers are still maturing' : '') + '. Small cohorts swing widely: read the counts, not just the percentage.';
+
+    $('useToolTbl').innerHTML = !toolsAll.length ? '<tr><td class="empty">' + (d.available ? 'No tool results in this window.' : 'Nothing collected yet.') + '</td></tr>' :
+      '<tr><th>Tool</th><th class="num">Results</th><th class="num">Browsers</th><th class="num">Empty</th><th class="num">Failed</th><th class="num">Empty or failed</th></tr>' +
+      toolsAll.map(function(t){
+        return '<tr><td>' + esc(toolName(t.tool)) + '</td><td class="num">' + num(t.success) + '</td><td class="num">' + num(t.successPeople) + '</td><td class="num">' + num(t.empty) + '</td><td class="num">' + num(t.error) +
+          '</td><td class="num">' + cp(t.empty + t.error, t.attempts) + '</td></tr>';
+      }).join('');
+
+    $('useWeekTbl').innerHTML = !weeks.length ? '<tr><td class="empty">' + (d.available ? 'No visits in this window.' : 'Nothing collected yet.') + '</td></tr>' :
+      '<tr><th>Week of</th><th class="num">Active</th><th class="num">Returning</th><th class="num">Returning + useful</th></tr>' +
+      weeks.slice().reverse().map(function(w){
+        return '<tr><td>' + esc(w.weekStart) + (w.partial ? ' <span class="badge">in progress</span>' : '') + '</td><td class="num">' + num(w.active) + '</td><td class="num">' + num(w.returning) + '</td><td class="num">' + cp(w.returningUseful, w.returning) + '</td></tr>';
+      }).join('');
+
+    var sh = d.shares || [];
+    $('useShareTbl').innerHTML = '<tr><th>Share control</th><th>Method</th><th class="num">Clicks</th><th class="num">Browsers</th></tr>' +
+      (sh.length ? sh.map(function(r){ return '<tr><td>' + esc(r.tool) + '</td><td>' + esc(r.method) + '</td><td class="num">' + num(r.clicks) + '</td><td class="num">' + num(r.people) + '</td></tr>'; }).join('')
+        : '<tr><td colspan="4" class="empty">' + (d.available ? 'No share clicks in this window.' : 'Nothing collected yet.') + '</td></tr>');
+    $('useSubNote').textContent = 'A share click means the control was used, not that a link was posted anywhere. Email: ' + num(sub.signupEvents || 0) + ' sign-up form submissions succeeded' +
+      (sub.contactsStored == null ? '' : ' (' + num(sub.contactsStored) + ' addresses stored by any form, purchases excluded)') + '. ' + (sub.confirmedNote || '');
   }
 
   // wire up
@@ -726,9 +894,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     var key = getKey(); if (!key) return;
     var on = meExcluded ? '0' : '1';
     $('meBtn').disabled = true;
-    fetch('/api/admin/exclude-me?on=' + on + '&key=' + encodeURIComponent(key))
+    fetch('/api/admin/exclude-me?on=' + on + '&key=' + encodeURIComponent(key) + uidParam())
       .then(function(r){ return r.json(); })
-      .then(function(){ $('meBtn').disabled = false; loadTraffic(); })
+      .then(function(){ $('meBtn').disabled = false; loadTraffic(); loadUsage(); })
       .catch(function(){ $('meBtn').disabled = false; });
   });
   $('lockBtn').addEventListener('click', function(){ setKey(''); $('keyInput').value = ''; $('ops').open = false; opsLoaded = false; showGate(''); });

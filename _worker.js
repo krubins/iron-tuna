@@ -15277,7 +15277,12 @@ async function projectionsPayload(env, ctx) {
 // Rows carry an `internal` flag for the operator's own browsing, which would
 // otherwise dominate a small site's numbers. They are recorded, not dropped, so
 // the exclusion is reversible and its size is visible on /admin.
-const BOT_RE = /bot|crawl|spider|slurp|facebookexternalhit|embedly|quora|pinterest|whatsapp|telegram|discord|slack|preview|monitor|uptime|curl|wget|python-requests|headless|lighthouse|pagespeed|gtmetrix|ahrefs|semrush|mj12|dotbot|petalbot|yandex|baidu|applebot|gptbot|claudebot|ccbot|perplexity|bytespider|scrapy|okhttp|axios|node-fetch/i;
+// 2026-10-17: the list gained the automation and fetcher tokens the live log
+// showed slipping through (Meta's and OpenAI's fetchers, HTTP client libraries,
+// browser-automation drivers, internet scanners). Each is a string no person's
+// browser sends, which is the bar for adding one: this list is for the
+// identifiable, and the admin page reports the unidentifiable separately.
+const BOT_RE = /bot|crawl|spider|slurp|facebookexternalhit|embedly|quora|pinterest|whatsapp|telegram|discord|slack|preview|monitor|uptime|curl|wget|python-requests|headless|lighthouse|pagespeed|gtmetrix|ahrefs|semrush|mj12|dotbot|petalbot|yandex|baidu|applebot|gptbot|claudebot|ccbot|perplexity|bytespider|scrapy|okhttp|axios|node-fetch|meta-external|chatgpt-user|fetcher|go-http-client|python-urllib|aiohttp|httpx|java\/|libwww|httpclient|phantomjs|puppeteer|playwright|selenium|zgrab|masscan|censys|expanse/i;
 const ANALYTICS_DDL = [
   'CREATE TABLE IF NOT EXISTS page_views (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, day TEXT NOT NULL, path TEXT NOT NULL, visitor TEXT NOT NULL, source TEXT, country TEXT, internal INTEGER NOT NULL DEFAULT 0)',
   'CREATE INDEX IF NOT EXISTS idx_pv_ts ON page_views(ts)',
@@ -15285,6 +15290,10 @@ const ANALYTICS_DDL = [
   'CREATE TABLE IF NOT EXISTS site_events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, day TEXT NOT NULL, event TEXT NOT NULL, uid TEXT, path TEXT, props TEXT, internal INTEGER NOT NULL DEFAULT 0)',
   'CREATE INDEX IF NOT EXISTS idx_ev_ts ON site_events(ts)',
   'CREATE INDEX IF NOT EXISTS idx_ev_name ON site_events(event, ts)',
+  // The operator's browsers by first-party id (it.uid), for the outcome events
+  // /api/admin/usage reads. The it_owner cookie marks rows as they are written;
+  // this catches the same browser's rows from before the cookie was set.
+  'CREATE TABLE IF NOT EXISTS analytics_owner (uid TEXT PRIMARY KEY, ts INTEGER NOT NULL)',
 ];
 // Columns added after the tables were first deployed. ADD COLUMN is the only
 // migration shape this repo uses (see x_posts.est_cost): each runs on its own and
@@ -15335,6 +15344,19 @@ async function visitorHash(env, request, day) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(day + '|' + salt + '|' + ip + '|' + ua));
   return [...new Uint8Array(buf)].slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join('');
 }
+const INTERNAL_SOURCE = '(internal)';
+const AUTO_MIN_VIEWS = 20, AUTO_GAP_MS = 15000;
+// Record (or forget) this browser's first-party id as the operator's, so the
+// outcome events it sent before the it_owner cookie existed are excluded too.
+const OWNER_UID_RE = /^[a-z0-9]{6,24}$/;
+async function ownerUid(env, uid, on) {
+  try {
+    uid = String(uid || '');
+    if (!OWNER_UID_RE.test(uid) || !(await analyticsReady(env))) return;
+    if (on) await env.LEADS_DB.prepare('INSERT OR REPLACE INTO analytics_owner (uid, ts) VALUES (?, ?)').bind(uid, Date.now()).run();
+    else await env.LEADS_DB.prepare('DELETE FROM analytics_owner WHERE uid = ?').bind(uid).run();
+  } catch (e) {}
+}
 // Where the visit came from: an explicit utm_source wins, then the referring
 // host, then "" which the admin page reads as direct. Self-referrals (clicking
 // between our own pages) are dropped so the list is arrivals, not internal hops.
@@ -15345,7 +15367,11 @@ function trafficSource(request, url) {
     const r = request.headers.get('referer') || '';
     if (!r) return '';
     const h = new URL(r).hostname.replace(/^www\./, '');
-    return h === url.hostname.replace(/^www\./, '') ? '' : h.slice(0, 80);
+    // A click between our own pages is not an arrival. It used to be stored as
+    // '' and so read as "direct" on /admin, which on 2026-10-17 made direct
+    // 3,075 of 3,128 views in a fortnight. It is labeled now, and the sources
+    // table leaves it out. Rows written before this change still carry ''.
+    return h === url.hostname.replace(/^www\./, '') ? INTERNAL_SOURCE : h.slice(0, 80);
   } catch (e) { return ''; }
 }
 async function logPageView(env, request, url) {
@@ -15372,11 +15398,44 @@ async function logSiteEvent(env, request, raw) {
     const name = String(b.event || '').replace(/[^A-Za-z0-9_.:-]/g, '').slice(0, 60);
     if (!name) return;
     if (!(await analyticsReady(env))) return;
-    const props = b.props && typeof b.props === 'object' ? b.props : {};
+    const props = cleanEventProps(name, b.props && typeof b.props === 'object' ? b.props : {});
+    if (!props) return;
     const ts = Date.now();
     await env.LEADS_DB.prepare('INSERT INTO site_events (ts, day, event, uid, path, props, internal) VALUES (?, ?, ?, ?, ?, ?, ?)')
       .bind(ts, utcDay(ts), name, String(b.uid || '').slice(0, 48), String(props.path || props.page || '').slice(0, 160), JSON.stringify(props).slice(0, 600), isOwnerVisit(request) ? 1 : 0).run();
   } catch (e) {}
+}
+// The outcome events it-metrics.js sends (docs/growth-plan.md, Phase 1). They
+// are what /api/admin/usage reads, so their props are cut to a fixed list of
+// short scalar fields: nothing a reader typed, no roster, no email. The page
+// script already sends only these; the worker enforces it so a future call
+// site cannot widen it by accident.
+const OUTCOME_EVENTS = new Set(['visit_start', 'tool_success', 'tool_empty', 'tool_error', 'league_setup_start', 'league_setup_complete', 'subscribe_request', 'share_click']);
+const OUTCOME_PROPS = ['path', 'vid', 'tool', 'key', 'src', 'med', 'cmp', 'land', 'new', 'fs', 'n', 'rows', 'horizon', 'pos', 'scoring', 'mode', 'kind', 'method', 'step', 'status', 'platform', 'teams', 'surface'];
+const EMAIL_LIKE = /[^\s@]+@[^\s@]+\.[^\s@]+/;
+function cleanEventProps(name, props) {
+  const out = {};
+  if (OUTCOME_EVENTS.has(name)) {
+    for (const k of OUTCOME_PROPS) {
+      let v = props[k];
+      if (v == null) continue;
+      if (typeof v === 'boolean') v = v ? 1 : 0;
+      if (typeof v === 'number') { if (isFinite(v)) out[k] = Math.round(v * 100) / 100; continue; }
+      v = String(v).slice(0, k === 'path' || k === 'land' ? 120 : 48);
+      if (EMAIL_LIKE.test(v)) continue;
+      out[k] = v;
+    }
+    if (name !== 'visit_start' && !out.tool && name.startsWith('tool_')) return null;
+    return out;
+  }
+  // Older click events keep their shape, less any value that looks like an
+  // email address, which no event has a reason to carry.
+  for (const k of Object.keys(props).slice(0, 30)) {
+    const v = props[k];
+    if (typeof v === 'string' && EMAIL_LIKE.test(v)) continue;
+    out[k] = v;
+  }
+  return out;
 }
 // Keep the tables from growing forever; called from the daily cron.
 async function pruneAnalytics(env, keepDays) {
@@ -15385,6 +15444,151 @@ async function pruneAnalytics(env, keepDays) {
   const a = await env.LEADS_DB.prepare('DELETE FROM page_views WHERE ts < ?').bind(cutoff).run();
   const b = await env.LEADS_DB.prepare('DELETE FROM site_events WHERE ts < ?').bind(cutoff).run();
   return { pruned: true, keepDays, pageViews: (a.meta && a.meta.changes) || 0, events: (b.meta && b.meta.changes) || 0 };
+}
+
+// ══ MEANINGFUL USE (/api/admin/usage) ════════════════════════════════════
+// The page counter above answers "how many requests for HTML". This answers
+// what people did with the site, off the outcome events it-metrics.js sends
+// (docs/growth-plan.md, Phase 1): a visit and where it came from, a tool that
+// produced a populated result, an empty or failed one, league setup, an email
+// sign-up and a share click. Successful outputs are their own events, never
+// inferred from clicks.
+//
+// The unit is a BROWSER, by the random first-party id in localStorage
+// (it.uid). That is what makes a return measurable at all, and it is also its
+// limit: a cleared or blocked storage, a private window or a second device is
+// a new browser, so return rates here are a floor, and a reader whose browser
+// runs no script is not in these numbers at all (the page counter still has
+// them). Each figure ships with the count it is a share of, and a figure
+// nothing has been collected for is null, never 0.
+const USAGE_TOOLS_EVENTS = "('tool_success','tool_empty','tool_error')";
+// Every props read goes through json_valid: older click events were cut at 600
+// characters and some are not valid JSON, and one of those would fail a query.
+const EVJ = k => "(CASE WHEN json_valid(props) THEN json_extract(props, '$." + k + "') END)";
+// The NFL week runs Tuesday to Monday, so the weekly read does too: the start
+// of the week a UTC day falls in.
+const EV_WEEK = "date(day, '-' || ((CAST(strftime('%w', day) AS INTEGER) + 5) % 7) || ' days')";
+async function adminUsage(env, url) {
+  const db = env.LEADS_DB;
+  const days = Math.min(90, Math.max(1, parseInt(url.searchParams.get('days') || '30', 10) || 30));
+  const includeMe = url.searchParams.get('includeMe') === '1';
+  const now = Date.now(), since = now - days * 86400000, today = utcDay(now);
+  // Owner rows are flagged by cookie as they are written, and by first-party
+  // id after the fact; either one excludes them unless &includeMe=1.
+  const F = includeMe ? " AND uid != ''" : " AND uid != '' AND internal = 0 AND uid NOT IN (SELECT uid FROM analytics_owner)";
+  let readErr = null;
+  const rows = async (sql, ...bind) => { try { return ((await db.prepare(sql).bind(...bind).all()).results) || []; } catch (e) { readErr = readErr || e; return []; } };
+  const one = async (sql, ...bind) => { try { return (await db.prepare(sql).bind(...bind).first()) || {}; } catch (e) { readErr = readErr || e; return {}; } };
+  const pct = (n, d) => d ? Math.round(1000 * n / d) / 10 : null;
+  const out = { ok: true, generatedAt: now, days, includeMe, unit: 'browser' };
+
+  const coll = await one("SELECT MIN(ts) AS t, COUNT(*) AS n FROM site_events WHERE event = 'visit_start'" + F);
+  if (readErr) return { status: 503, body: { ok: false, error: d1ReadLimit(readErr) ? 'd1_limit' : 'd1_read', detail: String(readErr.message || readErr).slice(0, 200) } };
+  out.collectingSince = coll.t || null;
+  out.available = !!coll.n;
+
+  // Visits and visitors, new against returning. "new" is the browser minting
+  // its id on this visit; anything else had been here before.
+  const nv = await one("SELECT COUNT(*) AS visits, COUNT(DISTINCT uid) AS visitors, COUNT(DISTINCT CASE WHEN " + EVJ('new') + " = 1 THEN uid END) AS newVisitors, SUM(CASE WHEN " + EVJ('new') + " = 1 THEN 0 ELSE 1 END) AS returningVisits FROM site_events WHERE event = 'visit_start' AND ts >= ?" + F, since);
+  const visitors = nv.visitors || 0;
+  out.visitors = { visits: nv.visits || 0, visitors, newVisitors: nv.newVisitors || 0, returningVisitors: Math.max(0, visitors - (nv.newVisitors || 0)), returningVisits: nv.returningVisits || 0 };
+
+  // Acquisition: each visit carries the source it-metrics.js assigned when the
+  // visit began (UTM, else an outside referrer, else direct; a click between
+  // our own pages never starts one). A visit is "useful" when it produced at
+  // least one populated result, joined on the visit id.
+  const src = await rows(
+    "WITH v AS (SELECT " + EVJ('vid') + " AS vid, COALESCE(" + EVJ('src') + ", '') AS src, COALESCE(" + EVJ('med') + ", '') AS med, uid FROM site_events WHERE event = 'visit_start' AND ts >= ?" + F + "), " +
+    "s AS (SELECT DISTINCT " + EVJ('vid') + " AS vid FROM site_events WHERE event = 'tool_success' AND ts >= ?" + F + "), " +
+    "l AS (SELECT DISTINCT " + EVJ('vid') + " AS vid FROM site_events WHERE event = 'league_setup_complete' AND ts >= ?" + F + ") " +
+    "SELECT v.src AS src, v.med AS med, COUNT(*) AS visits, COUNT(DISTINCT v.uid) AS visitors, SUM(CASE WHEN s.vid IS NOT NULL THEN 1 ELSE 0 END) AS usefulVisits, " +
+    "COUNT(DISTINCT CASE WHEN s.vid IS NOT NULL THEN v.uid END) AS usefulVisitors, COUNT(DISTINCT CASE WHEN l.vid IS NOT NULL THEN v.uid END) AS leagueVisitors " +
+    "FROM v LEFT JOIN s ON s.vid = v.vid LEFT JOIN l ON l.vid = v.vid GROUP BY v.src, v.med ORDER BY visitors DESC LIMIT 30", since, since, since);
+  out.sources = src.map(r => ({ source: r.src || 'direct', medium: r.med || 'none', visits: r.visits || 0, visitors: r.visitors || 0,
+    usefulVisits: r.usefulVisits || 0, usefulPct: pct(r.usefulVisits || 0, r.visits || 0), usefulVisitors: r.usefulVisitors || 0, leagueVisitors: r.leagueVisitors || 0 }));
+
+  // Tool outcomes. An output is one (visit, tool, key) result, so a rerender or
+  // a reload of the same board inside one visit is one output however many
+  // events arrived; `events` is the raw count beside it.
+  const tools = await rows("SELECT event, COALESCE(" + EVJ('tool') + ", '') AS tool, COUNT(DISTINCT uid || '|' || COALESCE(" + EVJ('vid') + ", '') || '|' || COALESCE(" + EVJ('key') + ", '')) AS outputs, COUNT(*) AS events, COUNT(DISTINCT uid) AS people FROM site_events WHERE event IN " + USAGE_TOOLS_EVENTS + " AND ts >= ?" + F + " GROUP BY event, tool", since);
+  const byTool = {};
+  tools.forEach(r => {
+    const t = byTool[r.tool] = byTool[r.tool] || { tool: r.tool, success: 0, successPeople: 0, empty: 0, error: 0, events: 0 };
+    const k = r.event === 'tool_success' ? 'success' : r.event === 'tool_empty' ? 'empty' : 'error';
+    t[k] = r.outputs || 0; t.events += r.events || 0;
+    if (k === 'success') t.successPeople = r.people || 0;
+  });
+  out.tools = Object.values(byTool).map(t => { const all = t.success + t.empty + t.error; return { ...t, attempts: all, failPct: pct(t.empty + t.error, all) }; })
+    .sort((a, b) => b.success - a.success || b.attempts - a.attempts);
+
+  // The funnel, per browser in the window: visited, got a useful result,
+  // started league setup, finished it, asked for email. Each later step is
+  // also reported as a share of the step before it.
+  const fu = await one("SELECT COUNT(*) AS visitors, SUM(u > 0) AS useful, SUM(ls > 0) AS started, SUM(lc > 0) AS completed, SUM(ls > 0 AND lc > 0) AS startedCompleted, SUM(u > 0 AND ls > 0) AS usefulStarted, SUM(sr > 0) AS subscribed FROM (" +
+    "SELECT uid, SUM(event = 'visit_start') AS v, SUM(event = 'tool_success') AS u, SUM(event = 'league_setup_start') AS ls, SUM(event = 'league_setup_complete') AS lc, SUM(event = 'subscribe_request') AS sr " +
+    "FROM site_events WHERE event IN ('visit_start','tool_success','league_setup_start','league_setup_complete','subscribe_request') AND ts >= ?" + F + " GROUP BY uid) WHERE v > 0", since);
+  const fv = fu.visitors || 0;
+  out.funnel = {
+    visitors: fv,
+    useful: fu.useful || 0, usefulPct: pct(fu.useful || 0, fv),
+    setupStarted: fu.started || 0, setupStartedPct: pct(fu.started || 0, fv), usefulThenStartedPct: pct(fu.usefulStarted || 0, fu.useful || 0),
+    setupCompleted: fu.completed || 0, setupCompletedPct: pct(fu.completed || 0, fv), startedToCompletedPct: pct(fu.startedCompleted || 0, fu.started || 0),
+    emailSignups: fu.subscribed || 0, emailSignupsPct: pct(fu.subscribed || 0, fv),
+  };
+
+  // Email. A sign-up is counted off the form's own success event (no address
+  // ever reaches the analytics tables); the contacts table is counted, not
+  // read, as a cross-check. There is no confirmation step yet, so a confirmed
+  // subscription is unavailable rather than zero.
+  // Its own try: a database with no contacts table yet is not a failed read.
+  let ct = null;
+  try { ct = ((await db.prepare("SELECT type, COUNT(*) AS n FROM contacts WHERE created_at >= ? AND type != 'purchase' GROUP BY type").bind(since).all()).results) || []; } catch (e) {}
+  out.subscriptions = {
+    confirmed: null,
+    confirmedNote: 'No confirmation step exists yet (planned for the email phase), so confirmed subscriptions cannot be counted.',
+    signupEvents: fu.subscribed || 0,
+    contactsStored: ct ? ct.reduce((s, r) => s + (r.n || 0), 0) : null,
+    contactsByType: (ct || []).map(r => ({ type: r.type || '', count: r.n || 0 })),
+  };
+
+  out.shares = (await rows("SELECT COALESCE(" + EVJ('tool') + ", '') AS tool, COALESCE(" + EVJ('method') + ", '') AS method, COUNT(*) AS clicks, COUNT(DISTINCT uid) AS people FROM site_events WHERE event = 'share_click' AND ts >= ?" + F + " GROUP BY tool, method ORDER BY clicks DESC", since))
+    .map(r => ({ tool: r.tool, method: r.method, clicks: r.clicks || 0, people: r.people || 0 }));
+
+  // Seven-day return, by first-seen day. A cohort is the browsers that minted
+  // their id that day; it "returned" when it began a visit on any of the seven
+  // calendar days after (UTC). Only a cohort with all seven days behind it is
+  // mature; younger ones are listed and kept out of the rate.
+  const ret = await rows(
+    "WITH c AS (SELECT uid, MIN(day) AS d0 FROM site_events WHERE event = 'visit_start' AND " + EVJ('new') + " = 1 AND ts >= ?" + F + " GROUP BY uid), " +
+    "r AS (SELECT uid, day, MAX(event = 'tool_success') AS useful, MAX(event = 'visit_start') AS visit FROM site_events WHERE event IN ('visit_start','tool_success') AND ts >= ?" + F + " GROUP BY uid, day) " +
+    "SELECT c.d0 AS day, COUNT(DISTINCT c.uid) AS cohort, " +
+    "COUNT(DISTINCT CASE WHEN r.visit = 1 AND r.day > c.d0 AND julianday(r.day) - julianday(c.d0) <= 7 THEN c.uid END) AS returned, " +
+    "COUNT(DISTINCT CASE WHEN r.useful = 1 AND r.day > c.d0 AND julianday(r.day) - julianday(c.d0) <= 7 THEN c.uid END) AS returnedUseful " +
+    "FROM c LEFT JOIN r ON r.uid = c.uid GROUP BY c.d0 ORDER BY c.d0", since, since);
+  const matureBy = utcDay(now - 8 * 86400000);
+  const cohorts = ret.map(r => ({ day: r.day, cohort: r.cohort || 0, returned: r.returned || 0, returnedUseful: r.returnedUseful || 0, mature: r.day <= matureBy, returnPct: pct(r.returned || 0, r.cohort || 0) }));
+  const mature = cohorts.filter(c => c.mature);
+  const mSize = mature.reduce((s, c) => s + c.cohort, 0), mRet = mature.reduce((s, c) => s + c.returned, 0), mUse = mature.reduce((s, c) => s + c.returnedUseful, 0);
+  out.retention7 = {
+    cohorts,
+    matureCohorts: mature.length,
+    maturingBrowsers: cohorts.filter(c => !c.mature).reduce((s, c) => s + c.cohort, 0),
+    newBrowsers: mSize, returned: mRet, returnedUseful: mUse,
+    returnPct: mSize ? pct(mRet, mSize) : null, returnUsefulPct: mSize ? pct(mUse, mSize) : null,
+  };
+
+  // Weekly returning browsers that did something useful. Returning means the
+  // browser was first seen before the week began: `fs` is the first-seen day
+  // the browser itself remembers, and a browser whose id predates this
+  // measurement reports 0000-00-00, which is before every week.
+  const wk = await rows(
+    "SELECT wk, COUNT(*) AS active, SUM(fs < wk) AS back, SUM(fs < wk AND useful = 1) AS backUseful, SUM(useful) AS useful FROM (" +
+    "SELECT uid, " + EV_WEEK + " AS wk, MIN(COALESCE(" + EVJ('fs') + ", day)) AS fs, MAX(event = 'tool_success') AS useful FROM site_events WHERE event IN ('visit_start','tool_success') AND ts >= ?" + F + " GROUP BY uid, wk) GROUP BY wk ORDER BY wk", since);
+  out.weekly = wk.map(r => ({ weekStart: r.wk, active: r.active || 0, returning: r.back || 0, returningUseful: r.backUseful || 0, useful: r.useful || 0,
+    returningUsefulPct: pct(r.backUseful || 0, r.back || 0), partial: utcDay(Date.parse(r.wk + 'T00:00:00Z') + 6 * 86400000) >= today }));
+
+  if (readErr) out.readError = { limit: d1ReadLimit(readErr), detail: String(readErr.message || readErr).slice(0, 200) };
+  return { status: 200, body: out };
 }
 
 // ══ THE SAVED LEAGUE ══════════════════════════════════════════════════════
@@ -18248,6 +18452,7 @@ export default {
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
       const on = url.searchParams.get('on') !== '0';
+      await ownerUid(env, url.searchParams.get('uid'), on);
       return json({ ok: true, excluded: on }, 200, { ...c, 'Set-Cookie': ownerCookie(on) });
     }
     if (url.pathname === '/api/admin/traffic') {
@@ -18267,6 +18472,7 @@ export default {
       const flag = ownerFlag(request);
       const includeMe = url.searchParams.get('includeMe') === '1';
       const head = flag ? c : { ...c, 'Set-Cookie': ownerCookie(true) };
+      if (flag !== '0') await ownerUid(env, url.searchParams.get('uid'), true);
       const db = env.LEADS_DB;
       try {
         const now = Date.now();
@@ -18367,8 +18573,18 @@ export default {
 
         out.topPages = (await rows('SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor) AS users FROM page_views WHERE ts >= ?' + mine + ' GROUP BY path ORDER BY views DESC LIMIT 25', since))
           .map(r => ({ path: r.path, views: r.views || 0, users: r.users || 0 }));
-        out.sources = (await rows('SELECT source, COUNT(*) AS views, COUNT(DISTINCT visitor) AS users FROM page_views WHERE ts >= ?' + mine + ' GROUP BY source ORDER BY views DESC LIMIT 20', since))
+        // Arrivals only: a click between our own pages is labeled '(internal)'
+        // and reported as its own number, not as a source (2026-10-17).
+        out.sources = (await rows('SELECT source, COUNT(*) AS views, COUNT(DISTINCT visitor) AS users FROM page_views WHERE ts >= ? AND source != ?' + mine + ' GROUP BY source ORDER BY views DESC LIMIT 20', since, INTERNAL_SOURCE))
           .map(r => ({ source: r.source || '', views: r.views || 0, users: r.users || 0 }));
+        out.internalHops = ((await one('SELECT COUNT(*) AS n FROM page_views WHERE ts >= ? AND source = ?' + mine, since, INTERNAL_SOURCE)).n) || 0;
+        // Likely automated, by behavior rather than by name: a visitor-day of 20
+        // or more views averaging under 15 seconds apart. Conservative on
+        // purpose (a person reading quickly through a few pages never reaches
+        // it), and reported beside the totals rather than subtracted from them,
+        // because a rule this blunt should be visible, not silently applied.
+        const auto = await one('SELECT COUNT(*) AS userDays, COALESCE(SUM(n), 0) AS views FROM (SELECT visitor, COUNT(*) AS n, MAX(ts) - MIN(ts) AS span FROM page_views WHERE ts >= ?' + mine + ' GROUP BY visitor) WHERE n >= ? AND span < n * ?', since, AUTO_MIN_VIEWS, AUTO_GAP_MS);
+        out.likelyAutomated = { userDays: auto.userDays || 0, views: auto.views || 0, minViews: AUTO_MIN_VIEWS, gapSec: AUTO_GAP_MS / 1000 };
         out.countries = (await rows("SELECT country, COUNT(*) AS views FROM page_views WHERE ts >= ? AND country != ''" + mine + ' GROUP BY country ORDER BY views DESC LIMIT 12', since))
           .map(r => ({ country: r.country, views: r.views || 0 }));
         out.events = (await rows('SELECT event, COUNT(*) AS n, COUNT(DISTINCT uid) AS people FROM site_events WHERE ts >= ?' + mine + ' GROUP BY event ORDER BY n DESC LIMIT 40', since))
@@ -18385,6 +18601,18 @@ export default {
         if (readErr) out.readError = { limit: d1ReadLimit(readErr), detail: errText(readErr) };
         return json(out, 200, head);
       } catch (e) { return json({ ok: false, error: 'server', detail: String(e).slice(0, 200) }, 500, head); }
+    }
+    if (url.pathname === '/api/admin/usage') {
+      // What visitors did, not just what they loaded: outcome events from
+      // it-metrics.js. Separate from /api/admin/traffic so either can fail alone.
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      if (!env.LEADS_DB) return json({ ok: false, error: 'no_db' }, 500, c);
+      if (!(await analyticsReady(env))) return json({ ok: false, error: 'no_tables' }, 500, c);
+      if (ownerFlag(request) !== '0') await ownerUid(env, url.searchParams.get('uid'), true);
+      try { const r = await adminUsage(env, url); return json(r.body, r.status, c); }
+      catch (e) { return json({ ok: false, error: 'server', detail: String(e).slice(0, 200) }, 500, c); }
     }
     if (url.pathname === '/api/track') {
       const c = corsHeaders(request.headers.get('Origin'));

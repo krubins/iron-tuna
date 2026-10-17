@@ -11,6 +11,7 @@
   gtag('config', 'AW-18397866361');
   gtag('config', 'G-KLBZBZSJ25');
 </script>
+<script src="/it-metrics.js" defer></script>
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -303,9 +304,11 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
     if (w0 && w0.out) return 'OUT';
     return w ? (w.home ? 'vs ' : 'at ') + w.opponent : '';
   }
+  // Queue an outcome for it-metrics.js, which loads deferred and drains the queue.
+  function itm() { (window.ITMetricsQ = window.ITMetricsQ || []).push([].slice.call(arguments)); }
   function paintRail() {
     $('psFull').href = '/rankings#pos=' + pos;
-    if (boardFailed) { $('psLeft').hidden = true; $('psRanks').innerHTML = ''; $('psRailEmpty').hidden = false; $('psRailEmpty').textContent = 'The board did not answer. Nothing is shown rather than a stale ranking.'; return; }
+    if (boardFailed) { $('psLeft').hidden = true; $('psRanks').innerHTML = ''; $('psRailEmpty').hidden = false; $('psRailEmpty').textContent = 'The board did not answer. Nothing is shown rather than a stale ranking.'; itm('error', 'position', pos, { pos: pos }); return; }
     if (!board) return;
     var rows = (board.players || []).filter(function (p) { return p && p.position === pos; })
       .map(function (p) { return { p: p, pts: points(p) }; })
@@ -323,6 +326,7 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
     }).join('');
     $('psRailEmpty').hidden = rows.length > 0;
     if (!rows.length) $('psRailEmpty').textContent = 'Nobody at this position is on the board ' + boardLabel + '.';
+    itm(rows.length ? 'success' : 'empty', 'position', pos + '|' + boardLabel, { pos: pos, horizon: boardLabel, rows: rows.length });
   }
 
   // PROMINENT PLAYERS THE RAIL DOES NOT SHOW (14 Oct 2026), by /rankings'

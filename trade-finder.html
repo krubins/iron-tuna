@@ -11,6 +11,7 @@
   gtag('config', 'AW-18397866361');
   gtag('config', 'G-KLBZBZSJ25');
 </script>
+<script src="/it-metrics.js" defer></script>
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -657,6 +658,11 @@ button.tf-shot{font-family:inherit;line-height:inherit;appearance:none}
 <script>
 (function () {
   'use strict';
+  // Queue an outcome for it-metrics.js, which loads deferred and drains the queue.
+  function itm() { (window.ITMetricsQ = window.ITMetricsQ || []).push([].slice.call(arguments)); }
+  // A short fingerprint of the input, so the same deal scored twice in one
+  // visit is one output. Only the fingerprint leaves the page, never a roster.
+  function hk(str) { var h = 5381; str = String(str); for (var i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
   var KEY = 'it_trade_v2';
   var HORIZONS = { week: 'This week', next3: 'Next 3 weeks', ros: 'Rest of season', playoffs: 'Fantasy playoffs' };
   // The focus slider's stops, left to right, and what each one says. The
@@ -1532,7 +1538,8 @@ button.tf-shot{font-family:inherit;line-height:inherit;appearance:none}
       renderResults(res, mi);
       take('find', res, mi);
       try { if (typeof gtag === 'function') gtag('event', 'trade_finder', { teams: count, trades: res.trades.length }); } catch (e) {}
-    }).catch(function () { status($('tf-find-status'), 'The board did not answer, so nothing is scored. Try again in a moment.', true); });
+      itm(res.trades.length ? 'success' : 'empty', 'trade_finder', hk([count, mine, res.considered, res.trades.length].join('|')), { rows: res.trades.length, teams: count });
+    }).catch(function () { status($('tf-find-status'), 'The board did not answer, so nothing is scored. Try again in a moment.', true); itm('error', 'trade_finder', 'load', { kind: 'network' }); });
   }
   function search(list, mi, limit) {
     return TR.findTrades(list, {
@@ -1599,7 +1606,8 @@ button.tf-shot{font-family:inherit;line-height:inherit;appearance:none}
       renderEvaluation(sides, mi, all, alt, entered, gauge);
       take('evaluate', sides, mi, gauge);
       try { if (typeof gtag === 'function') gtag('event', 'trade_evaluate', { teams: sides.length, all: all }); } catch (e) {}
-    }).catch(function () { status($('tf-find-status'), 'The board did not answer, so nothing is scored. Try again in a moment.', true); });
+      itm('success', 'trade_evaluator', hk(JSON.stringify(deal) + '|' + mine), { teams: sides.length, kind: all ? 'all_gain' : 'not_all' });
+    }).catch(function () { status($('tf-find-status'), 'The board did not answer, so nothing is scored. Try again in a moment.', true); itm('error', 'trade_evaluator', 'load', { kind: 'network' }); });
   }
 
   function chips(list, h) {

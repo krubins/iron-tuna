@@ -11,6 +11,7 @@
   gtag('config', 'AW-18397866361');
   gtag('config', 'G-KLBZBZSJ25');
 </script>
+<script src="/it-metrics.js" defer></script>
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -331,6 +332,15 @@ p{color:var(--sec);margin:0 0 16px}
     h += '<p class="mw-empty">' + esc(j.note) + '</p>';
     $('mwPlay').innerHTML = h;
   }
+  // Outcome metrics (it-metrics.js), once per visit per module. The league id
+  // and every name stay on the page; only the module and a row count go out.
+  function itm() { (window.ITMetricsQ = window.ITMetricsQ || []).push([].slice.call(arguments)); }
+  var TOOL = { lineup: 'lineup', pickups: 'waiver', trades: 'trade', matchup: 'matchup', intel: 'my_week_alerts', playoffs: 'playoffs' };
+  function outcome(m, j) {
+    if (!j || !j.ok) return itm('error', TOOL[m], m, { kind: (j && j.error) || 'not_ok', surface: 'my_week' });
+    var n = m === 'pickups' ? (j.pickups || []).length : m === 'trades' ? (j.trades || []).length : m === 'lineup' ? (j.lineup || []).length : m === 'intel' ? (j.alerts || []).length : 1;
+    itm(n || m === 'intel' || m === 'matchup' ? 'success' : 'empty', TOOL[m], m, { rows: n, surface: 'my_week' });
+  }
   function boot() {
     if (!window.ITSync) return;
     ITSync.load().then(function (st) {
@@ -342,7 +352,7 @@ p{color:var(--sec);margin:0 0 16px}
       $('mwGate').hidden = true; $('mwBody').hidden = false;
       var base = '/api/leagues/' + encodeURIComponent(LS.id) + '/advice?module=';
       [['lineup', lineup, 'mwLineup'], ['matchup', matchup, 'mwMatch'], ['intel', intel, 'mwIntel'], ['pickups', pickups, 'mwPick'], ['trades', trades, 'mwTrade'], ['playoffs', playoffs, 'mwPlay']].forEach(function (m) {
-        ITSync.api(base + m[0] + (m[0] === 'pickups' ? '&limit=8' : '')).then(m[1]).catch(function () { fail(m[2], null); });
+        ITSync.api(base + m[0] + (m[0] === 'pickups' ? '&limit=8' : '')).then(function (j) { m[1](j); outcome(m[0], j); }).catch(function () { fail(m[2], null); itm('error', TOOL[m[0]], m[0], { kind: 'network' }); });
       });
     });
   }

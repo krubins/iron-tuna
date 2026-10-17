@@ -11,6 +11,7 @@
   gtag('config', 'AW-18397866361');
   gtag('config', 'G-KLBZBZSJ25');
 </script>
+<script src="/it-metrics.js" defer></script>
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -580,6 +581,8 @@ p{color:var(--sec);margin:0 0 16px}
   var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
   var n1 = function (v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
   var $ = function (id) { return document.getElementById(id); };
+  // Queue an outcome for it-metrics.js, which loads deferred and drains the queue.
+  function itm() { (window.ITMetricsQ = window.ITMetricsQ || []).push([].slice.call(arguments)); }
   function rules() {
     var L = window.ITLeague, base = (L && L.defaults && L.defaults.scoring) || {};
     if (preset === 'custom' && L && L.has && L.config && L.config.scoring) return L.config.scoring;
@@ -756,6 +759,12 @@ p{color:var(--sec);margin:0 0 16px}
     if (!rows.length) $('rkEmpty').textContent = horizon === 'week' && payload.played && !payload.players.length
       ? 'Every game this week has kicked off, so there is nothing left to project. Next week\u2019s board posts when this week\u2019s last game ends; Next 3 Weeks and Rest of Season still answer.'
       : 'Nothing matches.';
+    // Outcome metrics (it-metrics.js): a populated board is a success once per
+    // visit for this horizon, position, scoring and board; a board with
+    // nothing to show is empty only when no search or switch narrowed it.
+    var mk = horizon + '|' + pos + '|' + preset + '|' + board;
+    if (rows.length) itm('success', 'rankings', mk, { horizon: horizon, pos: pos, scoring: preset, rows: rows.length });
+    else if (!q && !hideOut) itm('empty', 'rankings', mk, { horizon: horizon, pos: pos, scoring: preset });
     // The out-this-week switch is a one-week question; on a longer board it is
     // left in place but off, rather than quietly doing nothing.
     $('rkHideOut').disabled = horizon !== 'week';
@@ -824,10 +833,11 @@ p{color:var(--sec);margin:0 0 16px}
         $('rkEmpty').textContent = j && j.error === 'no_weeks'
           ? 'There is no week left on the schedule for this horizon. The Playoffs and Rest of Season boards still answer.'
           : 'The board did not answer. Nothing is shown rather than a stale ranking.';
+        itm(j && j.error === 'no_weeks' ? 'empty' : 'error', 'rankings', hz + '|' + preset, { horizon: hz, scoring: preset, kind: (j && j.error) || 'not_ok' });
         return;
       }
       store[hz] = j; if (hz === horizon) render();
-    }).catch(function () { $('rkEmpty').textContent = 'The board did not answer.'; });
+    }).catch(function () { $('rkEmpty').textContent = 'The board did not answer.'; itm('error', 'rankings', hz + '|' + preset, { horizon: hz, scoring: preset, kind: 'network' }); });
   }
   // THE TILES AND THE KPI BAND, both off the rows just scored, so the count
   // under a tile and the band's figure cannot disagree about who is ranked.

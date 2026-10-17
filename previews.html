@@ -11,6 +11,7 @@
   gtag('config', 'AW-18397866361');
   gtag('config', 'G-KLBZBZSJ25');
 </script>
+<script src="/it-metrics.js" defer></script>
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -328,6 +329,8 @@
     var b = ev.target.closest('button[data-share]');
     if (!b) return;
     var g = b.getAttribute('data-share');
+    // Counts the click on a share control; it cannot know whether the link was posted anywhere.
+    (window.ITMetricsQ = window.ITMetricsQ || []).push(['event', 'share_click', 'game_preview', g, { method: 'copy_link' }]);
     // The address bar is updated first and unconditionally, so a browser that
     // refuses the clipboard still leaves the right URL in front of the reader.
     focus = g;

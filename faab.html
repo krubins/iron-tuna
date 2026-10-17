@@ -11,6 +11,7 @@
   gtag('config', 'AW-18397866361');
   gtag('config', 'G-KLBZBZSJ25');
 </script>
+<script src="/it-metrics.js" defer></script>
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -329,6 +330,8 @@ Wk 4 - Tyler Allgeier - $12" spellcheck="false"></textarea></label>
 <script src="/it-sync.js"></script>
 <script>
 (function () {
+  // Queue an outcome for it-metrics.js, which loads deferred and drains the queue.
+  function itm() { (window.ITMetricsQ = window.ITMetricsQ || []).push([].slice.call(arguments)); }
   // The Waiver Desk, for the reader's own room. Everything here is one
   // call: /api/leagues/<id>/advice?module=pickups, computed on the server
   // from the synced rosters and the league-scored boards.
@@ -358,12 +361,13 @@ Wk 4 - Tyler Allgeier - $12" spellcheck="false"></textarea></label>
       $('fsMode').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; var generic = b.getAttribute('data-mode') === 'generic'; [].forEach.call(this.querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); }); $('fsRows').hidden = generic; $('fa-connect').hidden = !generic; $('fsSub').hidden = generic; $('fsNote').hidden = generic; });
       $('fa-connect').hidden = true;
       ITSync.api('/api/leagues/' + encodeURIComponent(LS.id) + '/advice?module=pickups&limit=15').then(function (j) {
-        if (!j || !j.ok) { $('fsSub').textContent = (j && (j.message || j.note)) || 'Your league did not answer. The generic advisor below still works.'; $('fa-connect').hidden = false; return; }
+        if (!j || !j.ok) { $('fsSub').textContent = (j && (j.message || j.note)) || 'Your league did not answer. The generic advisor below still works.'; $('fa-connect').hidden = false; itm('error', 'waiver', 'league', { kind: (j && j.error) || 'not_ok', surface: 'faab_league' }); return; }
+        itm(j.pickups.length ? 'success' : 'empty', 'waiver', 'league', { rows: j.pickups.length, surface: 'faab_league' });
         $('fsSub').innerHTML = '<b>Customized for your league.</b> ' + esc(j.availableCount) + ' players nobody in your room owns, ranked by what they add to <em>your</em> best lineup at your scoring.';
         $('fsRows').innerHTML = j.pickups.length ? j.pickups.map(row).join('') : '<p class="is-empty">No available player improves your roster this week. That is a compliment.</p>';
         $('fsNote').hidden = false;
         $('fsNote').innerHTML = 'Priority is the lineup gain per week over the next three and the rest of the season at your scoring. A drop is only proposed when the add is worth more than the player it costs. ' + (j.league.faab != null ? 'Bid ranges are shares of your remaining ' + DOLLAR + esc(j.league.budgetLeft) + ' by priority.' : 'This league uses waiver priority, so no bid is quoted.');
-      }).catch(function () { $('fsSub').textContent = 'Your league did not answer.'; $('fa-connect').hidden = false; });
+      }).catch(function () { $('fsSub').textContent = 'Your league did not answer.'; $('fa-connect').hidden = false; itm('error', 'waiver', 'league', { kind: 'network', surface: 'faab_league' }); });
     });
   });
 })();
@@ -372,6 +376,8 @@ Wk 4 - Tyler Allgeier - $12" spellcheck="false"></textarea></label>
 
 (function () {
   'use strict';
+  // Queue an outcome for it-metrics.js, which loads deferred and drains the queue.
+  function itm() { (window.ITMetricsQ = window.ITMetricsQ || []).push([].slice.call(arguments)); }
   var S = 'https://api.sleeper.app';
   var KEY = 'it_faab_v1';
   var MKEY = 'it_faab_manual_v1';
@@ -832,6 +838,7 @@ Wk 4 - Tyler Allgeier - $12" spellcheck="false"></textarea></label>
     $('fa-loading').hidden = true;
     $('fa-advisor').hidden = false;
     try { if (typeof gtag === 'function') gtag('event', 'faab_view', { teams: rosters.length }); } catch (e) {}
+    itm(shown ? 'success' : 'empty', 'faab', (manual ? 'manual' : 'sleeper') + '|' + (lg.total_rosters || rosters.length) + '|' + shown, { rows: shown, teams: rosters.length, mode: manual ? 'manual' : 'sleeper' });
   }
 
   // ── by hand ──────────────────────────────────────────────────────────────
