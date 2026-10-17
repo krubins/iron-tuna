@@ -865,6 +865,16 @@ jobs:
         if: ${{ !cancelled() }}
         run: node tools/test-admin-comp.mjs
 
+      # Growth plan Phase 6: the distribution desk. The three weekly drafts
+      # (the Tuesday waiver rule, the homepage examples, the flex pair), their
+      # frozen findings and tagged links, creator partners, the subscriber's
+      # visit attribution and the per-source comparison on /api/admin/usage,
+      # against SQLite and the real worker. Its /admin pass runs in the browser
+      # step below; here it skips, because Chromium is not installed yet.
+      - name: Distribution drafts, partners and source comparison
+        if: ${{ !cancelled() }}
+        run: node tools/test-distribution.mjs
+
       # ── the browser gate ──────────────────────────────────────────────────
       # LAST, and the only step in this file that installs anything. The browser
       # tests drive real Chromium, and they SELF-SKIP when it is absent — which
@@ -928,6 +938,12 @@ jobs:
         env:
           REQUIRE_BROWSER: '1'
         run: node tools/test-share-signup.mjs
+      # Phase 6: /admin's Distribution panel and Compare sources at 390 px.
+      - name: Distribution panel, in the browser
+        if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
+        env:
+          REQUIRE_BROWSER: '1'
+        run: node tools/test-distribution.mjs
 
       # it-metrics.js in a real browser: attribution and UTM stripping, one
       # visit across internal clicks, one success per result per visit, failure

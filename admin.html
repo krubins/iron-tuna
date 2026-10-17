@@ -116,6 +116,20 @@ details.ops[open]>summary::before{content:'\25BE'}
 details.ops>summary b{color:var(--sec);font-weight:600}
 details.ops>summary:hover b{color:var(--text)}
 
+/* The distribution desk (growth plan Phase 6). */
+.dist-draft{border-top:1px solid var(--line);padding:14px 0 6px}
+.dist-draft:first-of-type{border-top:0;padding-top:0}
+.dist-draft h3{font-size:16px;margin:0 0 4px}
+.dist-draft ul{margin:6px 0 8px;padding-left:20px;color:var(--sec);font-size:14.5px}
+.dist-draft li{overflow-wrap:anywhere}
+textarea.dist-text{width:100%;background:var(--elev);border:1px solid var(--line2);border-radius:9px;color:var(--text);padding:10px 12px;font:15px/1.45 inherit;font-family:inherit;resize:vertical}
+textarea.dist-text:focus{outline:none;border-color:var(--teal)}
+.dist-count{color:var(--muted);font-size:13.5px}
+.dist-count.over{color:var(--danger)}
+.dist-links{font-size:14px;color:var(--sec);overflow-wrap:anywhere}
+.field input[type=url]{background:var(--elev);border:1px solid var(--line2);border-radius:9px;color:var(--text);padding:10px 12px;font-size:15.5px;font-family:inherit;min-width:0}
+#ptForm input[type=text],#ptForm input[type=url]{flex:1 1 180px}
+
 /* Visible keyboard focus (WCAG 2.4.7). Gold reads >=9:1 on every surface in this palette.
    Listed per element so this beats the `outline:none` in the input rules above. */
 a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:2px}
@@ -202,6 +216,16 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     <div class="note">One row per source and medium as the visit began: a UTM tag first, then the outside site that linked, then direct. Moving between our own pages never starts a visit or changes its source; "(continued)" is a visit opened from one of our pages after the earlier visit had lapsed, so its source is unknown. A useful visit produced at least one populated result. Rows under 20 visitors are marked as small samples.</div>
   </div>
 
+  <!-- Phase 6: each source on what it produced. -->
+  <div class="card">
+    <h2>Compare sources: what each one produced</h2>
+    <div class="tblwrap"><table id="useCmpTbl"></table></div>
+    <div class="note">Browsers in the window, by the source their visit began with. A useful result, a saved league and a confirmed Sunday-email subscription are each counted once per browser. Came back in 7 days counts only browsers first seen at least eight days ago, by the source of their first visit; newer ones are listed as maturing. Confirmed subscriptions are credited to the visit the sign-up came from, inside the window; sign-ups from before 17 Oct 2026 have no source, and your own test sign-ups cannot be told apart. Under 20 visitors is a small sample; under 20 mature browsers is too young to compare returns. None of this is a forecast.</div>
+    <h2 style="margin-top:18px">Tagged links by campaign</h2>
+    <div class="tblwrap"><table id="useCampTbl"></table></div>
+    <div class="note">Visits that arrived on a link with a utm_campaign tag: one row per source, medium and campaign, so one week&rsquo;s post can be told from the next.</div>
+  </div>
+
   <div class="grid2">
     <div class="card">
       <h2>From a visit to a saved league</h2>
@@ -239,6 +263,59 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       <div class="note" id="useSubNote"></div>
     </div>
   </div>
+
+  <!-- The distribution desk (growth plan Phase 6): three weekly drafts to
+       post by hand, the creator partners they can be tagged for, and an
+       outreach draft. Closed until opened; nothing here posts or sends. -->
+  <details id="dist" class="ops">
+    <summary><b>Distribution</b> — this week&rsquo;s post drafts, creator partners, outreach</summary>
+  <h1>Post drafts</h1>
+  <p class="meta">Three drafts a week, cut from the same rules the site prints by. Building them freezes each finding as a dated page, so the link always says what the post said. Edit the text, choose where it is going, copy it and post it yourself. Nothing here posts, schedules or sends anything.</p>
+  <div class="card" id="distCard">
+    <div class="field">
+      <label for="distScoring">Scoring
+        <select id="distScoring"><option value="ppr">PPR</option><option value="half">Half PPR</option><option value="standard">Standard</option></select>
+      </label>
+      <button class="btn primary" id="distBuild" type="button">Build this week&rsquo;s drafts</button>
+    </div>
+    <p class="meta" id="distMeta" style="margin:0 0 12px">Not built yet.</p>
+    <div id="distDrafts"></div>
+    <div class="note">Each link is tagged utm_source (the channel, or creator-&lt;slug&gt; for a partner), utm_medium (social or partner) and utm_campaign &lt;season&gt;-w&lt;NN&gt;-&lt;piece&gt;, so Compare sources above shows what each post produced. The character count is the text as written; X counts any link as 23 characters. The share image is SVG: open the finding page and use Save image for a PNG.</div>
+  </div>
+
+  <h1>Creator partners</h1>
+  <p class="meta">Only creators you have chosen yourself. The list starts empty and nothing contacts anyone. Each partner gets its own tagged links (utm_source=creator-&lt;slug&gt;, utm_medium=partner) in the drafts above, and its results appear here once readers arrive on them.</p>
+  <div class="card" id="ptCard">
+    <div class="tblwrap"><table id="ptTbl"></table></div>
+    <div class="field" id="ptForm" style="margin-top:14px">
+      <input id="ptSlug" type="text" placeholder="slug, e.g. sunday-pod" autocomplete="off" spellcheck="false" maxlength="32">
+      <input id="ptName" type="text" placeholder="Name as you know them" autocomplete="off" maxlength="80">
+      <input id="ptChannel" type="text" placeholder="Channel (YouTube, podcast, Discord…)" autocomplete="off" maxlength="40">
+      <input id="ptUrl" type="url" placeholder="https://their page" autocomplete="off" spellcheck="false" maxlength="200">
+      <label for="ptStatus">Status <select id="ptStatus"></select></label>
+      <input id="ptNotes" type="text" placeholder="Notes (yours only)" autocomplete="off" maxlength="500">
+      <button class="btn primary" id="ptSave" type="button">Save partner</button>
+    </div>
+    <div class="result" id="ptResult"><div class="msg" id="ptMsg"></div></div>
+    <div class="note">Results use the window chosen at the top of the page. Saving a slug that exists updates it. A partner&rsquo;s own name, channel and notes stay on this page; the public links carry only the slug.</div>
+  </div>
+
+  <h1>Outreach and a sample segment</h1>
+  <p class="meta">A starting draft to edit before you send it yourself, and a short segment a creator could read, built from this week&rsquo;s market draft. Neither is sent from here.</p>
+  <div class="card" id="orCard">
+    <div class="field">
+      <label for="orPartner">For <select id="orPartner"><option value="">(no partner chosen)</option></select></label>
+      <button class="btn" id="orFill" type="button">Fill the drafts</button>
+    </div>
+    <h2>Outreach draft</h2>
+    <textarea class="dist-text" id="orText" rows="12" spellcheck="true"></textarea>
+    <div class="field" style="margin-top:8px"><button class="btn" id="orCopy" type="button">Copy outreach</button></div>
+    <h2 style="margin-top:14px">Sample segment</h2>
+    <textarea class="dist-text" id="orSeg" rows="9" spellcheck="true"></textarea>
+    <div class="field" style="margin-top:8px"><button class="btn" id="orSegCopy" type="button">Copy segment</button></div>
+    <div class="note" id="orNote">Build the drafts first: the segment and the example in the outreach use this week&rsquo;s market draft and its partner link. Bracketed fields are yours to fill. Say nothing about traffic or results you have not measured.</div>
+  </div>
+  </details>
 
   <!-- Everything that is not the audience. Ken, 2026-10-10: the Admin link
        exists for the usage numbers — how many people, what they read, how
@@ -487,6 +564,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
         renderTraffic(res.j);
         loadUsage();
         if ($('ops').open) opsLoad();
+        if ($('dist').open) ptLoad();
       })
       .catch(function(e){ showGate('Network error: ' + esc(e && e.message)); });
   }
@@ -894,6 +972,24 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     $('useNote').textContent = 'A visitor here is one browser, identified by a random id kept in its own storage. A cleared or private browser, or a second device, reads as a new visitor, so returns are undercounted; a browser that blocks storage or scripts is not counted at all (the traffic numbers above still include it). ' +
       'A one-page visit is not treated as a failure: what counts as useful is a populated result, wherever it happened.';
 
+    // Phase 6: each source on what it produced.
+    lastUsage = d;
+    var bs = d.bySource || [], na = '<span style="color:var(--muted)">n/a</span>';
+    $('useCmpTbl').innerHTML = !bs.length ? '<tr><td class="empty">' + (d.available ? 'No visits in this window.' : 'Nothing collected yet.') + '</td></tr>' :
+      '<tr><th>Source</th><th>Medium</th><th class="num">Visitors</th><th class="num">Useful result</th><th class="num">Saved a league</th><th class="num">Confirmed email</th><th class="num">Came back in 7 days</th></tr>' +
+      bs.map(function(r){
+        return '<tr><td>' + esc(r.source) + (r.small ? ' <span class="badge">small sample</span>' : '') + '</td><td>' + esc(r.medium) + '</td><td class="num">' + num(r.visitors) +
+          '</td><td class="num">' + cp(r.usefulVisitors, r.visitors) + '</td><td class="num">' + cp(r.leagueVisitors, r.visitors) + '</td><td class="num">' + (r.confirmedMeasured ? num(r.confirmed) : na) +
+          '</td><td class="num">' + (r.matureNew ? cp(r.returned7, r.matureNew) + (r.immature ? ' <span class="badge">too young</span>' : '') : na) + (r.maturing ? ' <span class="badge">' + num(r.maturing) + ' maturing</span>' : '') + '</td></tr>';
+      }).join('');
+    var cg = d.campaigns || [];
+    $('useCampTbl').innerHTML = !cg.length ? '<tr><td class="empty">' + (d.available ? 'No tagged visits in this window.' : 'Nothing collected yet.') + '</td></tr>' :
+      '<tr><th>Campaign</th><th>Source</th><th>Medium</th><th class="num">Visitors</th><th class="num">Visits</th><th class="num">Useful result</th></tr>' +
+      cg.map(function(r){
+        return '<tr><td>' + esc(r.campaign) + (r.small ? ' <span class="badge">small sample</span>' : '') + '</td><td>' + esc(r.source) + '</td><td>' + esc(r.medium) + '</td><td class="num">' + num(r.visitors) + '</td><td class="num">' + num(r.visits) + '</td><td class="num">' + cp(r.usefulVisitors, r.visitors) + '</td></tr>';
+      }).join('');
+    if (ptList.length) ptRender();
+
     var src = d.sources || [];
     $('useSrcTbl').innerHTML = !src.length ? '<tr><td class="empty">' + (d.available ? 'No visits in this window.' : 'Nothing collected yet.') + '</td></tr>' :
       '<tr><th>Source</th><th>Medium</th><th class="num">Visitors</th><th class="num">Visits</th><th class="num">Useful visits</th><th class="num">Saved a league</th></tr>' +
@@ -952,6 +1048,164 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     $('useSubNote').textContent = 'A share click means the control was used, not that a link was posted anywhere. Email: ' + num(sub.signupEvents || 0) + ' sign-up form submissions succeeded' +
       (sub.contactsStored == null ? '' : ' (' + num(sub.contactsStored) + ' addresses stored by any form, purchases excluded)') + '. ' + (sub.confirmedNote || '');
   }
+
+  // ── the distribution desk (growth plan Phase 6) ─────────────────────────
+  // Drafts are built on request (building freezes their findings), edited
+  // here and copied out by hand. Nothing on this page posts or sends.
+  var distData = null, ptList = [], ptStatuses = [], lastUsage = null;
+  var CH_NAMES = { x: 'X', threads: 'Threads', reddit: 'Reddit', discord: 'Discord', bluesky: 'Bluesky' };
+  var SC_NAMES = { ppr: 'PPR', half: 'Half PPR', standard: 'Standard' };
+  function copyText(text, btn){
+    var done = function(){ var t = btn.textContent; btn.textContent = 'Copied'; setTimeout(function(){ btn.textContent = t; }, 1500); };
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, function(){ btn.textContent = 'Copy refused: select the text'; }); return; } } catch(e){}
+    btn.textContent = 'Copy refused: select the text';
+  }
+  // X counts any link as 23 characters, whatever its length.
+  function xCount(t){ return String(t).replace(/https?:\/\/\S+/g, '01234567890123456789012').length; }
+  function distTargets(){
+    var d = distData || {}, o = (d.channels || []).map(function(c){ return { v: 'ch:' + c, t: CH_NAMES[c] || c }; });
+    (d.partners || []).forEach(function(s){ o.push({ v: 'pt:' + s, t: 'Creator: ' + s }); });
+    return o;
+  }
+  function distLink(f, target){ if (!f) return ''; var k = target.slice(3); return ((target.indexOf('pt:') === 0 ? f.partner : f.links) || {})[k] || ''; }
+  function distRender(){
+    var d = distData; if (!d) return;
+    $('distMeta').textContent = 'Week ' + d.week + (d.season ? ', ' + d.season : '') + ' · ' + (SC_NAMES[d.scoring] || d.scoring) + ' · built ' + new Date(d.generatedAt).toLocaleString() +
+      '. Build again for a newer board; a finding already frozen keeps its own page.';
+    var opts = distTargets().map(function(o){ return '<option value="' + esc(o.v) + '">' + esc(o.t) + '</option>'; }).join('');
+    $('distDrafts').innerHTML = d.drafts.map(function(x, i){
+      var h = '<div class="dist-draft" data-i="' + i + '"><h3>' + esc(x.label) + ' <span class="badge' + (x.status === 'ready' ? ' ok' : '') + '">' + (x.status === 'ready' ? 'ready' : 'nothing to post') + '</span></h3>' +
+        '<p class="meta" style="margin:0 0 6px">Post ' + esc(x.day) + ' · campaign ' + esc(x.campaign) + (x.boardAt ? ' · board computed ' + esc(new Date(x.boardAt).toLocaleString()) : '') + '</p>';
+      if (x.status !== 'ready') return h + '<p class="note" style="margin:0">' + esc(x.why) + '</p><p class="note">Rule: ' + esc(x.rule) + '</p></div>';
+      return h + '<ul>' + x.figures.map(function(t){ return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' +
+        '<p class="note" style="margin:0 0 10px">' + esc(x.explain) + '</p>' +
+        '<div class="field"><label>Tag for <select class="dist-target">' + opts + '</select></label><span class="dist-count"></span></div>' +
+        '<textarea class="dist-text" rows="7" spellcheck="true"></textarea>' +
+        '<div class="field" style="margin-top:8px"><button class="btn primary dist-copy" type="button">Copy text</button></div>' +
+        '<div class="dist-links">' + x.findings.map(function(f){ return '<div><a href="' + esc(f.url) + '" target="_blank" rel="noopener">' + esc(f.title) + '</a> · <a href="' + esc(f.image) + '" target="_blank" rel="noopener">share image</a><br><span class="dist-flink"></span></div>'; }).join('') + '</div>' +
+        '<p class="note">Rule: ' + esc(x.rule) + '</p></div>';
+    }).join('');
+    [].forEach.call($('distDrafts').querySelectorAll('.dist-draft'), function(el){
+      var x = d.drafts[+el.getAttribute('data-i')]; if (x.status !== 'ready') return;
+      var sel = el.querySelector('.dist-target'), ta = el.querySelector('textarea'), cnt = el.querySelector('.dist-count'), edited = false, cur = null;
+      function count(){ var n = ta.value.length, xn = xCount(ta.value); cnt.textContent = n + ' characters; X counts ' + xn + (xn > 280 ? ', over its 280' : ''); cnt.className = 'dist-count' + (xn > 280 ? ' over' : ''); }
+      // Switching channel swaps the link inside the text, edits kept.
+      function fill(){
+        var link = distLink(x.findings[0], sel.value);
+        if (!edited) ta.value = x.text.replace('{link}', link);
+        else if (cur && ta.value.indexOf(cur) >= 0) ta.value = ta.value.split(cur).join(link);
+        [].forEach.call(el.querySelectorAll('.dist-flink'), function(s, k){ s.textContent = distLink(x.findings[k], sel.value); });
+        cur = link; count();
+      }
+      fill();
+      sel.addEventListener('change', fill);
+      ta.addEventListener('input', function(){ edited = true; count(); });
+      el.querySelector('.dist-copy').addEventListener('click', function(){ copyText(ta.value, this); });
+    });
+  }
+  $('distBuild').addEventListener('click', function(){
+    var key = getKey(); if (!key) { showGate('Session locked. Enter the key again.'); return; }
+    var btn = this; btn.disabled = true; $('distMeta').textContent = 'Building…';
+    fetch('/api/admin/drafts?key=' + encodeURIComponent(key) + '&scoring=' + encodeURIComponent($('distScoring').value), { method: 'POST' })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        btn.disabled = false;
+        if (!j || !j.ok) { $('distMeta').textContent = 'Not built: ' + ({ no_board: 'there is no week board right now.', storage: 'the database is not available.' }[j && j.error] || (j && j.error) || 'unknown error'); return; }
+        distData = j; distRender(); orBuild();
+      })
+      .catch(function(){ btn.disabled = false; $('distMeta').textContent = 'Not built: the request failed.'; });
+  });
+
+  // Partners: the owner's own list, with what each partner's tagged links
+  // produced in the window chosen at the top (from the Compare sources read).
+  function ptUsage(slug){
+    var o = { visitors: 0, useful: 0, league: 0, confirmed: 0, mature: 0, returned: 0, measured: true };
+    ((lastUsage && lastUsage.bySource) || []).forEach(function(r){
+      if (r.source !== 'creator-' + slug) return;
+      o.visitors += r.visitors; o.useful += r.usefulVisitors; o.league += r.leagueVisitors; o.confirmed += r.confirmed; o.mature += r.matureNew; o.returned += r.returned7;
+      if (!r.confirmedMeasured) o.measured = false;
+    });
+    return o;
+  }
+  function ptRender(){
+    $('ptTbl').innerHTML = !ptList.length ? '<tr><td class="empty">No partners yet. Add one below when you have chosen whom to approach.</td></tr>' :
+      '<tr><th>Partner</th><th>Status</th><th class="num">Visitors</th><th class="num">Useful result</th><th class="num">Saved a league</th><th class="num">Confirmed email</th><th class="num">Came back in 7 days</th><th></th></tr>' +
+      ptList.map(function(p, i){
+        var u = ptUsage(p.slug);
+        return '<tr><td>' + esc(p.name) + ' <span style="color:var(--muted)">creator-' + esc(p.slug) + (p.channel ? ' · ' + esc(p.channel) : '') + '</span>' + (u.visitors && u.visitors < 20 ? ' <span class="badge">small sample</span>' : '') + '</td><td>' + esc(p.status) +
+          '</td><td class="num">' + num(u.visitors) + '</td><td class="num">' + cp(u.useful, u.visitors) + '</td><td class="num">' + cp(u.league, u.visitors) + '</td><td class="num">' + (u.measured ? num(u.confirmed) : '<span style="color:var(--muted)">n/a</span>') +
+          '</td><td class="num">' + (u.mature ? cp(u.returned, u.mature) : '<span style="color:var(--muted)">n/a</span>') + '</td><td><button class="btn pt-edit" type="button" data-i="' + i + '">Edit</button> <button class="btn pt-del" type="button" data-i="' + i + '">Remove</button></td></tr>';
+      }).join('');
+    [].forEach.call($('ptTbl').querySelectorAll('.pt-edit'), function(b){ b.addEventListener('click', function(){
+      var p = ptList[+b.getAttribute('data-i')];
+      $('ptSlug').value = p.slug; $('ptName').value = p.name || ''; $('ptChannel').value = p.channel || ''; $('ptUrl').value = p.url || ''; $('ptStatus').value = p.status; $('ptNotes').value = p.notes || '';
+    }); });
+    [].forEach.call($('ptTbl').querySelectorAll('.pt-del'), function(b){ b.addEventListener('click', function(){
+      var p = ptList[+b.getAttribute('data-i')];
+      if (!window.confirm('Remove ' + p.name + ' from the list? Visits already tagged creator-' + p.slug + ' stay in the numbers.')) return;
+      ptPost({ action: 'delete', slug: p.slug }, 'Removed.');
+    }); });
+    var sel = $('orPartner'), was = sel.value;
+    sel.innerHTML = '<option value="">(no partner chosen)</option>' + ptList.map(function(p){ return '<option value="' + esc(p.slug) + '">' + esc(p.name) + '</option>'; }).join('');
+    sel.value = was;
+  }
+  function ptSay(cls, t){ $('ptResult').className = 'result show ' + cls; $('ptMsg').textContent = t; }
+  function ptLoad(){
+    var key = getKey(); if (!key) return;
+    fetch('/api/admin/partners?key=' + encodeURIComponent(key))
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (!j || !j.ok) { $('ptTbl').innerHTML = '<tr><td class="empty">Partners unavailable: ' + esc((j && j.error) || 'unknown error') + '</td></tr>'; return; }
+        ptList = j.partners || []; ptStatuses = j.statuses || [];
+        var st = $('ptStatus'), was = st.value;
+        st.innerHTML = ptStatuses.map(function(s){ return '<option value="' + esc(s) + '">' + esc(s) + '</option>'; }).join('');
+        if (was) st.value = was;
+        ptRender();
+      })
+      .catch(function(){ $('ptTbl').innerHTML = '<tr><td class="empty">Partners did not load.</td></tr>'; });
+  }
+  function ptPost(body, okMsg){
+    var key = getKey(); if (!key) { showGate('Session locked. Enter the key again.'); return; }
+    fetch('/api/admin/partners?key=' + encodeURIComponent(key), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (!j || !j.ok) { ptSay('bad', 'Not saved: ' + ({ bad_slug: 'the slug must be 1 to 32 lowercase letters, digits or hyphens.', name_required: 'enter a name.', bad_url: 'the address must start with https://.', storage: 'the database is not available.' }[j && j.error] || (j && j.error) || 'unknown error')); return; }
+        ptSay('ok', okMsg + (distData ? ' Build the drafts again to get links tagged for this partner.' : ''));
+        ptLoad();
+      })
+      .catch(function(){ ptSay('bad', 'Not saved: the request failed.'); });
+  }
+  $('ptSave').addEventListener('click', function(){
+    ptPost({ action: 'save', slug: $('ptSlug').value.trim().toLowerCase(), name: $('ptName').value.trim(), channel: $('ptChannel').value.trim(), url: $('ptUrl').value.trim(), status: $('ptStatus').value, notes: $('ptNotes').value.trim() }, 'Saved.');
+  });
+
+  // Outreach and the sample segment, from this week's market draft. Bracketed
+  // fields are the owner's to fill; nothing is claimed that is not measured.
+  function orBuild(){
+    var p = null, slug = $('orPartner').value;
+    ptList.forEach(function(x){ if (x.slug === slug) p = x; });
+    var g = null;
+    ((distData && distData.drafts) || []).forEach(function(x){ if (x.piece === 'vegas-gaps' && x.status === 'ready') g = x; });
+    var f = g && g.findings[0];
+    var link = f ? (p ? (f.partner || {})[p.slug] : f.url) : '';
+    var lab = g ? (SC_NAMES[g.scoring] || g.scoring) : '';
+    $('orText').value = 'Hi ' + (p ? p.name : '[Name]') + ',\n\n' +
+      'I run Iron Tuna (irontuna.com), a free fantasy football site. Each week it compares two projections for every player: the fantasy consensus, and what sportsbook player props imply once they are converted into fantasy points. Most weeks a few players show a meaningful gap between the two.\n\n' +
+      (g ? 'This week’s widest, at ' + lab + ': ' + g.figures[0] + '\nThe dated page, which does not change once it is published: ' + (link || '[link]') + '\n\n' : '[One current example, with its numbers and its link]\n\n') +
+      'I thought it might make a short segment for ' + (p && p.channel ? 'your ' + p.channel : '[your show or channel]') + '. If it is of interest, I can send the week’s differences each [day], with the figures, when they were read, and a link tagged to you, so we can both see whether your audience finds it useful.\n\n' +
+      '[Anything specific to them]\n\nThanks,\n[Your name]';
+    $('orSeg').value = !g ? '' : '[About 60 seconds]\n\nWhere the betting market and the fantasy consensus disagree most this week (Week ' + g.week + ', ' + lab + '):\n\n' +
+      g.figures.map(function(t, i){ return (i + 1) + '. ' + t; }).join('\n') +
+      '\n\nMarket points are converted from quoted sportsbook player props; the consensus is the fantasy experts’ projection. A gap is a disagreement between two projections, not a prediction and not betting advice. 21+.\nFrozen numbers and the full board: ' + (link || '[link]');
+    $('orNote').textContent = !g ? 'Build the drafts first: the example and the segment use this week’s market draft. ' + (distData ? 'This week’s market draft has nothing to post at this scoring.' : '')
+      : (p && !link ? 'This partner was added after the drafts were built, so the link is untagged. Build the drafts again. ' : '') + 'Bracketed fields are yours to fill. Say nothing about traffic or results you have not measured.';
+  }
+  $('orFill').addEventListener('click', orBuild);
+  $('orPartner').addEventListener('change', orBuild);
+  $('orCopy').addEventListener('click', function(){ copyText($('orText').value, this); });
+  $('orSegCopy').addEventListener('click', function(){ copyText($('orSeg').value, this); });
+  var distLoaded = false;
+  $('dist').addEventListener('toggle', function(){ if ($('dist').open && !distLoaded && getKey()) { distLoaded = true; ptLoad(); orBuild(); } });
 
   // wire up
   $('unlockBtn').addEventListener('click', function(){ var k = $('keyInput').value.trim(); if (!k) { $('gateErr').textContent = 'Enter the password.'; return; } setKey(k); load(); });

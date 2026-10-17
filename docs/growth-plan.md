@@ -46,8 +46,8 @@ expectations and fantasy consensus. The retention feature is My Week.
 | 2 | Reliability and search visibility | **Done** (2026-10-17, merged as #443) | `claude/growth-phase-2` |
 | 3 | First-visit experience | **Done** (2026-10-17, merged as #444) | `claude/growth-phase-3` |
 | 4 | Repeat usage (My Week) | **Done** (2026-10-17, merged as #445) | `claude/growth-phase-4` |
-| 5 | Email and sharing | **Done** (2026-10-17, awaiting review and merge; delivery off until configured) | `claude/growth-phase-5` |
-| 6 | Distribution and evaluation | Not started | |
+| 5 | Email and sharing | **Done** (2026-10-17, merged as #446; delivery off until configured) | `claude/growth-phase-5` |
+| 6 | Distribution and evaluation | **Done** (2026-10-17, awaiting review and merge) | `claude/growth-phase-6` |
 
 ---
 
@@ -152,7 +152,7 @@ A click between our own pages never starts a visit or changes its source. A
 page opened from one of ours after the visit lapsed is `(continued)`. A new
 outside arrival mid-visit (a tagged link, another site) starts a new visit.
 
-**Tag the owner's own links this way** (Phase 6 builds this into the workflow):
+**Tag the owner's own links this way** (Phase 6 builds this into /admin's post drafts):
 
 | Field | Values |
 |---|---|
@@ -221,8 +221,8 @@ beside every percentage and `n/a` where there is no denominator:
 
 ## Outstanding configuration and access
 
-- **Merge and deploy** `claude/growth-phase-5` (owner). Phases 1 to 4 merged
-  as #442, #443, #444 and #445.
+- **Merge and deploy** `claude/growth-phase-6` (owner). Phases 1 to 5 merged
+  as #442, #443, #444, #445 and #446.
 - **Turn on the Sunday email** (owner, Phase 5). Until all of these are set,
   the sign-up form does not appear anywhere, `/newsletter` says sign-up is not
   open, and the Sunday job logs "disabled": `RESEND_API_KEY` (already used by
@@ -235,7 +235,7 @@ beside every percentage and `n/a` where there is no denominator:
   settings alone, and read the preview at each scoring.
 - **Privacy policy** (owner). `/privacy` does not yet describe the Sunday
   email (what is stored: address, scoring, where they signed up, the consent
-  wording and times; Resend as processor; how to unsubscribe). The sign-up
+  wording and times, and since Phase 6 the visit's source and campaign; Resend as processor; how to unsubscribe). The sign-up
   form links to it, so it should say so before the switch is turned on. Not
   edited here: a policy is the owner's statement, not copy to draft unasked.
 - **Washington.** Sign-up is not offered to visitors located in Washington,
@@ -732,13 +732,124 @@ player page, whose numbers move.
   failed, and `share_click` by method; Phase 6 compares sources by confirmed
   subscriptions.
 
-## Next steps: Phase 6 (distribution and evaluation)
+## Phase 6: distribution and evaluation (2026-10-17)
 
-Start here when told "Start next phase". The Phase 6 requirements are under
-"Later phases" below. Phase 5 leaves it dated findings to link drafts to
-(`/api/share/finding`, `/api/share/compare`), an SVG share image per finding,
-the UTM convention already applied to the email, and confirmed subscribers
-counted on /admin.
+### What existed
+
+Dated findings and their SVG images (Phase 5), the UTM convention (Phase 1,
+applied to the email in Phase 5), a sources table on /admin with visitors,
+useful visits and saved leagues, confirmed subscribers as a total only, and
+the Pickup Advisor's rostered-depth rule (`PICKUP_ROSTERED`). No drafts, no
+partner list, no per-source returns or subscriptions.
+
+### What changed
+
+- **Post drafts (`distributionDrafts`, `POST /api/admin/drafts`).** Three a
+  week, each from a rule the site already applies, at a chosen scoring:
+  - *Tuesday, waiver finding (`waiverFindingRec`).* The widest gap by which
+    Iron Tuna's projection beats the consensus for a player the consensus
+    ranks below the depth a 12-team league usually rosters (QB 17, RB 60,
+    WR 72, TE 18: `PICKUP_ROSTERED` x 12, a rule of thumb, not anyone's
+    rosters) while Iron Tuna ranks him inside it, by the board's strong
+    thresholds. Ranks re-cut at the preset within position. Healthy, playing,
+    upcoming, consensus at least 3 points. Market points only when fully
+    priced off quoted props. Declines once any game has kicked off (ranks
+    would be among the players still to play). Says "check your wire": a
+    public draft cannot know a league's free agents.
+  - *Thursday or Friday, market versus consensus.* The homepage examples
+    (`homeExamples`), up to three.
+  - *Sunday morning, close lineup call.* The homepage sample's flex pair
+    (`homeSamplePair`, `findingCompareRec`).
+  Each draft carries its figures, scoring, week, the board time, a short
+  explanation, the rule it applied, and a text with the link slot. Each is
+  frozen as a dated finding (a new `waiver` kind: page, title, description and
+  share image), so the link says what the post said. Each finding has a link
+  per channel (`x`, `threads`, `reddit`, `discord`, `bluesky`; medium
+  `social`) and per partner (`creator-<slug>`, medium `partner`), campaign
+  `<season>-w<NN>-<piece>` (`waiver`, `vegas-gaps`, `lineup`). A slot with
+  nothing that clears its rule says "nothing to post" and why, and freezes
+  nothing. Every draft fits X as built (link counted as 23).
+- **/admin, Distribution** (a closed disclosure between Meaningful use and
+  Operator tools; loads nothing until opened). Build button and scoring; per
+  draft the figures, explanation, rule, "Tag for" channel or partner, an
+  editable text whose link follows the channel (edits survive the switch),
+  character and X counts, Copy, and each finding's page and share image. No
+  publish, schedule or send control exists.
+- **Creator partners (`partners` table, `/api/admin/partners`).** Slug, name,
+  channel, https address, status (prospect to declined), notes. Starts empty;
+  nothing seeds it. Per partner on /admin: visitors, useful results, saved
+  leagues, confirmed subscriptions and seven-day returns from its tagged links,
+  with small samples marked. Only the slug reaches a public link.
+- **Outreach and sample segment.** An editable outreach draft (partner name and
+  channel, this week's widest market difference and its partner-tagged link,
+  bracketed fields for the owner) and a 60-second segment of the market draft
+  with the derived-estimate wording, "not betting advice" and 21+. Copied by
+  hand; never sent.
+- **Compare sources (`usageBySource`, in `/api/admin/usage` as `bySource` and
+  `campaigns`).** Per source and medium: visitors, browsers with a useful
+  result, browsers that saved a league, confirmed subscriptions, and seven-day
+  return by the source of the browser's first visit, counted only for browsers
+  first seen eight or more days ago (younger ones listed as maturing). Rows
+  under 20 visitors are small samples; under 20 mature browsers, too young.
+  Tagged traffic is split by campaign, so one week's post is told from the
+  next.
+- **Subscriptions by source.** The sign-up form sends the visit's
+  `src|med|cmp` from it-metrics.js (`att`); the worker cuts it to label
+  characters (`nlAttribution`) and stores it on the subscriber row
+  (`newsletter_subscribers.attribution`, added by `ALTER TABLE` on first
+  use). The analytics tables still never hold an address.
+- **The owner's checklist and the 30-day evaluation:** `docs/distribution.md`
+  (weekly steps per slot; Monday read; creator steps; periods, measures,
+  sample-size rule and the Day 30 decision). No traffic promises.
+
+### Phase 6 verification (2026-10-17)
+
+- `node tools/test-distribution.mjs` (new, in CI twice: node part early, then
+  with `REQUIRE_BROWSER=1` after Chromium): 93 checks. Waiver rule (the one
+  qualifying player out of seven built to fail one rule each, ranks re-cut,
+  depth line, market only when priced, declines after kickoff, none with a
+  reason); the three drafts (order, days, campaigns, week, scoring, time, one
+  link slot, explanation and rule, labels, X length, no em dash, findings and
+  images, links per channel and partner, partner name never in a link, same
+  figures same page and first date, the waiver page, image, title and
+  escaping, "nothing to post" freezes nothing, another preset); partners
+  (validation, upsert, delete, nothing seeded); attribution cut to labels;
+  the real worker's routes (gate, POST only, no board 409, partners) and
+  `/api/admin/usage` over seeded events (useful, league, confirmed by source,
+  first-touch mature return, maturing, unattributed, small samples,
+  campaigns, no address, no subscriber table); a sign-up storing its
+  attribution; /admin at 390 px (Compare sources, partners with results,
+  build posts once, the link follows the channel and keeps edits, finding
+  links, outreach and segment, no sideways scroll, no other request, no page
+  errors).
+- Full CI node suite less `test-dry-run`, with `REQUIRE_BROWSER=1`: 79 of 79
+  pass. `build-chrome`, `build-ranks`, `build-seo`, `build-bylines --check`
+  clean; `build-front` and `build-worker-faces` produce no diff; every
+  `node --check` target parses; admin.html's scripts parse.
+- Not run: `test-dry-run.mjs` (nothing here touches the newsroom or the job
+  schedule).
+
+### Still open from Phase 6
+
+- **Owner:** post by hand; nothing automates it. Follow `docs/distribution.md`.
+- **The waiver draft is Iron Tuna's projection, not the market's,** and
+  cannot say who is free in a reader's league. If the owner wants a
+  roster-percentage signal, it needs a licensed source (docs/data-sources.md).
+- **Per-finding link previews** still use `og.png` (Phase 5 limit): posts
+  carry the image only when the owner attaches the saved PNG.
+- **Confirmed subscriptions by source** read 0 everywhere until the Sunday
+  email is switched on, and sign-ups before this deploy have no source.
+- **Privacy policy** (owner, carried from Phase 5): it should also say the
+  sign-up records the visit's source.
+- The partner list holds names the owner types; it is admin-only and never
+  published, but it is personal data the owner is responsible for.
+
+## Next steps
+
+All six phases are built. There is no seventh in the brief. After deploy:
+run the 30-day evaluation in `docs/distribution.md`, then decide from its
+Day 30 table which channels and partners to keep. Any new phase should be
+written here first, from that evidence.
 
 ## Phase 2 requirements, as given (for reference)
 

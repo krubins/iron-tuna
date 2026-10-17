@@ -27,6 +27,12 @@
   if (!nodes.length) return;
   var get = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
   var set = function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} };
+  // Where this visit came from (Phase 6), so a confirmed subscription can be
+  // counted against its source on /admin. it-metrics.js's own attribution:
+  // source, medium and campaign, nothing else.
+  function visitSource() {
+    try { var v = window.ITMetrics && window.ITMetrics.visit && window.ITMetrics.visit(); return v ? { src: v.src, med: v.med, cmp: v.cmp } : null; } catch (e) { return null; }
+  }
   function itm() { (window.ITMetricsQ = window.ITMetricsQ || []).push([].slice.call(arguments)); }
   var RE = /^[^@\s<>"]+@[^@\s<>"]+\.[^@\s<>"]+$/;
   var OFFER = 'Get the five biggest Vegas-versus-expert fantasy differences every Sunday morning.';
@@ -98,7 +104,7 @@
       if (!cb.checked) { say('Tick the box to agree to the email.', false); cb.focus(); return; }
       btn.disabled = true; say('Sending…', true);
       fetch('/api/newsletter/subscribe', { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email: email, scoring: sel.value, consent: true, source: place, company: hp.firstChild.value }) })
+        body: JSON.stringify({ email: email, scoring: sel.value, consent: true, source: place, att: visitSource(), company: hp.firstChild.value }) })
         .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
         .then(function (j) {
           if (j && j.ok) {
