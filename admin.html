@@ -277,6 +277,27 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     <div class="note">Access is granted first, then the link is sent — that order matters, because a sign-in link is only ever issued to an address that already has access. Untick "Email it to them" to get the link without sending anything, for pasting into a DM. Full access is instant either way; the link only saves them the sign-in step.</div>
   </div>
 
+  <!-- The Sunday email (growth plan Phase 5): the switch and what it still
+       needs, who is subscribed, each week's edition, failed sends, a preview
+       and a test send to one address. Nothing here mails subscribers. -->
+  <div class="card" id="nlCard">
+    <h2>Sunday email <span class="badge" id="nlBadge"></span></h2>
+    <p class="meta" id="nlConfig">Open this section to load it.</p>
+    <div class="tiles" id="nlTiles"></div>
+    <div class="tblwrap"><table id="nlEdTbl"></table></div>
+    <div class="tblwrap"><table id="nlFailTbl"></table></div>
+    <div class="field">
+      <label for="nlScoring">Scoring
+        <select id="nlScoring"><option value="ppr">PPR</option><option value="half">Half PPR</option><option value="standard">Standard</option></select>
+      </label>
+      <button class="btn" id="nlPreview" type="button">Preview this week&rsquo;s edition</button>
+      <input id="nlTestTo" type="email" placeholder="you@example.com" autocomplete="off" spellcheck="false">
+      <button class="btn primary" id="nlTest" type="button">Send a test to this address</button>
+    </div>
+    <div class="result" id="nlResult"><div class="msg" id="nlMsg"></div></div>
+    <div class="note">The preview is the edition the Sunday run would send now: this week&rsquo;s frozen edition once it exists, otherwise one built for the preview and not stored. A test goes to the one address above, is marked as a test, and is not recorded as a delivery. Subscribers are mailed only by the Sunday-morning job, and only when NEWSLETTER_ENABLED is 1 and the mail settings are present.</div>
+  </div>
+
   <div class="card" id="dfsCard">
     <h2>DFS salaries</h2>
     <p class="meta">Paste a DraftKings or FanDuel lobby CSV export for the main slate. The site's rows are stored for the current week and <a href="/in-season/dfs">the DFS page</a> reads the newest import. Nothing here submits an entry anywhere.</p>
@@ -488,8 +509,49 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   var opsLoaded = false;
   function opsLoad(){
     opsLoaded = true;
-    loadDashboard(); hlthLoad(); dfsLoad();
+    loadDashboard(); hlthLoad(); dfsLoad(); nlLoad();
   }
+  // ── the Sunday email ───────────────────────────────────────────────────
+  function nlLoad(){
+    var key = getKey(); if (!key) return;
+    fetch('/api/admin/newsletter?key=' + encodeURIComponent(key))
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var c = d.config || {};
+        $('nlBadge').textContent = c.open ? 'on' : 'off';
+        $('nlConfig').textContent = c.open ? 'Sign-up is open and the Sunday job will send. ' + (c.schedule || '') + '. From: ' + (c.from || '') + '.'
+          : 'Off. Sign-up is hidden and nothing is sent until these are set: ' + (c.need || []).join(', ') + '.' + (c.canSend ? ' The mail settings are present, so a test send works now.' : '');
+        if (!d.ok) { $('nlTiles').innerHTML = ''; $('nlEdTbl').innerHTML = '<tr><td class="empty">No database, so there is nothing to show.</td></tr>'; $('nlFailTbl').innerHTML = ''; return; }
+        var n = d.counts || {};
+        $('nlTiles').innerHTML = tile('Confirmed', num(n.confirmed || 0), 'clicked the confirmation link', true) + tile('Pending', num(n.pending || 0), 'not confirmed yet') + tile('Unsubscribed', num(n.unsubscribed || 0), '');
+        var ed = d.editions || [];
+        $('nlEdTbl').innerHTML = '<tr><th>Week</th><th>Built</th><th>Status</th><th class="num">PPR / Half / Std</th><th class="num">Sent</th><th class="num">Failed</th><th class="num">Skipped</th></tr>' +
+          (ed.length ? ed.map(function(e){ var k = e.counts || {}; return '<tr><td>' + esc(e.season + ' W' + e.week) + '</td><td>' + esc(new Date(e.builtAt).toLocaleString()) + '</td><td>' + esc(e.status) + '</td><td class="num">' + [k.ppr, k.half, k.standard].map(function(x){ return num(x || 0); }).join(' / ') + '</td><td class="num">' + num(e.sent) + '</td><td class="num">' + num(e.failed) + '</td><td class="num">' + num(e.skipped) + '</td></tr>'; }).join('')
+            : '<tr><td colspan="7" class="empty">No edition has been built yet.</td></tr>');
+        var f = d.failures || [];
+        $('nlFailTbl').innerHTML = f.length ? '<tr><th>Week</th><th>Address</th><th>Error</th><th>When</th></tr>' + f.map(function(x){ return '<tr><td>' + esc(x.season + ' W' + x.week) + '</td><td>' + esc(x.email) + '</td><td>' + esc(x.error || '') + '</td><td>' + esc(new Date(x.at).toLocaleString()) + '</td></tr>'; }).join('') : '';
+      })
+      .catch(function(){ $('nlConfig').textContent = 'The newsletter status did not load.'; });
+  }
+  function nlSay(cls, t){ $('nlResult').className = 'result show ' + cls; $('nlMsg').textContent = t; }
+  $('nlPreview').addEventListener('click', function(){
+    var key = getKey(); if (!key) { showGate('Session locked. Enter the key again.'); return; }
+    window.open('/api/admin/newsletter/preview?key=' + encodeURIComponent(key) + '&scoring=' + encodeURIComponent($('nlScoring').value), '_blank');
+  });
+  $('nlTest').addEventListener('click', function(){
+    var key = getKey(); if (!key) { showGate('Session locked. Enter the key again.'); return; }
+    var to = $('nlTestTo').value.trim();
+    if (!to) { nlSay('bad', 'Enter the address to send the test to.'); return; }
+    nlSay('', 'Sending…');
+    fetch('/api/admin/newsletter/test?key=' + encodeURIComponent(key) + '&scoring=' + encodeURIComponent($('nlScoring').value), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ to: to }) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (j.ok) { nlSay('ok', 'Test sent: ' + (j.subject || '')); return; }
+        var why = { not_configured: 'Not configured: ' + ((j.need || []).join(', ') || 'mail settings'), bad_test_email: 'That is not a valid address.', no_board: 'There is no week board to build an edition from.', nothing_at_this_scoring: 'No player clears the bar at this scoring, so there is nothing to send.' }[j.error];
+        nlSay('bad', 'Not sent. ' + (why || j.error || 'Unknown error'));
+      })
+      .catch(function(){ nlSay('bad', 'Not sent: the request failed.'); });
+  });
 
   function tile(label, val, sub, hero){
     return '<div class="tile' + (hero ? ' hero' : '') + '"><div class="lbl">' + esc(label) + '</div><div class="val">' + val + '</div>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>';
@@ -827,7 +889,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
         r7.newBrowsers ? num(r7.returned) + ' of ' + num(r7.newBrowsers) + ' new browsers' : 'no cohort is 7 days old yet') +
       tile('Returning + useful, last full week', lastFull ? num(lastFull.returningUseful) : '<span style="color:var(--muted)">n/a</span>',
         lastFull ? 'of ' + num(lastFull.returning) + ' returning, week of ' + esc(lastFull.weekStart) : 'no full week collected yet') +
-      tile('Email sign-ups', num(sub.signupEvents || 0), 'unconfirmed; confirmed: not measured') +
+      tile('Email sign-ups', num(sub.signupEvents || 0), sub.confirmed == null ? 'form submissions; confirmed: not measured' : 'form submissions; ' + num(sub.confirmed) + ' confirmed subscribers (' + num(sub.confirmedInWindow || 0) + ' in this window)') +
       tile('Empty or failed results', cp(bad, att), 'of ' + num(att) + ' tool outputs');
     $('useNote').textContent = 'A visitor here is one browser, identified by a random id kept in its own storage. A cleared or private browser, or a second device, reads as a new visitor, so returns are undercounted; a browser that blocks storage or scripts is not counted at all (the traffic numbers above still include it). ' +
       'A one-page visit is not treated as a failure: what counts as useful is a populated result, wherever it happened.';

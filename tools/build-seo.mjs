@@ -96,7 +96,10 @@ const WEBSITE = {
 // and drops the noindex (analystSeo/analystHeader/analystLd in _worker.js), so
 // those eight URLs ARE indexed — but the file on disk is not the thing indexed
 // and must stay as it is.
-const NOINDEX = new Set(['admin.html', 'lead.html', 'player.html', 'my-insights.html', 'post-draft.html', 'analyst.html', 'player-intel.html']);
+// finding.html is the shell every /finding/<id> is served from: a dated,
+// frozen share page, one per shared link, which is exactly the thin and
+// duplicative set a crawler should not be asked to index (growth plan Phase 5).
+const NOINDEX = new Set(['admin.html', 'lead.html', 'player.html', 'my-insights.html', 'post-draft.html', 'analyst.html', 'player-intel.html', 'finding.html']);
 
 // Evergreen strategy guides. datePublished/dateModified come from git so they
 // stay honest as the guides are revised.

@@ -38,7 +38,8 @@ Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) 
 `api.twitter.com` + `upload.twitter.com` + `graph.threads.net` (our own posting),
 `api.indexnow.org` (search ping), `github.com` (links only), `schema.org`
 (the JSON-LD `@context`: a vocabulary identifier printed into the structured
-data, never fetched).
+data, never fetched), `www.w3.org` (the SVG namespace in the share image drawn
+for `/finding/<id>`: an identifier, never fetched).
 
 These are services Iron Tuna is a paying or authenticated customer of. They do
 not supply the factual data the product is built on, so Section 13 does not

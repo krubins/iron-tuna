@@ -177,7 +177,7 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js", "it-league.js", "it-season.js", "it-sync.js", "it-metrics.js", "it-inseason.js", "it-inseason-import.js", "it-inseason-ui.js", "my-league.html", "in-season.html", "site.css"];
+            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js", "it-league.js", "it-season.js", "it-sync.js", "it-metrics.js", "it-newsletter.js", "it-share.js", "it-inseason.js", "it-inseason-import.js", "it-inseason-ui.js", "my-league.html", "in-season.html", "site.css"];
             let bad = 0;
             for (const f of files) {
               const buf = fs.readFileSync(f);
@@ -798,6 +798,13 @@ jobs:
       - name: Parse it-myweek.js
         if: ${{ !cancelled() }}
         run: node --check it-myweek.js
+      # Growth plan Phase 5: the Sunday email form and the share controls.
+      - name: Parse it-newsletter.js
+        if: ${{ !cancelled() }}
+        run: node --check it-newsletter.js
+      - name: Parse it-share.js
+        if: ${{ !cancelled() }}
+        run: node --check it-share.js
 
       # The same board, asked about one player. The column prints twelve cases;
       # a card has to answer for all four hundred, and both read one
@@ -907,6 +914,20 @@ jobs:
         env:
           REQUIRE_BROWSER: '1'
         run: node tools/test-myweek.mjs
+
+      # Growth plan Phase 5: the Sunday email and dated findings. The worker
+      # side against SQLite and a recorded Resend (double opt-in, suppression,
+      # the edition's rules, one delivery per address per week, findings that
+      # never change, the routes), then the form and the share buttons in a
+      # browser at 390 px.
+      - name: Sunday email and findings
+        if: ${{ !cancelled() }}
+        run: node tools/test-newsletter.mjs
+      - name: Sign-up form and share controls, in the browser
+        if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
+        env:
+          REQUIRE_BROWSER: '1'
+        run: node tools/test-share-signup.mjs
 
       # it-metrics.js in a real browser: attribution and UTM stripping, one
       # visit across internal clicks, one success per result per visit, failure

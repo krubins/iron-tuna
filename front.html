@@ -319,6 +319,10 @@ footer.site {margin-top:0}
       <div class="hm-ex-sets" id="hmExSets"></div>
       <p class="hm-fine" id="hmExAsOf"></p>
       <p class="hm-fine">Shown only for a healthy player with a game still to play, a market side priced entirely off quoted props from two or more books, and a gap of at least 2 points and 15%. A difference is a disagreement between two projections, not a prediction of the result.</p>
+      <!-- The Sunday email offer (growth plan Phase 5), under the examples it
+           mails: it-newsletter.js fills it only when sign-up is open, and it
+           sits inside #hmExamples, so it never shows without examples. -->
+      <div data-it-newsletter="home" hidden></div>
     </div>
     <form class="search-field hm-find" role="search" autocomplete="off" action="/player" method="get">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
@@ -453,6 +457,7 @@ footer.site {margin-top:0}
     <li><a href="/players">Players</a></li>
     <li><a href="/faq#faq-start">How It Works</a></li>
     <li><a href="/data">Data Sources</a></li>
+    <li><a href="/newsletter">Sunday Email</a></li>
     <li><a href="/faq">FAQ</a></li>
     <li><a href="/privacy">Privacy</a></li>
     <li><a href="/terms">Terms</a></li>
@@ -471,6 +476,8 @@ footer.site {margin-top:0}
      search field takes the shared typeahead; deferred, and every call into it
      is guarded, so a band that paints first cannot throw. -->
 <script src="/it-action.js" defer></script>
+<script src="/it-share.js" defer></script>
+<script src="/it-newsletter.js" defer></script>
 <script src="/player-search.js" defer></script>
 <script>
 // ══ the homepage ═══════════════════════════════════════════════════════════

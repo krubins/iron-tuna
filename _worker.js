@@ -10715,7 +10715,8 @@ const HOME_EX_STAT = {
   rec: { m: 'rec', label: 'receptions' }, recYd: { m: 'recYd', label: 'receiving yards' },
   rushTD: { m: 'anytimeTD', td: true }, recTD: { m: 'anytimeTD', td: true }
 };
-function homeExamples(b, markets, preset) {
+// `max` is the email's five (newsletterEdition); the homepage shows three.
+function homeExamples(b, markets, preset, max) {
   if (!b || !b.ok || !Array.isArray(b.players) || !b.horizon || b.horizon.key !== 'week' || (b.horizon.weeks || []).length !== 1) return null;
   const D = b.delta || {}, band = b.prominentBand || {};
   if (!Number.isFinite(D.minPointsStrong) || !Number.isFinite(D.strongPct)) return null;
@@ -10765,7 +10766,7 @@ function homeExamples(b, markets, preset) {
                consensus: r1(c), market: r1(v), gap: r1(gap), books: vp.books, priced: (vp.priced || []).slice(), why });
   }
   out.sort((a, x) => Math.abs(x.gap) - Math.abs(a.gap) || (a.name < x.name ? -1 : 1));
-  return out.slice(0, HOME_EX_MAX);
+  return out.slice(0, max || HOME_EX_MAX);
 }
 // THE SAMPLE MY WEEK. A first-time reader has no league, so the homepage shows
 // what My Week does with one, built from real players on this week's board and
@@ -10827,6 +10828,9 @@ function homeExampleHtml(x, week, preset) {
     + ' <span class="hm-ex-per">Week ' + e(week) + ', ' + e(HOME_PRESET_LABEL[preset]) + '</span></p>'
     + '<p class="hm-ex-lab"><span class="hm-tag">Derived estimate</span> Market points converted from ' + e(x.books) + ' books&rsquo; props.</p>'
     + '<p class="hm-ex-why"><span class="hm-tag q">Quoted prop</span> ' + said + seen + '</p>'
+    // Phase 5: a dated link to exactly this card (it-share.js asks the worker
+    // to freeze it; the browser sends the name and the scoring, nothing else).
+    + '<button type="button" class="hm-share" data-it-share-finding="' + e(x.name) + '" data-it-share-scoring="' + e(preset) + '">Share this difference</button>'
     + '</li>';
 }
 function homeSampleHtml(s, week, preset) {
@@ -10836,7 +10840,8 @@ function homeSampleHtml(s, week, preset) {
     + '<p>Start ' + row(s.start) + ' <span class="hm-mw-pts">' + _homeN1(s.start.pts) + '</span></p>'
     + '<p>over ' + row(s.sit) + ' <span class="hm-mw-pts">' + _homeN1(s.sit.pts) + '</span></p>'
     + '<p class="hm-mw-note">' + (s.level ? 'Iron Tuna projects the two level at ' + lab + ', so it is a coin flip.'
-      : 'Iron Tuna projects ' + _homeN1(s.start.pts - s.sit.pts) + ' more points for the starter at ' + lab + '.') + '</p></div>';
+      : 'Iron Tuna projects ' + _homeN1(s.start.pts - s.sit.pts) + ' more points for the starter at ' + lab + '.') + '</p>'
+    + '<button type="button" class="hm-share" data-it-share-a="' + e(s.start.name) + '" data-it-share-b="' + e(s.sit.name) + '" data-it-share-scoring="' + e(preset) + '">Share this comparison</button></div>';
   if (s.alert) {
     h += '<div class="hm-mw-dec"><p class="hm-mw-k">Market alert</p><p>' + row(s.alert) + '</p>'
       + '<p class="hm-mw-note">Books project ' + _homeN1(s.alert.market) + ' points against a consensus of ' + _homeN1(s.alert.consensus) + '.</p></div>';
@@ -10886,6 +10891,525 @@ function homeShellFill(html, hp) {
     .replace('<div class="hm-mw-sets" id="hmMwSets"></div>', () => '<div class="hm-mw-sets" id="hmMwSets">' + hp.sample + '</div>');
   return h;
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// THE SUNDAY EMAIL AND SHARED FINDINGS START (growth plan Phase 5, 17 Oct 2026)
+// tools/test-newsletter.mjs lifts this section and runs it against SQLite.
+//
+// The offer is the homepage's promise, once a week: the biggest differences
+// between the betting market and the fantasy consensus, Sunday morning. The
+// email is built from homeExamples, the same rules that decide what the
+// homepage may show, so nothing reaches an inbox that the site would refuse
+// to print: up to five, fewer when fewer qualify, and no email at all when
+// none does.
+//
+// Subscribers live in their own table, apart from the analytics tables
+// (site_events never holds an address, and nothing here writes to it) and
+// apart from `contacts`, which every older form writes to without consent to
+// a newsletter. Double opt-in: an address is only mailed the edition after
+// its owner clicks the link sent to it. Suppression is the existing
+// `unsubscribes` table and /api/unsubscribe, so one unsubscribe link stops
+// every marketing email the site sends.
+//
+// Delivery is off unless NEWSLETTER_ENABLED is "1" AND the worker has
+// RESEND_API_KEY, MAIL_ADDRESS (the postal address the law requires in the
+// footer), AUTH_SECRET (to sign links) and the database. Until then the
+// sign-up form does not appear, the Sunday job logs that it is disabled, and
+// the admin preview still works.
+const NL_DDL = [
+  "CREATE TABLE IF NOT EXISTS newsletter_subscribers (email TEXT PRIMARY KEY, status TEXT NOT NULL, scoring TEXT NOT NULL DEFAULT 'ppr', source TEXT, consent TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, confirm_sent_at INTEGER, confirmed_at INTEGER, unsubscribed_at INTEGER)",
+  'CREATE TABLE IF NOT EXISTS newsletter_editions (season INTEGER NOT NULL, week INTEGER NOT NULL, built_at INTEGER NOT NULL, status TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY (season, week))',
+  'CREATE TABLE IF NOT EXISTS newsletter_deliveries (season INTEGER NOT NULL, week INTEGER NOT NULL, email TEXT NOT NULL, scoring TEXT, status TEXT NOT NULL, error TEXT, provider_id TEXT, at INTEGER NOT NULL, PRIMARY KEY (season, week, email))',
+  // Already in production (created by hand before the code that reads it);
+  // here so a fresh database and the tests have it too.
+  'CREATE TABLE IF NOT EXISTS unsubscribes (email TEXT PRIMARY KEY, created_at INTEGER)',
+  'CREATE TABLE IF NOT EXISTS findings (id TEXT PRIMARY KEY, kind TEXT NOT NULL, season INTEGER, week INTEGER, scoring TEXT, created_at INTEGER NOT NULL, payload TEXT NOT NULL)'
+];
+let _NL_READY = null;
+async function nlReady(env) {
+  if (!env || !env.LEADS_DB) return false;
+  if (_NL_READY === env.LEADS_DB) return true;
+  try { for (const q of NL_DDL) await env.LEADS_DB.prepare(q).run(); _NL_READY = env.LEADS_DB; return true; } catch (e) { return false; }
+}
+const NL_MAX = 5;
+// A player whose game kicks off within this long of the edition being built
+// is left out of it: the email is read over Sunday morning, and a London game
+// at 9:30 would be under way before the reader got to it.
+const NL_KICKOFF_MARGIN_MS = 4 * 3600000;
+// The send window, in New York time. Nothing is sent from noon on: by then
+// the first kickoffs are an hour away and the edition is no longer a preview.
+const NL_SEND_DOW = 'Sun';
+const NL_SEND_FROM_HOUR = 7;
+const NL_SEND_CUTOFF_HOUR = 12;
+// Per run. A Worker invocation has a subrequest cap, so a run sends this many
+// and the next quarter-hour carries on from the delivery log.
+const NL_BATCH = 40;
+// One confirmation email per address per this long, whoever asks; and no more
+// than NL_CONFIRM_HOURLY across all addresses in an hour. Both are enforced in
+// the database, so they hold without the KV rate limiter.
+const NL_CONFIRM_GAP_MS = 15 * 60000;
+const NL_CONFIRM_HOURLY = 200;
+const NL_CONFIRM_TTL_MS = 7 * 86400000;
+const NL_CONSENT = 'Send me the Iron Tuna Sunday email. I can unsubscribe from any email. (v1, 2026-10-17)';
+const NL_EMAIL_RE = /^[^@\s<>"]+@[^@\s<>"]+\.[^@\s<>"]+$/;
+const NL_OFFER = 'Get the five biggest Vegas-versus-expert fantasy differences every Sunday morning.';
+const NL_NOTICE = 'For social and entertainment purposes only. 21+. Iron Tuna is not a sportsbook, places no bets and holds no funds. If you or someone you know has a gambling problem, call or text 1-800-MY-RESET.';
+
+function nlConfig(env) {
+  const e = env || {};
+  const need = [];
+  if (!e.LEADS_DB) need.push('LEADS_DB');
+  if (!e.AUTH_SECRET) need.push('AUTH_SECRET');
+  if (!e.RESEND_API_KEY) need.push('RESEND_API_KEY');
+  if (!e.MAIL_ADDRESS) need.push('MAIL_ADDRESS');
+  const enabled = String(e.NEWSLETTER_ENABLED || '') === '1';
+  if (!enabled) need.push('NEWSLETTER_ENABLED=1');
+  return { open: enabled && need.length === 0, enabled, canSend: !!(e.LEADS_DB && e.AUTH_SECRET && e.RESEND_API_KEY && e.MAIL_ADDRESS), need,
+    from: e.EMAIL_FROM_NEWSLETTER || e.EMAIL_FROM_MARKETING || 'Iron Tuna <hello@irontuna.com>' };
+}
+const nlNorm = (s) => String(s || '').trim().toLowerCase();
+const nlValidEmail = (s) => s.length <= 254 && NL_EMAIL_RE.test(s);
+const nlPreset = (s) => (HOME_EX_PRESETS.includes(String(s)) ? String(s) : 'ppr');
+// An address as /admin shows it: enough to recognise your own, not a list.
+const nlMask = (s) => { const [u, d] = String(s).split('@'); return (u || '').slice(0, 1) + '…@' + (d || ''); };
+async function nlConfirmToken(env, email, sentAt) { return hmacSign(env.AUTH_SECRET, 'nlconfirm:' + email + ':' + sentAt); }
+
+// ── the edition ────────────────────────────────────────────────────────────
+// One frozen record per NFL week: the examples at each preset as homeExamples
+// gives them when the edition is first built, less anyone kicking off inside
+// the margin, five at most. It is written once and never recomputed, so a
+// reader who opens the email at noon sees what a reader at 7 AM saw, and the
+// dated findings it links to say the same.
+function newsletterEdition(b, markets, now) {
+  if (!b || !b.ok || !b.horizon || b.horizon.key !== 'week' || (b.horizon.weeks || []).length !== 1) return null;
+  const at = Number.isFinite(now) ? now : Date.now();
+  const presets = {}, counts = {};
+  for (const pr of HOME_EX_PRESETS) {
+    const ex = homeExamples(b, markets, pr, 1000);
+    if (ex == null) return null;
+    presets[pr] = ex.filter(x => !Number.isFinite(x.kickoff) || x.kickoff - at >= NL_KICKOFF_MARGIN_MS).slice(0, NL_MAX);
+    counts[pr] = presets[pr].length;
+  }
+  const up = b.updated || {};
+  return { season: b.season == null ? null : b.season, week: b.horizon.weeks[0], builtAt: at, boardAt: up.board || null, oddsAt: up.odds || null,
+    presets, counts, any: Object.values(counts).some(n => n > 0) };
+}
+const _nlN1 = (v) => (Math.round(v * 10) / 10).toFixed(1);
+const _nlSigned = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + _nlN1(Math.abs(v));
+const _nlFix = (x) => (x.home ? 'vs ' : 'at ') + x.opponent;
+function _nlWhy(q) {
+  return q.kind === 'td'
+    ? 'Books price an anytime touchdown at ' + q.prob + '%; the consensus projects ' + q.consTds + ' touchdowns, about ' + q.consProb + '%.'
+    : 'Books quote ' + q.line + ' ' + q.label + '; the consensus projects ' + q.cons + '.';
+}
+function newsletterSubject(ed, preset) {
+  const n = (ed.presets[preset] || []).length;
+  return 'Week ' + ed.week + ': ' + (n === 1 ? 'the one Vegas-versus-expert difference' : 'the ' + n + ' biggest Vegas-versus-expert differences') + ' (' + HOME_PRESET_LABEL[preset] + ')';
+}
+// The email, mobile first: one column, a table only for the frame because
+// mail clients still need one, every style inline. `links` carries the
+// origin, a finding URL per player (the dated page, not the live one) and the
+// unsubscribe URL; `test` puts a banner on top that says it is a test.
+function newsletterEmail(ed, preset, links) {
+  const e = _preEsc, L = links || {}, origin = L.origin || 'https://irontuna.com';
+  const list = ed.presets[preset] || [];
+  const lab = HOME_PRESET_LABEL[preset];
+  const stamp = ['Week ' + ed.week, lab, 'built ' + _etStamp(ed.builtAt), ed.oddsAt ? 'odds read ' + _etStamp(ed.oddsAt) : null].filter(Boolean).join(' · ');
+  const utm = (u) => u + (u.indexOf('?') < 0 ? '?' : '&') + 'utm_source=newsletter&utm_medium=email&utm_campaign=' + encodeURIComponent((ed.season || '') + '-w' + String(ed.week).padStart(2, '0') + '-sunday');
+  const card = (x, i) => {
+    const href = utm((L.finding && L.finding[x.name]) || origin + '/player/' + _homeSlug(x.name));
+    const up = x.gap > 0;
+    return '<tr><td style="padding:14px 0;border-top:1px solid #d4dde3">'
+      + '<p style="margin:0;font-size:13px;color:#566573">' + (i + 1) + '. ' + e(x.position + ' ' + x.team + ' ' + _nlFix(x)) + (x.kickoff ? ' · ' + e(_etStamp(x.kickoff)) : '') + '</p>'
+      + '<p style="margin:4px 0 0;font-size:19px;font-weight:700;color:#0b1117"><a href="' + e(href) + '" style="color:#0b1117;text-decoration:none">' + e(x.name) + '</a> '
+      + '<span style="color:' + (up ? '#0b7a5c' : '#0b1117') + '">' + _nlSigned(x.gap) + ' pts</span></p>'
+      + '<p style="margin:6px 0 0;font-size:15px;color:#1a2129">Market <b>' + _nlN1(x.market) + '</b> · consensus <b>' + _nlN1(x.consensus) + '</b></p>'
+      + '<p style="margin:6px 0 0;font-size:13px;color:#566573"><b>Derived estimate:</b> market points converted from ' + e(x.books) + ' books&rsquo; props.</p>'
+      + '<p style="margin:4px 0 0;font-size:13px;color:#566573"><b>Quoted prop:</b> ' + e(_nlWhy(x.why)) + (x.why.lastSeen ? ' Line last seen ' + e(_etStamp(x.why.lastSeen)) + '.' : '') + '</p>'
+      + '</td></tr>';
+  };
+  const test = L.test ? '<tr><td style="padding:10px 12px;background:#fff4d6;color:#5a4300;font-size:13px">Test send. This copy went only to you; subscribers have not been sent anything.</td></tr>' : '';
+  const html = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + e(newsletterSubject(ed, preset)) + '</title></head>'
+    + '<body style="margin:0;padding:0;background:#f0f4f6">'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f6"><tr><td align="center" style="padding:16px">'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:10px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif">'
+    + test
+    + '<tr><td style="padding:20px 20px 4px"><p style="margin:0;font-size:13px;letter-spacing:.08em;color:#0b7a5c;font-weight:700">IRON TUNA · SUNDAY</p>'
+    + '<h1 style="margin:6px 0 0;font-size:22px;line-height:1.25;color:#0b1117">Where the betting market and the fantasy consensus disagree, Week ' + e(ed.week) + '</h1>'
+    + '<p style="margin:8px 0 0;font-size:14px;color:#566573">' + e(stamp) + '</p></td></tr>'
+    + '<tr><td style="padding:4px 20px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">' + list.map(card).join('') + '</table></td></tr>'
+    + '<tr><td style="padding:14px 20px 0;font-size:13px;color:#566573;line-height:1.5">'
+    + (list.length < NL_MAX ? 'Only ' + list.length + ' cleared the bar this week. ' : '')
+    + 'A player is listed only with a game still to play, no injury designation but Active or Probable, a market side priced entirely off quoted props from two or more books, and a gap of at least 2 points and 15%. A difference is a disagreement between two projections, not a prediction of the result and not betting advice. '
+    + 'Each name links to that finding as it stood when this email was built; the numbers there do not change.</td></tr>'
+    + '<tr><td style="padding:16px 20px"><a href="' + e(utm(origin + '/vegas-edge')) + '#board" style="display:inline-block;background:#0b7a5c;color:#ffffff;padding:11px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">See the live board</a></td></tr>'
+    + '<tr><td style="padding:0 20px 20px;font-size:12px;color:#8595a1;line-height:1.5;border-top:1px solid #d4dde3">'
+    + '<p style="margin:12px 0 0">You are receiving this because you confirmed a subscription to the Iron Tuna Sunday email at irontuna.com, at ' + e(lab) + ' scoring. '
+    + '<a href="' + e(L.unsub || '#') + '" style="color:#8595a1">Unsubscribe</a>.</p>'
+    // The site-wide notice (tools/build-chrome.mjs), because the email prints
+    // sportsbook lines just as the pages do.
+    + '<p style="margin:6px 0 0">' + e(NL_NOTICE) + '</p>'
+    + '<p style="margin:6px 0 0">' + e(L.address || '') + '</p></td></tr>'
+    + '</table></td></tr></table></body></html>';
+  const text = (L.test ? 'TEST SEND. Subscribers have not been sent anything.\n\n' : '')
+    + 'Iron Tuna, Sunday. Where the betting market and the fantasy consensus disagree, Week ' + ed.week + '.\n' + stamp + '\n\n'
+    + list.map((x, i) => (i + 1) + '. ' + x.name + ' (' + x.position + ' ' + x.team + ' ' + _nlFix(x) + (x.kickoff ? ', ' + _etStamp(x.kickoff) : '') + '): ' + _nlSigned(x.gap) + ' pts. '
+      + 'Market ' + _nlN1(x.market) + ' (derived estimate from ' + x.books + ' books\' props), consensus ' + _nlN1(x.consensus) + '. Quoted prop: ' + _nlWhy(x.why) + '\n'
+      + utm((L.finding && L.finding[x.name]) || origin + '/player/' + _homeSlug(x.name))).join('\n\n')
+    + '\n\n' + (list.length < NL_MAX ? 'Only ' + list.length + ' cleared the bar this week. ' : '')
+    + 'A difference is a disagreement between two projections, not a prediction of the result and not betting advice.\n\n'
+    + 'Live board: ' + utm(origin + '/vegas-edge') + '#board\n\n'
+    + 'You are receiving this because you confirmed a subscription to the Iron Tuna Sunday email at irontuna.com. Unsubscribe: ' + (L.unsub || '') + '\n' + NL_NOTICE + '\n' + (L.address || '');
+  return { subject: (L.test ? '[Test] ' : '') + newsletterSubject(ed, preset), html, text };
+}
+
+// One message through Resend. Reports what happened; never throws.
+async function nlResend(env, msg) {
+  try {
+    const r = await fetch('https://api.resend.com/emails', { method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify(msg) });
+    let j = null; try { j = await r.json(); } catch (e) {}
+    if (!r.ok) return { ok: false, error: ('resend ' + r.status + (j && (j.message || j.name) ? ': ' + (j.message || j.name) : '')).slice(0, 200) };
+    return { ok: true, id: (j && j.id) || null };
+  } catch (e) { return { ok: false, error: ('network: ' + ((e && e.message) || e)).slice(0, 200) }; }
+}
+async function nlUnsubUrl(env, origin, email) {
+  return origin + '/api/unsubscribe?e=' + encodeURIComponent(email) + '&t=' + encodeURIComponent(await unsubToken(env, email));
+}
+
+// ── sign-up and confirmation ───────────────────────────────────────────────
+// The answer is the same for a new address, a pending one and a confirmed
+// one ("check your inbox"), so the form cannot be used to learn who is
+// subscribed. A confirmed address is not mailed again and its scoring is not
+// changed by whoever typed it in.
+async function newsletterSubscribe(env, origin, body, now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const cfg = nlConfig(env);
+  if (!cfg.open) return { status: 503, body: { ok: false, error: 'closed' } };
+  const b = body || {};
+  if (b.company) return { status: 200, body: { ok: true, state: 'check_inbox' } };
+  const email = nlNorm(b.email);
+  if (!nlValidEmail(email)) return { status: 400, body: { ok: false, error: 'invalid_email' } };
+  if (b.consent !== true) return { status: 400, body: { ok: false, error: 'consent_required' } };
+  if (!(await nlReady(env))) return { status: 503, body: { ok: false, error: 'storage' } };
+  const db = env.LEADS_DB;
+  const scoring = nlPreset(b.scoring);
+  const source = String(b.source || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32) || 'unknown';
+  const row = await db.prepare('SELECT * FROM newsletter_subscribers WHERE email = ?').bind(email).first();
+  const generic = { status: 200, body: { ok: true, state: 'check_inbox' } };
+  if (row && row.status === 'confirmed') return generic;
+  if (row && row.status === 'pending' && row.confirm_sent_at && at - row.confirm_sent_at < NL_CONFIRM_GAP_MS) return generic;
+  const hour = await db.prepare('SELECT COUNT(*) AS n FROM newsletter_subscribers WHERE confirm_sent_at >= ?').bind(at - 3600000).first();
+  if (hour && hour.n >= NL_CONFIRM_HOURLY) return { status: 429, body: { ok: false, error: 'rate' } };
+  if (row) await db.prepare("UPDATE newsletter_subscribers SET status = 'pending', scoring = ?, source = ?, consent = ?, updated_at = ?, confirm_sent_at = ? WHERE email = ?")
+    .bind(scoring, source, NL_CONSENT, at, at, email).run();
+  else await db.prepare("INSERT INTO newsletter_subscribers (email, status, scoring, source, consent, created_at, updated_at, confirm_sent_at) VALUES (?, 'pending', ?, ?, ?, ?, ?, ?)")
+    .bind(email, scoring, source, NL_CONSENT, at, at, at).run();
+  const link = origin + '/api/newsletter/confirm?e=' + encodeURIComponent(email) + '&s=' + at + '&t=' + encodeURIComponent(await nlConfirmToken(env, email, at));
+  const e = _preEsc;
+  const html = '<div style="font-family:system-ui,Arial;max-width:480px;color:#1a2129"><h2 style="color:#0b1117">Confirm the Iron Tuna Sunday email</h2>'
+    + '<p>' + e(NL_OFFER) + ' Up to five, fewer when fewer clear the bar, at ' + e(HOME_PRESET_LABEL[scoring]) + ' scoring.</p>'
+    + '<p><a href="' + e(link) + '" style="background:#0b7a5c;color:#ffffff;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Confirm my subscription</a></p>'
+    + '<p style="color:#667;font-size:13px">Nothing is sent until you confirm. The link works for seven days. If you did not ask for this, ignore this email and you will not hear from us.</p>'
+    + '<p style="color:#8595a1;font-size:12px">' + e(env.MAIL_ADDRESS) + '</p></div>';
+  const text = 'Confirm the Iron Tuna Sunday email.\n\n' + NL_OFFER + '\n\nConfirm: ' + link + '\n\nNothing is sent until you confirm. The link works for seven days. If you did not ask for this, ignore this email.\n\n' + env.MAIL_ADDRESS;
+  const r = await nlResend(env, { from: cfg.from, to: email, subject: 'Confirm your Iron Tuna Sunday email', html, text });
+  if (!r.ok) {
+    // Not sent, so not throttled: the reader can try again at once.
+    await db.prepare('UPDATE newsletter_subscribers SET confirm_sent_at = NULL WHERE email = ?').bind(email).run();
+    return { status: 502, body: { ok: false, error: 'send' } };
+  }
+  return generic;
+}
+// `apply` false checks the link and changes nothing: the GET a link scanner
+// or a mail client's preview makes. Only the reader's own button press (a
+// POST to the same address) confirms, so a security scanner opening every
+// link in an inbox cannot subscribe anyone.
+async function newsletterConfirm(env, q, now, apply) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const email = nlNorm(q.get('e')), s = parseInt(q.get('s') || '', 10), t = String(q.get('t') || '');
+  if (!email || !Number.isFinite(s) || !env.AUTH_SECRET || !(await nlReady(env))) return { ok: false, why: 'invalid' };
+  if (!timingSafeEq(t, await nlConfirmToken(env, email, s))) return { ok: false, why: 'invalid' };
+  const db = env.LEADS_DB;
+  const row = await db.prepare('SELECT * FROM newsletter_subscribers WHERE email = ?').bind(email).first();
+  if (!row) return { ok: false, why: 'invalid' };
+  if (row.status === 'confirmed') return { ok: true, already: true, scoring: row.scoring };
+  // Only the newest link counts, and only for a week: an older link would
+  // otherwise re-subscribe an address that has since unsubscribed.
+  if (row.status !== 'pending' || row.confirm_sent_at !== s) return { ok: false, why: 'stale' };
+  if (at - s > NL_CONFIRM_TTL_MS) return { ok: false, why: 'expired' };
+  if (!apply) return { ok: true, ask: true, scoring: row.scoring };
+  await db.prepare("UPDATE newsletter_subscribers SET status = 'confirmed', confirmed_at = ?, updated_at = ?, unsubscribed_at = NULL WHERE email = ?").bind(at, at, email).run();
+  return { ok: true, scoring: row.scoring };
+}
+// Called by /api/unsubscribe after it has written the suppression row.
+async function newsletterUnsubscribe(env, email, now) {
+  if (!(await nlReady(env))) return;
+  try { await env.LEADS_DB.prepare("UPDATE newsletter_subscribers SET status = 'unsubscribed', unsubscribed_at = ?, updated_at = ? WHERE email = ?").bind(now, now, email).run(); } catch (e) {}
+}
+function nlPage(title, msg, ok, form) {
+  const e = _preEsc;
+  return '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' + e(title) + ' | Iron Tuna</title>'
+    + '<div style="font-family:system-ui,Arial;max-width:480px;margin:64px auto;padding:0 22px;text-align:center;color:#1a2129"><h2>' + e(title) + '</h2><p style="color:#566">' + msg + '</p>'
+    + (form ? '<form method="post" action="' + e(form) + '"><button type="submit" style="font:inherit;font-weight:700;font-size:16px;background:#0b7a5c;color:#ffffff;border:0;border-radius:8px;padding:12px 20px;min-height:44px;cursor:pointer">Confirm my subscription</button></form>'
+      : '<p><a href="/vegas-edge#board" style="color:#0b7a5c">' + (ok ? 'See this week&rsquo;s board' : 'Back to Iron Tuna') + '</a></p>') + '</div>';
+}
+
+// ── the board the email and the share links are cut from ───────────────────
+async function nlBoardNow(env) {
+  const b = boardStillToPlay(await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr', through: null }));
+  const wk = b && b.ok && b.horizon ? (b.horizon.weeks || [])[0] : null;
+  if (wk == null) return null;
+  return { b, week: wk, season: b.season, markets: await marketHistoryWeek(env, b.season, wk) };
+}
+
+// ── dated findings ─────────────────────────────────────────────────────────
+// A finding is what the board said about one player (kind "gap") or two
+// (kind "compare") at one scoring, frozen the moment it is shared or mailed.
+// Its id carries a hash of its own figures, so the same numbers shared twice
+// are one page and different numbers are a different page: a link never
+// changes under the person it was sent to. The live view is the player page
+// and the board, and the finding page links to both and says it is dated.
+// Never anything from a league: the input is the public week board only.
+async function nlHash(s) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(d)).slice(0, 4).map(x => x.toString(16).padStart(2, '0')).join('');
+}
+async function findingFreeze(env, rec, now) {
+  if (!(await nlReady(env))) return null;
+  const at = Number.isFinite(now) ? now : Date.now();
+  const names = rec.kind === 'compare' ? [rec.a.name, rec.b.name] : [rec.player.name];
+  const figures = JSON.stringify({ kind: rec.kind, season: rec.season, week: rec.week, scoring: rec.scoring, player: rec.player || null, a: rec.a || null, b: rec.b || null });
+  const id = [rec.season || 's', 'w' + rec.week, names.map(_homeSlug).join('-vs-'), rec.scoring, await nlHash(figures)].join('-').slice(0, 120);
+  const payload = { ...rec, frozenAt: at };
+  await env.LEADS_DB.prepare('INSERT OR IGNORE INTO findings (id, kind, season, week, scoring, created_at, payload) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .bind(id, rec.kind, rec.season == null ? null : rec.season, rec.week, rec.scoring, at, JSON.stringify(payload)).run();
+  const row = await env.LEADS_DB.prepare('SELECT payload FROM findings WHERE id = ?').bind(id).first();
+  return row ? { id, rec: JSON.parse(row.payload) } : null;
+}
+async function findingRead(env, id) {
+  if (!/^[a-z0-9-]{8,120}$/.test(String(id)) || !(await nlReady(env))) return null;
+  try { const row = await env.LEADS_DB.prepare('SELECT payload FROM findings WHERE id = ?').bind(id).first(); return row ? JSON.parse(row.payload) : null; } catch (e) { return null; }
+}
+function findingGapRec(nb, x, preset) {
+  const up = nb.b.updated || {};
+  return { kind: 'gap', season: nb.season == null ? null : nb.season, week: nb.week, scoring: preset, boardAt: up.board || null, oddsAt: up.odds || null, player: x };
+}
+// A comparison: the two players' public projections at one preset, the
+// Iron Tuna board's numbers first because that is what the lineup call uses.
+// The market side is given only when it is fully priced off quoted props.
+function findingCompareRec(nb, nameA, nameB, preset) {
+  const rules = scoringRules(preset);
+  const r1 = (v) => Math.round(v * 10) / 10;
+  const side = (n) => {
+    const p = (nb.b.players || []).find(q => q.name === n);
+    if (!p || !/^(QB|RB|WR|TE)$/.test(p.position) || (p.weeks || []).length !== 1) return null;
+    const w = p.weeks[0];
+    if (w.bye || w.out || w.gameState !== 'upcoming' || !p.ironTuna || !p.ironTuna.stats) return null;
+    const vp = w.vegasProjection || {};
+    const priced = p.vegas && p.vegas.basis === 'props' && vp.status === 'full' && !(vp.missing || []).length && vp.books >= HOME_EX_MIN_BOOKS;
+    return { name: p.name, position: p.position, team: p.team, opponent: w.opponent, home: !!w.home, kickoff: w.kickoff || null,
+      injury: p.injury ? String(p.injury.status || '') : null,
+      ironTuna: r1(scoreStats(p.ironTuna.stats, p.position, rules)),
+      consensus: p.consensus && p.consensus.stats ? r1(scoreStats(p.consensus.stats, p.position, rules)) : null,
+      market: priced ? r1(scoreStats(p.vegas.stats, p.position, rules)) : null, books: priced ? vp.books : null };
+  };
+  const a = side(nameA), b = side(nameB);
+  if (!a || !b || a.name === b.name) return null;
+  const up = nb.b.updated || {};
+  return { kind: 'compare', season: nb.season == null ? null : nb.season, week: nb.week, scoring: preset, boardAt: up.board || null, oddsAt: up.odds || null, a, b };
+}
+function findingTitle(r) {
+  const lab = HOME_PRESET_LABEL[r.scoring] || r.scoring;
+  if (r.kind === 'compare') return r.a.name + ' or ' + r.b.name + ': Week ' + r.week + ', ' + lab;
+  const x = r.player;
+  return x.name + ': market ' + _nlN1(x.market) + ', consensus ' + _nlN1(x.consensus) + ' (Week ' + r.week + ', ' + lab + ')';
+}
+function findingDesc(r) {
+  if (r.kind === 'compare') return 'Iron Tuna projects ' + r.a.name + ' ' + _nlN1(r.a.ironTuna) + ' and ' + r.b.name + ' ' + _nlN1(r.b.ironTuna) + ' points. Frozen ' + _etStamp(r.frozenAt) + '.';
+  const x = r.player;
+  return 'The betting market projects ' + x.name + ' ' + _nlSigned(x.gap) + ' points against the fantasy consensus. ' + _nlWhy(x.why) + ' Frozen ' + _etStamp(r.frozenAt) + '.';
+}
+// The page body, in the markup finding.html styles.
+function findingBodyHtml(r, id) {
+  const e = _preEsc, lab = e(HOME_PRESET_LABEL[r.scoring] || r.scoring);
+  const dated = '<p class="fd-dated"><b>Dated finding.</b> Frozen ' + e(_etStamp(r.frozenAt))
+    + (r.boardAt ? ' from the board computed ' + e(_etStamp(r.boardAt)) : '') + (r.oddsAt ? (r.boardAt ? ' and' : ' from') + ' odds read ' + e(_etStamp(r.oddsAt)) : '') + '. These numbers do not update.</p>';
+  let h = '<p class="fd-kick">Week ' + e(r.week) + ' &middot; ' + lab + '</p>';
+  if (r.kind === 'compare') {
+    const row = (x) => '<li><p class="fd-who"><a href="/player/' + e(_homeSlug(x.name)) + '"><b>' + e(x.name) + '</b></a> <span>' + e(x.position + ' ' + x.team + ' ' + _nlFix(x)) + (x.kickoff ? ' &middot; ' + e(_etStamp(x.kickoff)) : '') + '</span></p>'
+      + '<p class="fd-nums">Iron Tuna <b>' + _nlN1(x.ironTuna) + '</b>' + (x.consensus != null ? ' &middot; consensus <b>' + _nlN1(x.consensus) + '</b>' : '')
+      + (x.market != null ? ' &middot; market <b>' + _nlN1(x.market) + '</b> <span class="fd-tag">Derived estimate</span>' : ' &middot; <span class="is-status">no full market price</span>') + '</p>'
+      + (x.injury ? '<p class="fd-note">Listed ' + e(x.injury) + ' when frozen.</p>' : '') + '</li>';
+    const hi = r.a.ironTuna >= r.b.ironTuna ? r.a : r.b, lo = hi === r.a ? r.b : r.a;
+    h += '<h1>' + e(r.a.name) + ' or ' + e(r.b.name) + '</h1><ul class="fd-cmp">' + row(r.a) + row(r.b) + '</ul>'
+      + '<p class="fd-why">' + (hi.ironTuna === lo.ironTuna ? 'Iron Tuna projected the two level at ' + lab + '.'
+        : 'Iron Tuna projected ' + e(hi.name) + ' ' + _nlN1(hi.ironTuna - lo.ironTuna) + ' more points at ' + lab + '.') + ' A projection, not a guarantee.</p>';
+  } else {
+    const x = r.player;
+    h += '<h1>' + e(x.name) + ' <span class="fd-gap' + (x.gap > 0 ? ' good' : '') + '">' + _nlSigned(x.gap) + ' pts</span></h1>'
+      + '<p class="fd-who">' + e(x.position + ' ' + x.team + ' ' + _nlFix(x)) + (x.kickoff ? ' &middot; ' + e(_etStamp(x.kickoff)) : '') + '</p>'
+      + '<p class="fd-nums">Market <b>' + _nlN1(x.market) + '</b> &middot; consensus <b>' + _nlN1(x.consensus) + '</b></p>'
+      + '<p class="fd-lab"><span class="fd-tag">Derived estimate</span> Market points converted from ' + e(x.books) + ' books&rsquo; props.</p>'
+      + '<p class="fd-lab"><span class="fd-tag q">Quoted prop</span> ' + e(_nlWhy(x.why)) + (x.why.lastSeen ? ' Line last seen ' + e(_etStamp(x.why.lastSeen)) + '.' : '') + '</p>'
+      + '<p class="fd-why">A disagreement between two projections, not a prediction of the result and not betting advice.</p>';
+  }
+  const live = r.kind === 'compare' ? r.a : r.player;
+  h += dated
+    + '<p class="fd-live">Current numbers: <a href="/player/' + e(_homeSlug(live.name)) + '">' + e(live.name) + '</a>'
+    + (r.kind === 'compare' ? ' and <a href="/player/' + e(_homeSlug(r.b.name)) + '">' + e(r.b.name) + '</a>' : '') + ', or <a href="/vegas-edge#board">this week&rsquo;s board</a>.</p>'
+    + '<img class="fd-img" src="/finding/' + e(id) + '/card.svg" width="1200" height="630" alt="' + e(findingTitle(r)) + '">'
+    + '<div class="fd-share" data-it-share-url="https://irontuna.com/finding/' + e(id) + '" data-it-share-title="' + e(findingTitle(r)) + '" data-it-share-tool="finding_' + e(r.kind) + '" data-it-share-key="' + e(id.slice(0, 48)) + '" data-it-share-image="/finding/' + e(id) + '/card.svg"></div>';
+  return h;
+}
+// The share image: the player or the pair, the numbers, the week, the
+// scoring, the time it was frozen and the name. SVG, so the figures are
+// exact at any size; the finding page turns it into a PNG in the browser for
+// a native share or a download (see it-share.js).
+function findingSvg(r) {
+  const e = _preEsc, lab = HOME_PRESET_LABEL[r.scoring] || r.scoring;
+  const T = (x, y, s, w, c, t, a) => '<text x="' + x + '" y="' + y + '" font-size="' + s + '" font-weight="' + w + '" fill="' + c + '"' + (a ? ' text-anchor="' + a + '"' : '') + '>' + e(t) + '</text>';
+  let body = '';
+  if (r.kind === 'compare') {
+    const line = (x, y) => T(80, y, 54, 700, '#e8eef2', x.name) + T(80, y + 46, 28, 400, '#aebcc6', x.position + ' ' + x.team + ' ' + _nlFix(x)) + T(1120, y, 64, 700, '#e8eef2', _nlN1(x.ironTuna), 'end');
+    body = T(80, 150, 30, 600, '#9fe1cb', 'Iron Tuna projection, Week ' + r.week + ', ' + lab) + line(r.a, 250) + line(r.b, 390);
+  } else {
+    const x = r.player;
+    body = T(80, 150, 30, 600, '#9fe1cb', 'Market versus consensus, Week ' + r.week + ', ' + lab)
+      + T(80, 250, 72, 700, '#e8eef2', x.name) + T(80, 302, 30, 400, '#aebcc6', x.position + ' ' + x.team + ' ' + _nlFix(x))
+      + T(80, 420, 96, 700, x.gap > 0 ? '#2dd4a3' : '#e8eef2', _nlSigned(x.gap) + ' pts')
+      + T(1120, 380, 34, 400, '#e8eef2', 'Market ' + _nlN1(x.market), 'end') + T(1120, 428, 34, 400, '#e8eef2', 'Consensus ' + _nlN1(x.consensus), 'end')
+      + T(80, 486, 24, 400, '#aebcc6', 'Market points: derived estimate from ' + x.books + ' books’ props');
+  }
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">'
+    + '<rect width="1200" height="630" fill="#0b1117"/><rect x="0" y="0" width="1200" height="8" fill="#2dd4a3"/>'
+    + T(80, 86, 34, 800, '#e8eef2', 'IRON TUNA') + body
+    + T(80, 570, 24, 400, '#8595a1', 'Frozen ' + _etStamp(r.frozenAt) + '. A projection, not a prediction.') + T(1120, 570, 24, 600, '#8595a1', 'irontuna.com', 'end')
+    + '</svg>';
+}
+// finding.html with one finding written in: the head names it, the body is
+// the card, and an unknown id keeps the shell's own "no finding" copy.
+function findingShellFill(html, r, id) {
+  if (!r || html.indexOf('<div class="fd-body" id="fdBody">') < 0) return html;
+  const e = _preEsc, t = findingTitle(r), d = findingDesc(r), u = 'https://irontuna.com/finding/' + id;
+  return html
+    .replace(/<title>[^<]*<\/title>/, () => '<title>' + e(t) + ' | Iron Tuna</title>')
+    .replace(/<meta name="description" content="[^"]*"\/?>/, () => '<meta name="description" content="' + e(d) + '"/>')
+    .replace(/<link rel="canonical" href="[^"]*"\/?>/, () => '<link rel="canonical" href="' + u + '"/>')
+    .replace(/<meta property="og:title" content="[^"]*">/, () => '<meta property="og:title" content="' + e(t) + '">')
+    .replace(/<meta property="og:description" content="[^"]*">/, () => '<meta property="og:description" content="' + e(d) + '">')
+    .replace(/<meta property="og:url" content="[^"]*">/, () => '<meta property="og:url" content="' + u + '">')
+    .replace(/<meta name="twitter:title" content="[^"]*">/, () => '<meta name="twitter:title" content="' + e(t) + '">')
+    .replace(/<meta name="twitter:description" content="[^"]*">/, () => '<meta name="twitter:description" content="' + e(d) + '">')
+    .replace(/<div class="fd-body" id="fdBody">[\s\S]*?<\/div><!--\/fdBody-->/, () => '<div class="fd-body" id="fdBody">' + findingBodyHtml(r, id) + '</div><!--/fdBody-->');
+}
+
+// ── the Sunday job ─────────────────────────────────────────────────────────
+// Quarter-hourly through Sunday morning (JOB_SCHEDULE). The first run of the
+// week builds and freezes the edition; every run then mails the next batch of
+// confirmed, unsuppressed subscribers who have no delivery row for the week.
+// The row is claimed BEFORE the send, on the primary key, so two runs (or a
+// retried one) cannot mail the same person twice. A failed send stays failed
+// and is listed on /admin: it is not retried, because a provider that timed
+// out may still have delivered it.
+async function newsletterEditionFor(env, now, nb) {
+  const db = env.LEADS_DB;
+  const at = Number.isFinite(now) ? now : Date.now();
+  const season = nb.season == null ? 0 : nb.season;
+  let row = await db.prepare('SELECT * FROM newsletter_editions WHERE season = ? AND week = ?').bind(season, nb.week).first();
+  if (!row) {
+    const ed = newsletterEdition(nb.b, nb.markets, at);
+    if (!ed) return null;
+    ed.finding = {};
+    for (const pr of HOME_EX_PRESETS) {
+      ed.finding[pr] = {};
+      for (const x of ed.presets[pr]) { const f = await findingFreeze(env, findingGapRec(nb, x, pr), at); if (f) ed.finding[pr][x.name] = '/finding/' + f.id; }
+    }
+    await db.prepare('INSERT OR IGNORE INTO newsletter_editions (season, week, built_at, status, payload) VALUES (?, ?, ?, ?, ?)')
+      .bind(season, nb.week, at, ed.any ? 'ready' : 'empty', JSON.stringify(ed)).run();
+    row = await db.prepare('SELECT * FROM newsletter_editions WHERE season = ? AND week = ?').bind(season, nb.week).first();
+  }
+  return row ? { status: row.status, ed: JSON.parse(row.payload) } : null;
+}
+async function runNewsletterSend(env, now, origin) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const cfg = nlConfig(env);
+  if (!cfg.open) return { ok: true, skipped: 'disabled', need: cfg.need };
+  const et = etParts(at);
+  if (et.dow !== NL_SEND_DOW || et.hour < NL_SEND_FROM_HOUR || et.hour >= NL_SEND_CUTOFF_HOUR) return { ok: true, skipped: 'outside the Sunday-morning window' };
+  if (!(await nlReady(env))) return { ok: false, error: 'storage' };
+  const nb = await nlBoardNow(env);
+  if (!nb) return { ok: false, error: 'no week board' };
+  const edr = await newsletterEditionFor(env, at, nb);
+  if (!edr) return { ok: false, error: 'no week board' };
+  if (edr.status === 'empty') return { ok: true, skipped: 'nothing cleared the bar this week', week: nb.week };
+  const ed = edr.ed, db = env.LEADS_DB, season = nb.season == null ? 0 : nb.season;
+  const o = origin || 'https://irontuna.com';
+  const rows = ((await db.prepare("SELECT s.email, s.scoring FROM newsletter_subscribers s WHERE s.status = 'confirmed' "
+    + 'AND NOT EXISTS (SELECT 1 FROM newsletter_deliveries d WHERE d.season = ? AND d.week = ? AND d.email = s.email) '
+    + 'AND NOT EXISTS (SELECT 1 FROM unsubscribes u WHERE u.email = s.email AND u.created_at >= s.confirmed_at) '
+    + 'ORDER BY s.email LIMIT ?').bind(season, nb.week, NL_BATCH).all()).results) || [];
+  let sent = 0, failed = 0, skipped = 0, firstError = null;
+  for (const s of rows) {
+    const pr = nlPreset(s.scoring);
+    const claim = await db.prepare("INSERT OR IGNORE INTO newsletter_deliveries (season, week, email, scoring, status, at) VALUES (?, ?, ?, ?, 'sending', ?)").bind(season, nb.week, s.email, pr, Date.now()).run();
+    if (claim && claim.meta && claim.meta.changes === 0) continue;
+    if (!(ed.presets[pr] || []).length) {
+      skipped++;
+      await db.prepare("UPDATE newsletter_deliveries SET status = 'skipped', error = ? WHERE season = ? AND week = ? AND email = ?").bind('none at ' + pr, season, nb.week, s.email).run();
+      continue;
+    }
+    const unsub = await nlUnsubUrl(env, o, s.email);
+    const finding = {};
+    for (const [n, p] of Object.entries((ed.finding && ed.finding[pr]) || {})) finding[n] = o + p;
+    const m = newsletterEmail(ed, pr, { origin: o, finding, unsub, address: env.MAIL_ADDRESS });
+    const r = await nlResend(env, { from: cfg.from, to: s.email, subject: m.subject, html: m.html, text: m.text,
+      headers: { 'List-Unsubscribe': '<' + unsub + '>', 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } });
+    if (r.ok) sent++; else { failed++; firstError = firstError || r.error; }
+    await db.prepare('UPDATE newsletter_deliveries SET status = ?, error = ?, provider_id = ?, at = ? WHERE season = ? AND week = ? AND email = ?')
+      .bind(r.ok ? 'sent' : 'failed', r.ok ? null : r.error, r.ok ? r.id : null, Date.now(), season, nb.week, s.email).run();
+  }
+  const out = { ok: true, week: nb.week, batch: rows.length, sent, failed, skipped, more: rows.length === NL_BATCH };
+  if (failed && !sent) { out.ok = false; out.error = failed + ' sends failed: ' + firstError; }
+  return out;
+}
+// What /admin shows: the switch and what it still needs, the counts, the
+// editions and the failures. Addresses are masked.
+async function newsletterAdmin(env) {
+  const cfg = nlConfig(env);
+  const out = { config: { open: cfg.open, enabled: cfg.enabled, canSend: cfg.canSend, need: cfg.need, from: cfg.from, schedule: 'Sun 7 to 11:45 AM ET, quarter-hourly, ' + NL_BATCH + ' per run' } };
+  if (!(await nlReady(env))) return { ...out, ok: false, error: 'storage' };
+  const db = env.LEADS_DB;
+  const c = ((await db.prepare('SELECT status, COUNT(*) AS n FROM newsletter_subscribers GROUP BY status').all()).results) || [];
+  out.counts = { pending: 0, confirmed: 0, unsubscribed: 0 };
+  for (const r of c) out.counts[r.status] = r.n;
+  const eds = ((await db.prepare('SELECT season, week, built_at, status, payload FROM newsletter_editions ORDER BY built_at DESC LIMIT 8').all()).results) || [];
+  out.editions = [];
+  for (const r of eds) {
+    const d = ((await db.prepare('SELECT status, COUNT(*) AS n FROM newsletter_deliveries WHERE season = ? AND week = ? GROUP BY status').bind(r.season, r.week).all()).results) || [];
+    const by = {}; for (const x of d) by[x.status] = x.n;
+    let counts = {}; try { counts = JSON.parse(r.payload).counts || {}; } catch (e) {}
+    out.editions.push({ season: r.season, week: r.week, builtAt: r.built_at, status: r.status, counts, sent: by.sent || 0, failed: by.failed || 0, skipped: by.skipped || 0, sending: by.sending || 0 });
+  }
+  out.failures = (((await db.prepare("SELECT season, week, email, error, at FROM newsletter_deliveries WHERE status = 'failed' ORDER BY at DESC LIMIT 20").all()).results) || [])
+    .map(r => ({ season: r.season, week: r.week, email: nlMask(r.email), error: r.error, at: r.at }));
+  out.ok = true;
+  return out;
+}
+// The edition as it would go out now: the frozen one when this week's exists,
+// else built fresh and NOT stored (a preview must not freeze the week).
+async function newsletterPreview(env, now) {
+  const nb = await nlBoardNow(env);
+  if (!nb) return null;
+  if (await nlReady(env)) {
+    const row = await env.LEADS_DB.prepare('SELECT payload FROM newsletter_editions WHERE season = ? AND week = ?').bind(nb.season == null ? 0 : nb.season, nb.week).first();
+    if (row) return { frozen: true, ed: JSON.parse(row.payload) };
+  }
+  const ed = newsletterEdition(nb.b, nb.markets, now);
+  return ed ? { frozen: false, ed } : null;
+}
+// THE SUNDAY EMAIL AND SHARED FINDINGS END
+// ════════════════════════════════════════════════════════════════════════════
 
 // A desk piece's head and its first screen: headline, kicker, publication
 // time and dek, the four things desk.html's piece() paints before the body.
@@ -14818,7 +15342,8 @@ const JOB_FNS = {
   'news-scan':            env => runNewsScan(env),
   'calls-grade':          env => runCallsGrade(env),
   'rivalry-column':       env => runRivalryColumn(env),
-  'content-tick':         env => runContentTick(env)
+  'content-tick':         env => runContentTick(env),
+  'newsletter-send':      env => runNewsletterSend(env)
 };
 const _jobSummary = r => { try { return JSON.stringify(r).slice(0, 800); } catch (e) { return null; } };
 // How long a job may run before the log calls it dead. A cron invocation has
@@ -15195,7 +15720,11 @@ const JOB_SCHEDULE = [
   // phase 3: the desk, which reads everything above. Quarter-hourly so a
   // 12:15 and a 7:30 slot exist in Eastern time; a tick with nothing due
   // costs one pure evaluation per kind.
-  { job: 'content-tick',         days: null,                   hours: 'hourly', minutes: [0, 15, 30, 45], phase: 3 }
+  { job: 'content-tick',         days: null,                   hours: 'hourly', minutes: [0, 15, 30, 45], phase: 3 },
+  // The Sunday email (growth plan Phase 5): built and frozen on the first run
+  // of the morning, then sent in batches. It does nothing until
+  // NEWSLETTER_ENABLED and the mail settings are in place (nlConfig).
+  { job: 'newsletter-send',      days: ['Sun'],                hours: [7, 8, 9, 10, 11], minutes: [0, 15, 30, 45], phase: 3 }
 ];
 const JOB_DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 // Validate one entry. Returns the clean entry or a string saying what is wrong.
@@ -15929,9 +16458,15 @@ async function adminUsage(env, url) {
   // Its own try: a database with no contacts table yet is not a failed read.
   let ct = null;
   try { ct = ((await db.prepare("SELECT type, COUNT(*) AS n FROM contacts WHERE created_at >= ? AND type != 'purchase' GROUP BY type").bind(since).all()).results) || []; } catch (e) {}
+  // Confirmed Sunday-email subscriptions (Phase 5): the double opt-in table,
+  // currently confirmed, and how many of them confirmed inside the window.
+  let nl = null;
+  try { nl = await db.prepare("SELECT SUM(status = 'confirmed') AS confirmed, SUM(status = 'confirmed' AND confirmed_at >= ?) AS recent, SUM(status = 'pending') AS pending FROM newsletter_subscribers").bind(since).first(); } catch (e) {}
   out.subscriptions = {
-    confirmed: null,
-    confirmedNote: 'No confirmation step exists yet (planned for the email phase), so confirmed subscriptions cannot be counted.',
+    confirmed: nl ? (nl.confirmed || 0) : null,
+    confirmedInWindow: nl ? (nl.recent || 0) : null,
+    pending: nl ? (nl.pending || 0) : null,
+    confirmedNote: nl ? 'Confirmed means the owner of the address clicked the confirmation link (double opt-in) and has not unsubscribed.' : 'The Sunday email has no subscriber table yet (it is created on the first sign-up or /admin read), so confirmed subscriptions cannot be counted.',
     signupEvents: fu.subscribed || 0,
     contactsStored: ct ? ct.reduce((s, r) => s + (r.n || 0), 0) : null,
     contactsByType: (ct || []).map(r => ({ type: r.type || '', count: r.n || 0 })),
@@ -18268,11 +18803,109 @@ export default {
         return json({ ok: r.ok, status: r.status, submitted: urls.length, urls: urls }, 200, c);
       } catch (e) { return json({ ok: false, error: 'server', detail: String(e).slice(0, 200) }, 500, c); }
     }
+    // ── the Sunday email (growth plan Phase 5) ────────────────────────────────
+    // status: whether the sign-up form should appear at all; subscribe and
+    // confirm: double opt-in; the admin routes: the switch, the counts, a
+    // preview of this week's edition and a test send to one address.
+    if (url.pathname === '/api/newsletter/status') {
+      const cfg = nlConfig(env);
+      // Not offered in Washington, where the site does not show the market.
+      return json({ ok: true, open: cfg.open && !IS_WASHINGTON(request), offer: NL_OFFER }, 200, { 'cache-control': 'private, max-age=300' });
+    }
+    if (url.pathname === '/api/newsletter/subscribe') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'POST') return json({ ok: false }, 405, c);
+      if (IS_WASHINGTON(request)) return json({ ok: false, error: 'region' }, 403, c);
+      if (await rl(env, request, 'nlsub', 10, 600)) return json({ ok: false, error: 'rate' }, 429, c);
+      let b = {}; try { b = await request.json(); } catch (e) {}
+      let r;
+      try { r = await newsletterSubscribe(env, url.origin, b); } catch (e) { r = { status: 500, body: { ok: false, error: 'server' } }; }
+      return json(r.body, r.status, c);
+    }
+    if (url.pathname === '/api/newsletter/confirm') {
+      let r = { ok: false, why: 'invalid' };
+      try { r = await newsletterConfirm(env, url.searchParams, Date.now(), request.method === 'POST'); } catch (e) {}
+      if (r.ok && r.ask) return secure(new Response(nlPage('Confirm the Sunday email', 'One more step: press the button to start the Iron Tuna Sunday email at ' + _preEsc(HOME_PRESET_LABEL[r.scoring] || 'PPR') + ' scoring.', true, url.pathname + url.search),
+        { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } }));
+      const msg = r.ok
+        ? (r.already ? 'This address was already confirmed. Nothing has changed.' : 'You will get the Sunday email at ' + _preEsc(HOME_PRESET_LABEL[r.scoring] || 'PPR') + ' scoring, starting with the next Sunday morning. Every email carries an unsubscribe link.')
+        : r.why === 'expired' ? 'This link is more than seven days old. Sign up again and use the newest email.'
+        : r.why === 'stale' ? 'This link has been replaced by a newer one. Use the newest confirmation email.'
+        : 'This confirmation link is not valid.';
+      return secure(new Response(nlPage(r.ok ? 'Subscribed' : 'Not confirmed', msg, r.ok), { status: r.ok ? 200 : 400, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } }));
+    }
+    if (url.pathname === '/api/admin/newsletter' || url.pathname === '/api/admin/newsletter/preview' || url.pathname === '/api/admin/newsletter/test') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      if (url.pathname === '/api/admin/newsletter') {
+        try { return json(await newsletterAdmin(env), 200, { ...c, 'cache-control': 'no-store' }); } catch (e) { return json({ ok: false, error: 'server' }, 500, c); }
+      }
+      const preset = nlPreset(url.searchParams.get('scoring'));
+      let pv = null; try { pv = await newsletterPreview(env, Date.now()); } catch (e) {}
+      if (url.pathname === '/api/admin/newsletter/preview') {
+        if (!pv) return secure(new Response(nlPage('No edition', 'There is no week board to build an edition from right now.', false), { status: 404, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } }));
+        if (!(pv.ed.presets[preset] || []).length) return secure(new Response(nlPage('Nothing to send', 'No player clears the bar at ' + _preEsc(HOME_PRESET_LABEL[preset]) + ' right now, so this edition would not be sent at that scoring.', false), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } }));
+        const m = newsletterEmail(pv.ed, preset, { origin: url.origin, unsub: '#', address: env.MAIL_ADDRESS || '(MAIL_ADDRESS is not set: required before sending)', test: false });
+        const note = '<div style="font-family:system-ui,Arial;font-size:13px;background:#0b1117;color:#e8eef2;padding:8px 12px">Preview, ' + (pv.frozen ? 'the frozen edition for this week' : 'built now and not stored (the Sunday run freezes it)') + '. Subject: ' + _preEsc(m.subject) + '</div>';
+        return secure(new Response(m.html.replace('<body style="margin:0;padding:0;background:#f0f4f6">', () => '<body style="margin:0;padding:0;background:#f0f4f6">' + note), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } }));
+      }
+      if (request.method !== 'POST') return json({ ok: false }, 405, c);
+      const cfg = nlConfig(env);
+      if (!cfg.canSend) return json({ ok: false, error: 'not_configured', need: cfg.need.filter(n => n !== 'NEWSLETTER_ENABLED=1') }, 400, c);
+      let b = {}; try { b = await request.json(); } catch (e) {}
+      const to = nlNorm(b.to);
+      if (!nlValidEmail(to)) return json({ ok: false, error: 'bad_test_email' }, 400, c);
+      if (!pv) return json({ ok: false, error: 'no_board' }, 409, c);
+      if (!(pv.ed.presets[preset] || []).length) return json({ ok: false, error: 'nothing_at_this_scoring' }, 409, c);
+      const unsub = await nlUnsubUrl(env, url.origin, to);
+      const m = newsletterEmail(pv.ed, preset, { origin: url.origin, unsub, address: env.MAIL_ADDRESS, test: true });
+      const r = await nlResend(env, { from: cfg.from, to, subject: m.subject, html: m.html, text: m.text, headers: { 'List-Unsubscribe': '<' + unsub + '>', 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } });
+      return json({ ok: r.ok, error: r.error || null, subject: m.subject }, r.ok ? 200 : 502, c);
+    }
+    // ── dated findings: share links that never change (Phase 5) ───────────────
+    // The browser names a player (or two) and a scoring; the worker cuts the
+    // finding from its own current board, never from figures the browser
+    // sends, and answers the frozen page's address.
+    if (url.pathname === '/api/share/finding' || url.pathname === '/api/share/compare') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'POST') return json({ ok: false }, 405, c);
+      if (IS_WASHINGTON(request)) return json({ ok: false, error: 'region' }, 403, c);
+      if (await rl(env, request, 'share', 30, 600)) return json({ ok: false, error: 'rate' }, 429, c);
+      let b = {}; try { b = await request.json(); } catch (e) {}
+      const preset = nlPreset(b.scoring);
+      try {
+        const nb = await nlBoardNow(env);
+        if (!nb) return json({ ok: false, error: 'no_board' }, 409, c);
+        let rec = null;
+        if (url.pathname === '/api/share/finding') {
+          const x = (homeExamples(nb.b, nb.markets, preset, 1000) || []).find(q => q.name === String(b.player || ''));
+          if (x) rec = findingGapRec(nb, x, preset);
+        } else rec = findingCompareRec(nb, String(b.a || ''), String(b.b || ''), preset);
+        if (!rec) return json({ ok: false, error: 'not_current' }, 404, c);
+        const f = await findingFreeze(env, rec);
+        if (!f) return json({ ok: false, error: 'storage' }, 503, c);
+        return json({ ok: true, id: f.id, url: url.origin + '/finding/' + f.id, title: findingTitle(f.rec) }, 200, c);
+      } catch (e) { return json({ ok: false, error: 'server' }, 500, c); }
+    }
+    {
+      const __fm = /^\/finding\/([a-z0-9-]{8,120})\/card\.svg$/.exec(url.pathname);
+      if (__fm) {
+        const r = IS_WASHINGTON(request) ? null : await findingRead(env, __fm[1]);
+        if (!r) return secure(new Response('not found', { status: 404, headers: { 'content-type': 'text/plain' } }));
+        return secure(new Response(findingSvg(r), { headers: { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'public, max-age=31536000, immutable' } }));
+      }
+    }
     if (url.pathname === '/api/unsubscribe') {
       const email = (url.searchParams.get('e') || '').trim().toLowerCase();
       const t = url.searchParams.get('t') || '';
       const ok = !!email && !!env.AUTH_SECRET && timingSafeEq(t, await hmacSign(env.AUTH_SECRET, 'unsub:' + email));
       if (ok && env.LEADS_DB) { try { await env.LEADS_DB.prepare('INSERT OR IGNORE INTO unsubscribes (email, created_at) VALUES (?, ?)').bind(email, Date.now()).run(); } catch (e) {} }
+      // The Sunday email reads its own status too: the suppression row above
+      // keeps its first timestamp, so a second unsubscribe after a re-confirm
+      // would not otherwise be seen by the send query.
+      if (ok && env.LEADS_DB) await newsletterUnsubscribe(env, email, Date.now());
       const msg = ok ? 'You’re unsubscribed. You won’t receive marketing emails from Iron Tuna.' : 'This unsubscribe link is invalid or expired.';
       return new Response('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unsubscribe — Iron Tuna</title><div style="font-family:system-ui,Arial;max-width:480px;margin:64px auto;padding:0 22px;text-align:center;color:#1a2129"><h2>' + (ok ? 'Done' : 'Hmm') + '</h2><p style="color:#566">' + msg + '</p><p><a href="https://irontuna.com/" style="color:#0b9">Back to Iron Tuna</a></p></div>', { headers: { 'content-type': 'text/html; charset=utf-8' } });
     }
@@ -19282,6 +19915,8 @@ export default {
       // The bare /player stays the lookup box, and out of season nothing changes.
       else if (/^\/player\/[A-Za-z0-9._-]+\/?$/.test(url.pathname) && (POST_DRAFT_OPEN(env) || postDraftPreview(env, url, request))) __assetReq = new Request(new URL('/player-intel', url).toString(), request);
       else if (/^\/player(\/[A-Za-z0-9._-]*)?\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/player', url).toString(), request);
+      // /finding/<id>: one shell for every dated finding (Phase 5), filled below.
+      else if (/^\/finding\/[a-z0-9-]{1,120}\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/finding', url).toString(), request);
       else if (/^\/(auctiondraft|snakedraft|bestball|hub)(\/|$)/.test(url.pathname)) __assetReq = new Request(new URL('/', url).toString(), request);
       // /in-season/<page> is an ALIAS, not the canonical URL. This comment used to
       // claim the opposite, and two pages believed it: rankings.html and
@@ -19562,6 +20197,19 @@ export default {
         __r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
         __r.headers.delete('content-length');
         return secure(__r);
+      }
+      // /finding/<id>: the frozen record written into the shell. An unknown id
+      // is a 404 with the shell's own "no such finding"; in Washington, where
+      // the market is not shown, every finding is.
+      {
+        const __fd = /^\/finding\/([a-z0-9-]{1,120})$/.exec(__seoKey);
+        if (__fd) {
+          const __rec = IS_WASHINGTON(request) ? null : await findingRead(env, __fd[1]);
+          const __r = new Response(findingShellFill(await resp.text(), __rec, __fd[1]), { status: __rec ? 200 : 404, headers: resp.headers });
+          __r.headers.set('Cache-Control', __rec ? 'public, max-age=3600' : 'no-store');
+          __r.headers.delete('content-length');
+          return secure(__r);
+        }
       }
       if (__seoKey === '/players') {
         const __idx = await playerIndex(env, url);
