@@ -11,6 +11,7 @@
   gtag('config', 'AW-18397866361');
   gtag('config', 'G-KLBZBZSJ25');
 </script>
+<script src="/it-metrics.js" defer></script>
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -414,8 +415,15 @@ textarea.ls-paste:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3
     // A button sets its numbers. The reception button sets the running back's
     // catch too, as the hub's form does: a league that pays backs differently
     // for a catch says so in the fold, and nobody arrives at one by accident.
+    // Outcome metrics (it-metrics.js): the first touch of the form starts
+    // setup, a save completes it. Once per visit each; no setting is sent.
+    function itm() { (window.ITMetricsQ = window.ITMetricsQ || []).push([].slice.call(arguments)); }
+    var started = false;
+    function begin(how) { if (started) return; started = true; itm('event', 'league_setup_start', 'league_scoring', 'form', { step: how }); }
+    form.addEventListener('focusin', function () { begin('form'); });
     form.addEventListener('change', function (e) {
       var t = e.target;
+      begin('form');
       if (!t || t.type !== 'radio') return;
       if (t.name === 'teams') { teamsMode(); if (t.value === 'custom') $('lsTeamsCustom').focus(); return; }
       if (t.name === 'format') { field('receptionPoints').value = t.value; field('rbReceptionPoints').value = t.value; }
@@ -454,6 +462,7 @@ textarea.ls-paste:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3
       var rec = readForm();
       if (!isFinite(rec.teams) || rec.teams < 4 || rec.teams > 20) {
         say(msg, 'How many teams? Pick 8, 10 or 12, or type a number from 4 to 20.', true);
+        itm('error', 'league_scoring', 'teams', { kind: 'validation' });
         $('lsTeamsCustom').focus();
         return;
       }
@@ -462,6 +471,7 @@ textarea.ls-paste:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3
         (L.hasCustomScoring() ? ' with your own rules' : '') +
         ', ' + esc(saved.settings.scoring.passingTD) + '-point passing touchdowns. Every board on the site now reads these.');
       var from = $('lsFrom'); if (from) from.hidden = true;
+      itm('event', 'league_setup_complete', 'league_scoring', 'save', { teams: saved.teams, scoring: saved.scoring });
     });
 
     // ── what was read, into the numbers ─────────────────────────────────────

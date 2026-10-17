@@ -11,6 +11,7 @@
   gtag('config', 'AW-18397866361');
   gtag('config', 'G-KLBZBZSJ25');
 </script>
+<script src="/it-metrics.js" defer></script>
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -373,7 +374,11 @@ p{color:var(--sec);margin:0 0 16px}
       try { document.getElementById('board').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (err) {}
     });
     fetch('/api/vegas-edge').then(function (r) { return r.json(); }).then(function (j) {
-      if (!j || !j.ok) { $('veNote').textContent = 'The board did not answer. Nothing is shown rather than something invented.'; vacantAll('The board did not answer.'); return; }
+      if (!j || !j.ok) { $('veNote').textContent = 'The board did not answer. Nothing is shown rather than something invented.'; vacantAll('The board did not answer.'); itm('error', 'vegas_edge', 'load', { kind: 'not_ok' }); return; }
+      // Outcome metrics (it-metrics.js): the differences board is populated
+      // when either side of it has a player; empty when neither does.
+      var veRows = (j.vsExperts.buys || []).length + (j.vsExperts.fades || []).length;
+      itm(veRows ? 'success' : 'empty', 'vegas_edge', j.week || 'board', { rows: veRows });
       if (j.week) $('veWeek').textContent = j.week;
       $('veNote').innerHTML = (j.week ? '<b>' + e(j.week) + '.</b> ' : '') + e(j.note || 'Player props are priced this week; every number below says whether it is quoted or derived.') +
         (j.playedNote ? ' ' + e(j.playedNote) : '');
@@ -478,8 +483,10 @@ p{color:var(--sec);margin:0 0 16px}
             '</ul><p>' + e(d.interpretation) + '</p></div>';
         }).join('');
       }
-    }).catch(function () { $('veNote').textContent = 'The board did not answer.'; vacantAll('The board did not answer.'); });
+    }).catch(function () { $('veNote').textContent = 'The board did not answer.'; vacantAll('The board did not answer.'); itm('error', 'vegas_edge', 'load', { kind: 'network' }); });
   });
+  // Queue an outcome for it-metrics.js, which loads deferred and drains the queue.
+  function itm() { (window.ITMetricsQ = window.ITMetricsQ || []).push([].slice.call(arguments)); }
   // Every board's empty state says the feed failed, rather than "nothing yet".
   function vacantAll(msg) {
     [].forEach.call(document.querySelectorAll('.ve-plate .is-vacant b'), function (b) { b.textContent = msg; });

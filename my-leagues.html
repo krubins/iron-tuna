@@ -11,6 +11,7 @@
   gtag('config', 'AW-18397866361');
   gtag('config', 'G-KLBZBZSJ25');
 </script>
+<script src="/it-metrics.js" defer></script>
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -346,6 +347,7 @@ function rosterGrid(el) {
   var warned = false;
 
   document.getElementById('mlGridSave').addEventListener('click', function () {
+    (window.ITMetricsQ = window.ITMetricsQ || []).push(['event', 'league_setup_start', 'league_rosters', 'grid', { mode: 'screenshot' }]);
     if (!grid || !grid.teams.length) { msg('Paste a screenshot of the rosters first.', true); return; }
     if (grid.mine < 0) { msg('Pick which of those teams is yours.', true); return; }
     if (grid.unplaced > 0 && !warned) {
@@ -390,13 +392,15 @@ function rosterGrid(el) {
       };
       return ITSync.api('/api/leagues/manual', { method: 'POST', body: body }).then(function (j) {
         btn.disabled = false;
-        if (!j || !j.ok) { msg(esc((j && (j.message || j.error)) || 'Could not save those rosters.'), true); return; }
+        if (!j || !j.ok) { msg(esc((j && (j.message || j.error)) || 'Could not save those rosters.'), true); (window.ITMetricsQ = window.ITMetricsQ || []).push(['error', 'league_rosters', 'grid', { kind: (j && j.error) || 'not_ok', mode: 'screenshot' }]); return; }
+        // Outcome metrics (it-metrics.js): counts only, never a name or roster.
+        (window.ITMetricsQ = window.ITMetricsQ || []).push(['event', 'league_setup_complete', 'league_rosters', 'grid', { teams: grid.teams.length, mode: 'screenshot' }]);
         msg('<b>Saved.</b> ' + esc(j.league.name) + ' now holds ' + grid.teams.length + ' rosters.' +
             (j.unresolved && j.unresolved.length ? ' Not on the board (kept by name, scored 0): ' + esc(j.unresolved.join(', ')) + '.' : ' Every player mapped to the board.'));
         ITSync.invalidate();
         ITSync.load(true);
       });
-    }).catch(function () { btn.disabled = false; msg('Could not save those rosters. Try again.', true); });
+    }).catch(function () { btn.disabled = false; msg('Could not save those rosters. Try again.', true); (window.ITMetricsQ = window.ITMetricsQ || []).push(['error', 'league_rosters', 'grid', { kind: 'network', mode: 'screenshot' }]); });
   });
 }
 </script>
@@ -627,6 +631,9 @@ function rosterGrid(el) {
     }) || grid;
     var cancel = $('mfCancel');
     if (cancel) cancel.addEventListener('click', function () { el.hidden = true; });
+    // Outcome metrics (it-metrics.js): the first touch of the form starts
+    // setup, a save completes it. No name, roster or setting is sent.
+    el.addEventListener('focusin', function () { (window.ITMetricsQ = window.ITMetricsQ || []).push(['event', 'league_setup_start', 'league_rosters', 'manual', { mode: L ? 'edit' : 'create' }]); });
     $('mfSave').addEventListener('click', function () {
       var recV = parseFloat((el.querySelector('input[name="mfRec"]:checked') || {}).value || '1');
       if (mfRecExact != null && (mfRecExact >= 0.9 ? 1 : mfRecExact >= 0.4 ? 0.5 : 0) === recV) recV = mfRecExact;
@@ -656,10 +663,15 @@ function rosterGrid(el) {
       }
       $('mfMsg').textContent = 'Saving…';
       ITSync.api('/api/leagues/manual', { method: 'POST', body: body }).then(function (j) {
-        if (!j || !j.ok) { $('mfMsg').textContent = (j && (j.message || j.error)) || 'Could not save.'; return; }
+        if (!j || !j.ok) { $('mfMsg').textContent = (j && (j.message || j.error)) || 'Could not save.'; (window.ITMetricsQ = window.ITMetricsQ || []).push(['error', 'league_rosters', 'manual', { kind: (j && j.error) || 'not_ok', mode: L ? 'edit' : 'create' }]); return; }
+        (window.ITMetricsQ = window.ITMetricsQ || []).push(['event', 'league_setup_complete', 'league_rosters', 'manual', { teams: (body.teams || []).length || parseInt(body.numTeams, 10) || 0, mode: L ? 'edit' : 'create' }]);
         el.hidden = true;
         note('<b>Saved.</b> ' + esc(j.league.name) + (j.unresolved && j.unresolved.length ? '. Not on the board (kept by name, scored 0): ' + esc(j.unresolved.join(', ')) : '. Every player mapped to the board.'));
         reload();
+      }).catch(function () {
+        // A network failure used to leave "Saving…" on screen with no answer.
+        $('mfMsg').textContent = 'Could not reach Iron Tuna to save. Your entries are still in the form; try again in a moment.';
+        (window.ITMetricsQ = window.ITMetricsQ || []).push(['error', 'league_rosters', 'manual', { kind: 'network', mode: L ? 'edit' : 'create' }]);
       });
     });
     if (o.scroll !== false) el.scrollIntoView({ behavior: 'smooth', block: 'start' });

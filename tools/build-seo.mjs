@@ -279,6 +279,22 @@ function applyTag(file, html) {
   return html.replace(adsConfig, `${adsConfig}\n  gtag('config', '${GA4}');`);
 }
 
+// ── 1a. the outcome metrics (it-metrics.js, 2026-10-17) ──────────────────────
+// The first-party script that counts what a reader got out of a page and
+// whether the browser came back (docs/growth-plan.md, Phase 1). It rides
+// directly after the Google tag so every tagged page carries it and a new page
+// picks it up the moment this tool runs. Deferred: it never holds the page.
+const METRICS_TAG = '<script src="/it-metrics.js" defer></script>';
+function applyMetrics(file, html) {
+  if (html.includes('/it-metrics.js')) return html;
+  const anchor = `  gtag('config', '${GA4}');\n</script>`;
+  if (!html.includes(anchor)) {
+    console.error(`  WARN ${file}: no Google tag block to follow, it-metrics.js skipped`);
+    return html;
+  }
+  return html.replace(anchor, `${anchor}\n${METRICS_TAG}`);
+}
+
 // ── 1b. the head meta every page was missing ─────────────────────────────────
 // Three gaps, all site-wide, all invisible until you go looking.
 //
@@ -760,7 +776,7 @@ const pages = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html')).sort();
 for (const file of pages) {
   const before = read(file);
   let out = before;
-  if (!NO_TAG.has(file)) out = applyTag(file, out);
+  if (!NO_TAG.has(file)) out = applyMetrics(file, applyTag(file, out));
   out = applyMeta(file, out);
   out = applyLd(file, out);
   write(file, out, before);

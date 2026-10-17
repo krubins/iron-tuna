@@ -11,6 +11,7 @@
   gtag('config', 'AW-18397866361');
   gtag('config', 'G-KLBZBZSJ25');
 </script>
+<script src="/it-metrics.js" defer></script>
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -680,6 +681,8 @@ body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14);color:var(--ink-3)}
   // as a choice rather than a ranking. Nothing here is written when the board
   // cannot support it.
   var CLOSE = 1.5;          // points; nearer than this and it is a real choice
+  // Queue an outcome for it-metrics.js, which loads deferred and drains the queue.
+  function itm() { (window.ITMetricsQ = window.ITMetricsQ || []).push([].slice.call(arguments)); }
   function flexCall() {
     var flex = (data.players || []).filter(function (p) {
       return /^(RB|WR|TE)$/.test(p.position) && p.ironTuna && p.ironTuna.points != null &&
@@ -805,6 +808,7 @@ body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14);color:var(--ink-3)}
       var b = ev.target.closest && ev.target.closest('button[data-share]');
       if (!b) return;
       var sl = b.getAttribute('data-share');
+      itm('event', 'share_click', 'fantasy_board', sl, { method: 'copy_link' });
       // The address bar first and unconditionally, so a refused clipboard still
       // leaves the reader the right URL in front of them.
       focus = sl;
@@ -828,12 +832,15 @@ body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14);color:var(--ink-3)}
       .then(function (j) {
         if (!j || !j.ok) {
           $('fnState').textContent = 'The projection feeds have not answered. The board is blank rather than stale.';
+          itm('error', 'fantasy_board', 'week|' + preset, { scoring: preset, kind: (j && j.error) || 'not_ok' });
           return;
         }
         data = j; render();
+        itm((j.players || []).length ? 'success' : 'empty', 'fantasy_board', 'week|' + preset, { scoring: preset, rows: (j.players || []).length });
       })
       .catch(function () {
         $('fnState').textContent = 'The projection feeds have not answered. The board is blank rather than stale.';
+        itm('error', 'fantasy_board', 'week|' + preset, { scoring: preset, kind: 'network' });
       });
   });
 })();
