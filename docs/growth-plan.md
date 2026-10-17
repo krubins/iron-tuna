@@ -714,8 +714,11 @@ player page, whose numbers move.
   `test-usage` (confirmed is counted when the table exists),
   `test-data-sources` and `docs/data-sources.md` (`www.w3.org`, the SVG
   namespace, never fetched).
-- Full CI node suite less `test-dry-run`: see the commit for the final count.
-  Generators clean.
+- Full CI node suite less `test-dry-run`: 78 of 78 pass (with
+  `REQUIRE_BROWSER=1`). `test-dry-run.mjs` run as well, because the job
+  schedule changed: 115 of 115. `build-chrome`, `build-ranks`, `build-seo`,
+  `build-bylines --check` clean; `build-front` and `build-worker-faces`
+  produce no diff.
 
 ### Still open from Phase 5
 
