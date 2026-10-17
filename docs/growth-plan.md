@@ -46,8 +46,8 @@ expectations and fantasy consensus. The retention feature is My Week.
 | 2 | Reliability and search visibility | **Done** (2026-10-17, merged as #443) | `claude/growth-phase-2` |
 | 3 | First-visit experience | **Done** (2026-10-17, merged as #444) | `claude/growth-phase-3` |
 | 4 | Repeat usage (My Week) | **Done** (2026-10-17, merged as #445) | `claude/growth-phase-4` |
-| 5 | Email and sharing | **Done** (2026-10-17, awaiting review and merge; delivery off until configured) | `claude/growth-phase-5` |
-| 6 | Distribution and evaluation | Not started | |
+| 5 | Email and sharing | **Done** (2026-10-17, merged as #446; delivery off until configured) | `claude/growth-phase-5` |
+| 6 | Distribution and evaluation | **Done** (2026-10-17, awaiting review and merge) | `claude/growth-phase-6` |
 
 ---
 
@@ -221,8 +221,12 @@ beside every percentage and `n/a` where there is no denominator:
 
 ## Outstanding configuration and access
 
-- **Merge and deploy** `claude/growth-phase-5` (owner). Phases 1 to 4 merged
-  as #442, #443, #444 and #445.
+- **Merge and deploy** `claude/growth-phase-6` (owner). Phases 1 to 5 merged
+  as #442, #443, #444, #445 and #446.
+- **Privacy policy, Phase 6 addition** (owner). A Sunday-email sign-up now
+  also stores the source labels of the visit it happened in (site name or
+  UTM source, medium, campaign; never the browser id). Mention it when the
+  policy is updated for the Sunday email.
 - **Turn on the Sunday email** (owner, Phase 5). Until all of these are set,
   the sign-up form does not appear anywhere, `/newsletter` says sign-up is not
   open, and the Sunday job logs "disabled": `RESEND_API_KEY` (already used by
@@ -732,13 +736,103 @@ player page, whose numbers move.
   failed, and `share_click` by method; Phase 6 compares sources by confirmed
   subscriptions.
 
-## Next steps: Phase 6 (distribution and evaluation)
+## Phase 6: distribution and evaluation (2026-10-17)
 
-Start here when told "Start next phase". The Phase 6 requirements are under
-"Later phases" below. Phase 5 leaves it dated findings to link drafts to
-(`/api/share/finding`, `/api/share/compare`), an SVG share image per finding,
-the UTM convention already applied to the email, and confirmed subscribers
-counted on /admin.
+### What changed
+
+- **Weekly drafts on /admin** (Operator tools, "Weekly drafts"; worker
+  section "THE WEEKLY DRAFTS AND PARTNERS"). `POST /api/admin/drafts` with a
+  kind, a scoring and a channel. Built only on the owner's press (POST, so a
+  prefetch freezes nothing); never posted, scheduled or sent.
+  - Tuesday waiver finding (`waiverFindingPick`): from the three-week board,
+    Iron Tuna ranks him inside the depth a 12-team league rosters
+    (`PICKUP_ROSTERED`: QB 17, RB 60, WR 72, TE 18) and the consensus ranks
+    him outside it; a game every week of the span; Active, Probable or no tag;
+    role not trending down; best Iron Tuna rank wins. Never says "available":
+    no league is read, so the post and page say to check.
+  - Thursday or Friday: the homepage's own examples (`homeExamples`) at the
+    chosen scoring, up to three, as one dated page.
+  - Sunday: the homepage sample's flex pair (`homeSamplePair`, then
+    `findingCompareRec`).
+  - Each: validated figures, scoring, week, board and odds timestamps, the
+    explanation with the Derived estimate and Quoted prop labels, a dated
+    finding (link and share image), a link tagged per the convention
+    (`utm_source` by channel or `creator-<slug>`, `utm_medium` social or
+    partner, `utm_campaign` `<season>-w<NN>-<waiver|vegas-gaps|lineup>`), and
+    editable text with a counter at the channel's length (X counts a link
+    as 23). Nobody kicking off within the hour. When nothing clears, the
+    draft says so and nothing is frozen.
+- **Two new dated finding kinds**: `set` (up to three gaps on one page) and
+  `waiver`. Page, title, description and SVG image for each. A gap or
+  comparison hashes exactly as before, so Phase 5 links keep their ids.
+- **Creator partners** (`partners` table, `GET/POST /api/admin/partners`,
+  `GET /api/admin/partners/package`). The owner's own list, never seeded:
+  name, slug, channel, URL, status (prospect, contacted, agreed, active,
+  paused, ended), notes. Per partner: visitors, useful visits, saved leagues,
+  confirmed email sign-ups off `utm_source=creator-<slug>`. The package: four
+  tagged links, a sample segment from the current board (not frozen), and an
+  outreach draft with the owner's choices left in brackets. Nothing is sent.
+  A partner can be picked as a draft's channel.
+- **Comparing sources** (`/api/admin/usage`, shown on /admin). The source
+  query is now `usageSourceRows`, shared with the partner list. Each source
+  row adds return within 7 days (browsers credited to the source of their
+  first visit in the window, mature only, otherwise "maturing") and confirmed
+  subscriptions. New "Campaigns" table: per `utm_campaign`, visitors, useful
+  visits, saved leagues, confirmed sign-ups. Small samples marked under 20.
+- **Sign-up attribution.** `it-newsletter.js` sends the visit's source,
+  medium and campaign with a sign-up; `newsletter_subscribers` gains
+  `visit_src`, `visit_med`, `visit_cmp` (added on first use by
+  `NL_MIGRATIONS`). Labels only; anything containing `@` is dropped.
+- **The owner's playbook** (`docs/distribution-playbook.md`): the weekly
+  checklist, the link tags, and the 30-day evaluation plan with comparison
+  periods, sample-size limits and decision rules. No traffic promises.
+
+### Phase 6 verification (2026-10-17)
+
+- `node tools/test-distribution.mjs` (new, in CI): 82 checks over SQLite.
+  The waiver rule (each exclusion, the tie-break, the explanation, never
+  "available"); the three drafts (figures, the frozen finding, tagged links,
+  X and Threads lengths, the kickoff margin, fewer when fewer qualify,
+  nothing invented with no board or nothing qualifying, no outside request
+  while building); the new finding kinds' pages and images; a gap finding's
+  id unchanged from Phase 5; partners (validation, upsert, metrics with the
+  owner excluded, the package, nothing sent); the sign-up's source labels
+  and the migration of a Phase 5 table; the real worker's routes (key gate,
+  POST-only drafts, 409 with no board, partners). Three deliberate mutations
+  (the consensus-inside rule, the kickoff margin, the Phase 5 id) each fail it.
+- `REQUIRE_BROWSER=1 node tools/test-distribution-admin.mjs` (new, in CI):
+  41 checks at 390 and 1280 px off true payloads. One POST per Build and
+  nothing else; figures, labels, editable text, counter and over-length
+  warning; clipboard copy that says nothing was posted; another channel's
+  limit and tag; "nothing to post" said plainly; a partner added, listed,
+  offered as a channel and packaged; the new source columns and campaign
+  table; no sideways scroll (a long select overflowed at 390 and was fixed);
+  no script errors.
+- `test-usage` gained 10 checks (returns by first source, mature only;
+  confirmed by source; campaigns; the owner excluded; unavailable without a
+  subscriber table).
+- Full CI node suite less `test-dry-run`: 80 of 80 pass (with
+  `REQUIRE_BROWSER=1`). `test-worker-sql` caught a ternary inside the new
+  source query's string on the first run; the query was restructured.
+  `build-chrome`, `build-ranks`, `build-seo`, `build-bylines --check` clean;
+  `build-front` and `build-worker-faces` produce no diff. Nothing in the
+  newsroom or job schedule changed, so `test-dry-run` was not run.
+
+### Still open from Phase 6
+
+- Every owner item under "Outstanding configuration and access".
+- The evaluation needs data that does not exist yet: run the 30-day plan in
+  `docs/distribution-playbook.md` from the first post.
+- Per-finding link-preview images (Phase 5 limit) still apply to drafts:
+  platforms show `og.png` in the card; attach the share image by hand.
+- Confirmed sign-ups made before Phase 6 carry no source.
+
+## Next steps
+
+All six phases are implemented. There is no further phase in this plan.
+After merge, follow the weekly checklist and the 30-day evaluation plan in
+`docs/distribution-playbook.md`, and decide the next initiative from its
+day-30 read.
 
 ## Phase 2 requirements, as given (for reference)
 
