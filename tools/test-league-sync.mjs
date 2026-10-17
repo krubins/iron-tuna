@@ -154,7 +154,9 @@ function stubBoards(H) {
         scheduleDifficulty: { avgOpponentDefRank: 16, label: pos === 'WR' ? 'Easy' : 'Average' },
         consensus: { stats, points: pts }, vegas: { stats, points: pts, confidence: 'LOW', basis: 'ratings' }, ironTuna: { stats, points: pts, confidence: 'LOW' }, marketDelta: { points: 0, rank: 0, classification: 'AGREE', significant: false } });
     }
-    return { ok: true, contract: 1, horizon: { key: o.horizon, weeks: weeksOf }, currentWeek: worldState.week, players };
+    // `updated` as boardsPayload stamps it (Phase 2), so the league advice can
+    // say when its board was computed.
+    return { ok: true, contract: 1, horizon: { key: o.horizon, weeks: weeksOf }, currentWeek: worldState.week, players, updated: { board: Date.now(), odds: null } };
   };
 }
 
@@ -168,7 +170,7 @@ const stubs = {
   _availTable: () => ({}), _withAvailability: p => p, _availPool: pool => pool
 };
 const code = deps.join('\n') + '\n' + _oddsRoundSrc + '\nvar boardsPayload = __stubBoards({ scoringRules, PROJECTIONS, teamKey, scoreAny, _oddsNorm, _oddsRound });\n' + region +
-  '\nreturn { leagueReady, leagueNormalizeSettings, leagueEffectiveSettings, leagueScore, leagueScoringKey, leagueSettingsLabel, leagueResolvePlayer, leagueNameSuggestions, leagueRosterCheck, leagueMapPlayers, leagueOptimize, leagueStarterSlots, leagueRosterSize, leagueEmptyRoster, LEAGUE_PROVIDERS, leagueCreateRow, leagueLoad, leagueList, leagueManualUpsert, leagueBrowserImport, leagueSetDefault, leagueDisconnect, leagueBoard, leagueLineup, leaguePickups, leagueMatchup, leagueIntel, leagueTrades, leaguePlayoffs, leagueAvailabilityLookup, leagueSummary, leagueRoutes, makeToken, SCORING_BASE, scoringRules, scoreAny, PROJECTIONS, _oddsNorm, teamKey, flagOn, LEAGUE_STALE_MS, leagueRowToLeague };';
+  '\nreturn { leagueReady, leagueNormalizeSettings, leagueEffectiveSettings, leagueScore, leagueScoringKey, leagueSettingsLabel, leagueResolvePlayer, leagueNameSuggestions, leagueRosterCheck, leagueMapPlayers, leagueOptimize, leagueStarterSlots, leagueRosterSize, leagueEmptyRoster, LEAGUE_PROVIDERS, leagueCreateRow, leagueLoad, leagueList, leagueManualUpsert, leagueBrowserImport, leagueSetDefault, leagueDisconnect, leagueBoard, leagueLineup, leaguePickups, leagueMatchup, leagueIntel, leagueTrades, leaguePlayoffs, leagueAvailabilityLookup, leagueSummary, leagueRoutes, leaguePool, makeToken, SCORING_BASE, scoringRules, scoreAny, PROJECTIONS, _oddsNorm, teamKey, flagOn, LEAGUE_STALE_MS, leagueRowToLeague };';
 const H = new Function(...Object.keys(stubs), '__stubBoards', code)(...Object.values(stubs), stubBoards);
 
 // ── a world: rooms of real players, in the shape a reader saves one ───────
@@ -389,6 +391,20 @@ console.log('\npersonalization on the saved league');
   // Pickups
   const pk = await H.leaguePickups(env, L, { limit: 10 });
   ok('the pickup advisor only recommends players nobody in the league owns', pk.ok && pk.pickups.length > 0 && pk.pickups.every(p => p.status === 'available' || p.status === 'waiver') && pk.pickups.every(p => !L.rosters.some(r => r.players.some(x => x.key === p.key))));
+  ok('every roster saved: the pool is known and every pickup is a verified free agent', pk.pool && pk.pool.known === true && pk.pickups.every(p => p.verified === true), JSON.stringify(pk.pool));
+  ok('each pickup answer carries its scoring and when its board was computed', pk.scoring === L.label && pk.asOf && pk.asOf.board > 0 && pk.asOf.week != null, JSON.stringify([pk.scoring, pk.asOf]));
+  {
+    // A league whose last save is over a week old is flagged beside the advice.
+    const old = { ...L, sync: { ...L.sync, lastOkAt: Date.now() - 8 * 86400000, lastAt: Date.now() - 8 * 86400000 } };
+    const fresh = await H.leagueLineup(env, L), stale = await H.leagueLineup(env, old);
+    ok('a league saved over a week ago is flagged stale; a fresh one is not', stale.asOf.leagueStale === true && fresh.asOf.leagueStale === false, JSON.stringify([fresh.asOf, stale.asOf]));
+    ok('the lineup rows carry the key and injury status My Week compares between visits', fresh.lineup.filter(s => !s.empty).every(s => 'key' in s && 'injury' in s) && fresh.bench.every(b => 'key' in b && 'injury' in b));
+  }
+  {
+    // Every team present but one roster short of a lineup is still not a known pool.
+    const short = { ...L, rosters: L.rosters.map((r, i) => i === 3 ? { ...r, players: r.players.slice(0, 2) } : r) };
+    ok('a roster shorter than the starting lineup leaves the pool unknown', H.leaguePool(short).known === false && H.leaguePool(L).known === true);
+  }
   ok('each pickup says why, who to drop, the priority, the FAAB range and the horizon values', pk.pickups.every(p => p.why && p.priority && p.projected.ros >= 0 && (p.drop === null || p.drop.name || p.drop.open) && p.faab && p.faab.low <= p.faab.high && p.faab.budget === 100));
   ok('a drop is never worth more than the add', pk.pickups.filter(p => p.drop && p.drop.name).every(p => p.projected.ros > p.drop.ros || p.gain.ros > 0 || p.gain.next3 > 0));
   const noFaab = { ...L, settings: { ...L.settings, faab: null, waiverType: 'priority' } };
@@ -467,7 +483,16 @@ console.log('\nmanual leagues');
   const lu = await H.leagueLineup(env, Lm);
   ok('the lineup engine works on it, and the unmatched player scores nothing', lu.ok && lu.unranked.join() === 'Nobody Atall' && lu.lineup.find(s => s.slot === 'QB').name === qb.name);
   const pk = await H.leaguePickups(env, Lm, { limit: 5 });
-  ok('the pickup advisor treats everyone not on the manual roster as available', pk.ok && pk.pickups.length > 0);
+  // One roster in a ten-team room (growth plan Phase 4): the free-agent pool
+  // is unknown, so nobody off that roster is called available. The advice
+  // still says what a player would add, marked unverified, and the board and
+  // the availability lookup say "check" rather than "available".
+  ok('one roster of ten: the pickup advisor still answers, but the pool is unknown', pk.ok && pk.pickups.length > 0 && pk.pool && pk.pool.known === false && pk.pool.rostered === 1 && pk.pool.teams === 10, JSON.stringify(pk.pool));
+  ok('and no pickup is called available: every one is unverified', pk.pickups.every(p => p.status === 'unverified' && p.verified === false));
+  const bm = await H.leagueBoard(env, Lm, 'week');
+  ok('the board marks players on no saved roster unverified, never available', bm.ok && !bm.players.some(p => p.roster.status === 'available' || p.roster.status === 'waiver') && bm.players.some(p => p.roster.status === 'unverified') && bm.pool.known === false);
+  const avm = H.leagueAvailabilityLookup(Lm, [{ name: pk.pickups[0].name }]);
+  ok('the availability lookup says to check, not that he is free', avm[0].status === 'unverified' && /check availability/.test(avm[0].label), JSON.stringify(avm[0]));
   const sy = await route(env, 'POST', '/api/leagues/' + Lm.id + '/sync', null, cookie);
   ok('there is no sync route left to call', sy.status === 404);
   const ed = await route(env, 'POST', '/api/leagues/manual', { id: Lm.id, name: 'Hand League 2', numTeams: 10, teamName: 'Mine', players: [{ name: qb.name, position: 'QB' }], settings: { roster: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, BN: 5 } } }, cookie);

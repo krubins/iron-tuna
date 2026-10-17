@@ -95,6 +95,10 @@ p{color:var(--sec);margin:0 0 16px}
 .mw-dec{border-left:3px solid var(--gold);padding:8px 12px;margin:10px 0;background:var(--elev);border-radius:0 8px 8px 0}.mw-dec b.lab{display:block;font-size:12.5px;color:var(--muted)}
 .mw-alert{padding:10px 12px;border-radius:8px;margin:8px 0;border:1px solid var(--line2)}.mw-alert.p1{border-color:rgba(160,40,40,.4);background:rgba(200,50,50,.06)}.mw-alert .tag{font-size:12.5px;font-weight:800;}
 .mw-empty{color:var(--muted);font-size:15.5px}.mw-big{font-size:29px;font-weight:800;line-height:1}.mw-vs{display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:8px 0 12px}.mw-vs div{text-align:center}.mw-vs .nm{font-size:14.5px;color:var(--sec)}
+.mw-meta{margin:10px 0 0;font-size:13.5px;color:var(--muted);line-height:1.5}.mw-meta.stale{color:var(--danger)}
+.mw-since{border:1px solid var(--line2);border-radius:10px;padding:14px 18px;background:var(--bg);margin:14px 0}.mw-since ul{margin:6px 0 0;padding-left:20px}.mw-since li{margin:4px 0;font-size:15.5px}
+.mw-since .k{font-size:12.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-right:6px}
+.mw-pool{border-left:3px solid var(--gold);padding:8px 12px;margin:0 0 10px;background:var(--elev);border-radius:0 8px 8px 0;font-size:14.5px}
 .mw-pos{display:inline-block;margin:3px 6px 3px 0;padding:3px 9px;border-radius:10px;font-size:13.5px;font-weight:700;border:1px solid var(--line2)}.mw-pos.strong{color:var(--teal);border-color:var(--teal);background:var(--teal-tint)}.mw-pos.weak{color:var(--danger);border-color:rgba(160,40,40,.35);background:rgba(200,50,50,.06)}
 </style>
 
@@ -179,6 +183,13 @@ p{color:var(--sec);margin:0 0 16px}
 <div id="mwBody" hidden>
 
 <div class="wrap wide">
+  <!-- 00 · what MOVED since the last visit (growth plan Phase 4). Built in
+       the browser by it-myweek.js from the lineup answer, against the
+       snapshot this browser kept last time; nothing about it is stored on
+       the server. -->
+  <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">00</span><h2>Since your last visit</h2></div></div>
+  <div class="mw-since" id="mwSince"><p class="mw-empty">Reading your roster&hellip;</p></div>
+
   <!-- 01 · what you SET before kickoff -->
   <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>Set the lineup</h2></div></div>
   <div class="mw-grid">
@@ -211,8 +222,8 @@ p{color:var(--sec);margin:0 0 16px}
     </div>
     <div class="mw-card" id="mwPickCard">
       <span class="is-tag">Pickup Advisor</span>
-      <h2>Available in your league</h2>
-      <p class="who">Waiver Desk &middot; only players nobody in your room owns</p>
+      <h2 id="mwPickH">Available in your league</h2>
+      <p class="who" id="mwPickWho">Waiver Desk &middot; only players nobody in your room owns</p>
       <div id="mwPick" class="mw-empty">Reading the wire&hellip;</div>
       <div class="is-btns"><a class="is-btn sec" href="/faab">Full Pickup Advisor</a></div>
     </div>
@@ -267,9 +278,37 @@ p{color:var(--sec);margin:0 0 16px}
 </div></footer>
 <script src="/it-season.js" defer></script>
 <script src="/it-sync.js" defer></script>
+<script src="/it-myweek.js" defer></script>
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
+  // Every recommendation says at what scoring and from how fresh a board, and
+  // flags a league the reader has not re-saved in a week (Phase 4).
+  function et(ms) {
+    try { return new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: '2-digit' }).format(new Date(ms)).replace(',', '') + ' ET'; } catch (e) { return ''; }
+  }
+  function meta(j) {
+    var a = j && j.asOf, bits = [];
+    if (j && j.scoring) bits.push('At ' + esc(j.scoring));
+    if (a && typeof a === 'object') {
+      if (a.week != null) bits.push('Week ' + esc(a.week));
+      if (a.board) bits.push('board computed ' + esc(et(a.board)));
+      if (a.odds) bits.push('odds read ' + esc(et(a.odds)));
+      if (a.leagueSaved) bits.push('league saved ' + esc(window.ITSync ? ITSync.ago(a.leagueSaved) : ''));
+    } else if (typeof a === 'number') bits.push('injury list read ' + esc(et(a)));
+    if (!bits.length) return '';
+    var stale = a && typeof a === 'object' && a.leagueStale;
+    return '<p class="mw-meta' + (stale ? ' stale' : '') + '">' + bits.join(' &middot; ') + '.' +
+      (stale ? ' Your rosters were saved over a week ago and have likely changed since: <a href="/my-leagues">update them</a>.' : '') + '</p>';
+  }
+  // The free-agent pool is known only when every team's roster is saved
+  // (leaguePool, _worker.js). Otherwise a player on no saved roster may well
+  // be on someone's team, and the page says to check rather than to claim.
+  function poolNote(pool) {
+    if (!pool || pool.known) return '';
+    return '<p class="mw-pool">' + (pool.rostered >= pool.teams ? 'Some of the rosters saved for this league are shorter than a starting lineup' : 'Iron Tuna has ' + esc(pool.rostered) + ' of ' + esc(pool.teams) + ' rosters for this league') + ', so it cannot tell who is a free agent. ' +
+      'The players below are on no saved roster: <b>check availability in your league before you claim one.</b> <a href="/my-leagues#rosters">Save every roster</a> to see only real free agents.</p>';
+  }
   function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
   function n1(v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); }
   function fail(id, j) { $(id).innerHTML = '<p class="mw-empty">' + esc((j && (j.message || j.note || j.detail)) || 'Did not answer.') + '</p>'; }
@@ -287,7 +326,7 @@ p{color:var(--sec);margin:0 0 16px}
     });
     if (j.unranked && j.unranked.length) h += '<p class="mw-empty">Not on the board (scored 0): ' + esc(j.unranked.join(', ')) + '.</p>';
     if (j.bench && j.bench.length) h += '<p class="mw-empty" style="margin-top:8px"><b>Bench:</b> ' + j.bench.map(function (b) { return esc(b.name) + ' ' + n1(b.projected) + (b.bye ? ' (bye)' : b.out ? ' (out)' : ''); }).join(', ') + '</p>';
-    $('mwLineup').innerHTML = h;
+    $('mwLineup').innerHTML = h + meta(j);
   }
   function matchup(j) {
     if (!j.ok) return fail('mwMatch', j);
@@ -297,20 +336,26 @@ p{color:var(--sec);margin:0 0 16px}
     if (j.swing.length) h += '<p><b>Swing slots:</b> ' + j.swing.map(function (s) { return esc(slotName(s.slot)) + ' ' + (s.edge > 0 ? '+' : '') + n1(s.edge) + ' (' + esc(s.mine ? s.mine.name : '—') + ' vs ' + esc(s.theirs ? s.theirs.name : '—') + ')'; }).join('; ') + '</p>';
     if (j.opponent.injuryRisk.length) h += '<p><b>Their injury exposure:</b> ' + j.opponent.injuryRisk.map(function (r) { return esc(r.name) + ' (' + esc(r.status) + ')'; }).join(', ') + '</p>';
     if (j.you.injuryRisk.length) h += '<p><b>Yours:</b> ' + j.you.injuryRisk.map(function (r) { return esc(r.name) + ' (' + esc(r.status) + ')'; }).join(', ') + '</p>';
-    if (j.upgrades.length) h += '<p><b>Available now that would start for you:</b> ' + j.upgrades.map(function (u) { return esc(u.name) + ' (+' + n1(u.gainThisWeek) + (u.drop ? ', drop ' + esc(u.drop) : '') + ')'; }).join('; ') + '</p>';
+    var known = !j.pool || j.pool.known;
+    if (j.upgrades.length) h += '<p><b>' + (known ? 'Available now that would start for you:' : 'On no saved roster, would start for you (check availability):') + '</b> ' + j.upgrades.map(function (u) { return esc(u.name) + ' (+' + n1(u.gainThisWeek) + (u.drop ? ', drop ' + esc(u.drop) : '') + ')'; }).join('; ') + '</p>';
     h += '<p class="mw-empty">' + esc(j.note) + '</p>';
-    $('mwMatch').innerHTML = h;
+    $('mwMatch').innerHTML = h + meta(j);
   }
   function intel(j) {
     if (!j.ok) return fail('mwIntel', j);
     if (!j.alerts.length) { $('mwIntel').innerHTML = '<p class="mw-empty">Quiet. Nobody on your roster or your opponent&rsquo;s carries a designation right now.</p>'; return; }
-    $('mwIntel').innerHTML = j.alerts.map(function (a) { return '<div class="mw-alert' + (a.priority === 1 ? ' p1' : '') + '"><span class="tag">' + esc(a.tag) + '</span><br><b>' + esc(a.name) + '</b> ' + esc(a.position) + (a.status ? ' · ' + esc(a.status) : '') + (a.note ? ' · ' + esc(a.note) : '') + '<br>' + esc(a.action) + '</div>'; }).join('');
+    $('mwIntel').innerHTML = j.alerts.map(function (a) { return '<div class="mw-alert' + (a.priority === 1 ? ' p1' : '') + '"><span class="tag">' + esc(a.tag) + '</span><br><b>' + esc(a.name) + '</b> ' + esc(a.position) + (a.status ? ' · ' + esc(a.status) : '') + (a.note ? ' · ' + esc(a.note) : '') + '<br>' + esc(a.action) + '</div>'; }).join('') + meta(j);
   }
   function pickups(j) {
     if (!j.ok) return fail('mwPick', j);
-    if (!j.pickups.length) { $('mwPick').innerHTML = '<p class="mw-empty">No available player improves your roster this week.</p>'; return; }
+    var known = !j.pool || j.pool.known;
+    if (!known) { $('mwPickH').textContent = 'Worth checking on your wire'; $('mwPickWho').textContent = 'Waiver Desk · players on no saved roster; whether they are free is yours to check'; }
+    if (!j.pickups.length) { $('mwPick').innerHTML = poolNote(j.pool) + '<p class="mw-empty">No ' + (known ? 'available ' : 'unrostered ') + 'player improves your roster this week.</p>' + meta(j); return; }
     var D = String.fromCharCode(36);
-    $('mwPick').innerHTML = j.pickups.slice(0, 5).map(function (p) { return '<div class="mw-alert"><span class="tag">' + esc(p.priority) + (p.cracksLineup ? ' · starts this week' : p.stash ? ' · stash' : '') + '</span><br><b>ADD ' + esc(p.name) + '</b> ' + esc(p.position) + ' · ' + esc(p.team || '') + (p.drop && p.drop.name ? ' · <b>DROP</b> ' + esc(p.drop.name) : '') + (p.faab ? ' · FAAB ' + D + esc(p.faab.low) + '–' + D + esc(p.faab.high) : '') + '<br><span class="mw-empty">' + esc(p.why) + '</span></div>'; }).join('');
+    $('mwPick').innerHTML = poolNote(j.pool) + j.pickups.slice(0, 5).map(function (p) {
+      var sure = known && p.verified !== false;
+      return '<div class="mw-alert"><span class="tag">' + esc(p.priority) + (p.cracksLineup ? ' · starts this week' : p.stash ? ' · stash' : '') + (sure ? '' : ' · check availability') + '</span><br><b>' + (sure ? 'ADD ' : 'If available: ') + esc(p.name) + '</b> ' + esc(p.position) + ' · ' + esc(p.team || '') + (p.drop && p.drop.name ? ' · <b>DROP</b> ' + esc(p.drop.name) : '') + (p.faab ? ' · FAAB ' + D + esc(p.faab.low) + '–' + D + esc(p.faab.high) : '') + '<br><span class="mw-empty">' + esc(p.why) + '</span></div>';
+    }).join('') + meta(j);
   }
   function trades(j) {
     if (!j.ok) return fail('mwTrade', j);
@@ -327,7 +372,7 @@ p{color:var(--sec);margin:0 0 16px}
     var h = '<p>' + j.positions.map(function (p) { return '<span class="mw-pos ' + esc(p.grade) + '">' + esc(p.position) + ' ' + (p.delta > 0 ? '+' : '') + esc(p.delta) + '%</span>'; }).join('') + '</p>';
     if (j.favorable.length) h += '<p><b>Favorable playoff schedule:</b> ' + j.favorable.map(function (s) { return esc(s.name); }).join(', ') + '</p>';
     if (j.concerning.length) h += '<p><b>Concerning:</b> ' + j.concerning.map(function (s) { return esc(s.name); }).join(', ') + '</p>';
-    if (j.benchMoves.length) h += '<p><b>Bench moves worth making early:</b> ' + j.benchMoves.slice(0, 4).map(function (m) { return esc(m.name) + ' (' + esc(m.position) + ', ' + n1(m.playoffPoints) + ' pts' + (m.drop ? ', over ' + esc(m.drop) : '') + ')'; }).join('; ') + '</p>';
+    if (j.benchMoves.length) h += '<p><b>Bench moves worth making early' + (j.pool && !j.pool.known ? ' (players on no saved roster: check availability)' : '') + ':</b> ' + j.benchMoves.slice(0, 4).map(function (m) { return esc(m.name) + ' (' + esc(m.position) + ', ' + n1(m.playoffPoints) + ' pts' + (m.drop ? ', over ' + esc(m.drop) : '') + ')'; }).join('; ') + '</p>';
     if (j.dstStreaming.length) h += '<p><b>DST streaming:</b> ' + j.dstStreaming.map(function (d) { return esc(d.name) + ' ' + n1(d.playoffPoints); }).join(', ') + '</p>';
     h += '<p class="mw-empty">' + esc(j.note) + '</p>';
     $('mwPlay').innerHTML = h;
@@ -341,18 +386,40 @@ p{color:var(--sec);margin:0 0 16px}
     var n = m === 'pickups' ? (j.pickups || []).length : m === 'trades' ? (j.trades || []).length : m === 'lineup' ? (j.lineup || []).length : m === 'intel' ? (j.alerts || []).length : 1;
     itm(n || m === 'intel' || m === 'matchup' ? 'success' : 'empty', TOOL[m], m, { rows: n, surface: 'my_week' });
   }
+  // ── since your last visit ──────────────────────────────────────────────
+  function since(LS, j) {
+    var box = $('mwSince');
+    if (!window.ITMyWeek) { box.hidden = true; return; }
+    if (!j || !j.ok) { box.innerHTML = '<p class="mw-empty">Your roster did not answer, so nothing can be compared this visit.</p>'; return; }
+    var cur = ITMyWeek.snapshot(j, { scoring: j.scoring }), prev = ITMyWeek.load(LS.id), d = ITMyWeek.diff(prev, cur);
+    var when = d.prevAt ? ITSync.ago(d.prevAt) : '';
+    var KIND = { injury: 'Injury', lineup: 'Lineup', roster: 'Roster', projection: 'Projection', scoring: 'Scoring' };
+    var h;
+    if (d.reason === 'first') h = '<p>This is your first visit for <b>' + esc(LS.name) + '</b> in this browser. Today&rsquo;s roster, lineup and projections are saved as the baseline; next time this lists what moved.</p>';
+    else if (d.reason === 'week') h = '<p>A new week' + (d.week != null ? ' (Week ' + esc(d.week) + ')' : '') + ' since your last visit ' + esc(when) + '. Projections are compared within a week, so this visit sets the new baseline.</p>';
+    else if (!d.items.length) h = '<p>No material change since your last visit ' + esc(when) + ': no injury, lineup or roster change, and no starter&rsquo;s projection moved 2 points and 20%.</p>';
+    else h = '<p>Since your last visit ' + esc(when) + ':</p><ul>' + d.items.map(function (it) { return '<li><span class="k">' + esc(KIND[it.kind] || it.kind) + '</span> ' + esc(it.text) + '</li>'; }).join('') + '</ul>' + (d.more ? '<p class="mw-empty">And ' + esc(d.more) + ' smaller changes.</p>' : '');
+    box.innerHTML = h + '<p class="mw-meta">Kept in this browser only: another browser, a private window or cleared site data starts a new baseline. Your league itself (scoring, lineup, rosters) is saved to your Iron Tuna account and follows you to any device you sign in on.</p>';
+    ITMyWeek.save(LS.id, cur);
+  }
+  // Remembered for the homepage, so a returning reader with a saved league
+  // gets a way straight back here (front.html, #hmYours). The league's name
+  // only, in this browser only.
+  function remember(LS) { try { if (LS) localStorage.setItem('it.myweek', JSON.stringify({ name: String(LS.name || '').slice(0, 60), at: Date.now() })); else localStorage.removeItem('it.myweek'); } catch (e) {} }
   function boot() {
     if (!window.ITSync) return;
     ITSync.load().then(function (st) {
       ITSync.strip($('mwSync'), { onChange: function () { location.reload(); } });
       var LS = ITSync.active();
-      if (!st || !st.signedIn) { $('mwGateMsg').innerHTML = 'My Week reads your synced league. <a href="/my-leagues">Sign in and save a league</a> to see it.'; return; }
-      if (!LS) { $('mwGateMsg').innerHTML = 'No league saved yet. <a class="btn" href="/my-leagues#connect">Set up my league</a>'; return; }
+      if (!st || !st.signedIn) { remember(null); $('mwGateMsg').innerHTML = 'My Week reads your synced league. <a href="/my-leagues">Sign in and save a league</a> to see it.'; return; }
+      if (!LS) { remember(null); $('mwGateMsg').innerHTML = 'No league saved yet. <a class="btn" href="/my-leagues#connect">Set up my league</a>'; return; }
       if (!LS.userTeamId) { $('mwGateMsg').innerHTML = 'Iron Tuna could not tell which team in <b>' + esc(LS.name) + '</b> is yours. <a href="/my-leagues">Pick it on My Leagues</a>.'; return; }
       $('mwGate').hidden = true; $('mwBody').hidden = false;
+      remember(LS);
       var base = '/api/leagues/' + encodeURIComponent(LS.id) + '/advice?module=';
       [['lineup', lineup, 'mwLineup'], ['matchup', matchup, 'mwMatch'], ['intel', intel, 'mwIntel'], ['pickups', pickups, 'mwPick'], ['trades', trades, 'mwTrade'], ['playoffs', playoffs, 'mwPlay']].forEach(function (m) {
-        ITSync.api(base + m[0] + (m[0] === 'pickups' ? '&limit=8' : '')).then(function (j) { m[1](j); outcome(m[0], j); }).catch(function () { fail(m[2], null); itm('error', TOOL[m[0]], m[0], { kind: 'network' }); });
+        ITSync.api(base + m[0] + (m[0] === 'pickups' ? '&limit=8' : '')).then(function (j) { m[1](j); outcome(m[0], j); if (m[0] === 'lineup') since(LS, j); })
+          .catch(function () { fail(m[2], null); itm('error', TOOL[m[0]], m[0], { kind: 'network' }); if (m[0] === 'lineup') since(LS, null); });
       });
     });
   }

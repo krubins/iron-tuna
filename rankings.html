@@ -739,6 +739,9 @@ p{color:var(--sec);margin:0 0 16px}
     var r = p.roster; if (!r || preset !== 'league') return '';
     if (r.status === 'mine') return ' <span class="its-tag mine" title="On your roster">Your team' + (r.slot === 'starter' ? ' · starting' : '') + '</span>';
     if (r.status === 'available') return ' <span class="its-tag avail" title="Available in your league">Available</span>';
+    // On no saved roster, in a league whose other rosters are not all saved:
+    // whether he is free is unknown, so nothing is claimed (17 Oct 2026).
+    if (r.status === 'unverified') return '';
     if (r.status === 'waiver') return ' <span class="its-tag avail" title="On waivers in your league">Waivers</span>';
     return ' <span class="its-tag" title="Rostered by ' + e(r.teamName) + '">' + (r.isOpponent ? 'Opponent' : e(r.teamName)) + '</span>';
   }

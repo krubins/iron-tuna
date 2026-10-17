@@ -329,12 +329,25 @@ function rosterGrid(el) {
   '</div>';
   var msgEl = document.getElementById('mlGridMsg');
   function msg(html, bad) { msgEl.innerHTML = html || ''; msgEl.style.color = bad ? 'var(--danger)' : ''; }
+  // THE TYPED PATH (growth plan Phase 4). When the reader fails or the save
+  // fails, the way forward is the by-hand form, opened with whatever was read
+  // for the reader's own team already in it, so nothing read is lost.
+  function offerManual(lead) {
+    if (!window.ITLeagueForm) return;
+    var t = grid && grid.teams && grid.mine >= 0 ? grid.teams[grid.mine] : null;
+    msg((lead ? lead + ' ' : '') + '<button type="button" class="is-btn sec" id="mlGridManual">Type your roster instead</button>', true);
+    document.getElementById('mlGridManual').addEventListener('click', function () {
+      ITLeagueForm.manual(null, { prefill: t ? t.players.map(function (p) { return p.name + (p.position ? ' ' + p.position : ''); }) : null,
+        note: t ? 'Your team as the reader found it is below. Check it, add the scoring and lineup, and save.' : 'Type your roster below, one player per line. Other teams can be added later from the rosters box.' });
+    });
+  }
 
   var grid = ITRosterGrid.mount(document.getElementById('mlGridBox'), {
     // The card above already carries the number and the title.
     label: '',
     note: 'Paste the grid as text or as a screenshot \u2014 either one reads. Names only: who starts is projected from the scoring, not read off the page. Send more than one image together if the grid does not fit in one shot.',
     onPick: function () { msg(''); },
+    onFail: function () { offerManual('If the reader cannot get it, enter your league by hand.'); },
     // A new answer is a new state of play, so the one warning below is armed
     // again: a reader who fixes six of eight names should be told about the two.
     onCheck: function () { warned = false; }
@@ -392,7 +405,7 @@ function rosterGrid(el) {
       };
       return ITSync.api('/api/leagues/manual', { method: 'POST', body: body }).then(function (j) {
         btn.disabled = false;
-        if (!j || !j.ok) { msg(esc((j && (j.message || j.error)) || 'Could not save those rosters.'), true); (window.ITMetricsQ = window.ITMetricsQ || []).push(['error', 'league_rosters', 'grid', { kind: (j && j.error) || 'not_ok', mode: 'screenshot' }]); return; }
+        if (!j || !j.ok) { offerManual(esc((j && (j.message || j.error)) || 'Could not save those rosters.')); (window.ITMetricsQ = window.ITMetricsQ || []).push(['error', 'league_rosters', 'grid', { kind: (j && j.error) || 'not_ok', mode: 'screenshot' }]); return; }
         // Outcome metrics (it-metrics.js): counts only, never a name or roster.
         (window.ITMetricsQ = window.ITMetricsQ || []).push(['event', 'league_setup_complete', 'league_rosters', 'grid', { teams: grid.teams.length, mode: 'screenshot' }]);
         msg('<b>Saved.</b> ' + esc(j.league.name) + ' now holds ' + grid.teams.length + ' rosters.' +
@@ -400,7 +413,7 @@ function rosterGrid(el) {
         ITSync.invalidate();
         ITSync.load(true);
       });
-    }).catch(function () { btn.disabled = false; msg('Could not save those rosters. Try again.', true); (window.ITMetricsQ = window.ITMetricsQ || []).push(['error', 'league_rosters', 'grid', { kind: 'network', mode: 'screenshot' }]); });
+    }).catch(function () { btn.disabled = false; offerManual('Could not save those rosters. Try again, or'); (window.ITMetricsQ = window.ITMetricsQ || []).push(['error', 'league_rosters', 'grid', { kind: 'network', mode: 'screenshot' }]); });
   });
 }
 </script>
@@ -511,6 +524,9 @@ function rosterGrid(el) {
   // The one way in. There are no platforms to choose between any more, so the
   // by-hand form is the flow rather than the fallback at the end of one.
   function addLeague() { manualForm(null); }
+  // The rosters box opens this form when its reader or its save fails, with
+  // what was read already in it (growth plan Phase 4).
+  window.ITLeagueForm = { manual: manualForm };
 
   function panel(id, kind) {
     var host = document.querySelector('[data-id="' + id + '"] [data-panel]'); if (!host) return;
@@ -583,13 +599,13 @@ function rosterGrid(el) {
       seeded.mine = L.teams.map(function (t) { return t.teamId; }).indexOf(L.userTeamId);
     }
     var grid = { teams: [], mine: -1, partial: false };
-    el.innerHTML = '<div class="is-card"><h3>' + (L ? 'Edit ' + esc(L.name) : 'Enter your league by hand') + '</h3><p class="is-note" style="margin:0 0 10px">Works for ESPN, CBS, Fantrax, MFL or any league. The scoring and lineup below make every ranking exact; your roster makes Best Lineup and the Pickup Advisor personal. Other managers&rsquo; rosters are optional; without them the free-agent pool is everyone not on your team.</p><div id="mfImp"></div><div id="mfGrid"></div>' +
+    el.innerHTML = '<div class="is-card"><h3>' + (L ? 'Edit ' + esc(L.name) : 'Enter your league by hand') + '</h3><p class="is-note" style="margin:0 0 10px">Works for ESPN, CBS, Fantrax, MFL or any league. The scoring and lineup below make every ranking exact; your roster makes Best Lineup and the Pickup Advisor personal. Other managers&rsquo; rosters are optional, but without every one of them Iron Tuna cannot tell who is a free agent, so pickups say to check availability instead of calling a player available.</p>' + (o.note ? '<p class="is-note" style="margin:0 0 10px"><b>' + esc(o.note) + '</b></p>' : '') + '<div id="mfImp"></div><div id="mfGrid"></div>' +
       '<div class="is-row2"><div class="is-field"><label>League name</label><input class="is-input" id="mfName" value="' + esc(L ? L.name : '') + '"></div><div class="is-field"><label>Teams</label><input class="is-input" id="mfTeams" type="number" min="2" max="20" value="' + esc(L ? L.numTeams : 12) + '"></div></div>' +
       '<div class="is-field"><label>Scoring</label><div class="is-seg" role="group">' + [['1', 'PPR'], ['0.5', 'Half PPR'], ['0', 'Standard']].map(function (o) { return '<label><input type="radio" name="mfRec" value="' + o[0] + '"' + (String(rec) === o[0] ? ' checked' : '') + '>' + o[1] + '</label>'; }).join('') + '</div></div>' +
       '<div class="is-row2"><div class="is-field"><label>TE premium (extra per catch)</label><input class="is-input" id="mfTe" type="number" step="0.25" value="' + esc(S ? S.extras.tePremium : 0) + '"></div><div class="is-field"><label>Passing TD</label><input class="is-input" id="mfPtd" type="number" step="1" value="' + esc(S ? S.scoring.passingTD : 4) + '"></div></div>' +
       '<div class="is-field"><label>Starting lineup and bench</label><div>' + rosterRows(S || { roster: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, SFLEX: 0, REC_FLEX: 0, WRRB_FLEX: 0, K: 1, DEF: 1, BN: 6, IR: 1, TAXI: 0 } }, []) + '</div></div>' +
       '<div class="is-row2"><div class="is-field"><label>FAAB budget (blank if waiver priority)</label><input class="is-input" id="mfFaab" type="number" value="' + (S && S.faab != null ? esc(S.faab) : '') + '"></div><div class="is-field"><label>Your team name</label><input class="is-input" id="mfTeam" value="' + esc(L ? ((L.teams.find(function (t) { return t.teamId === L.userTeamId; }) || {}).name || 'My team') : 'My team') + '"></div></div>' +
-      '<div class="is-field"><label>Your roster, one player per line (mark starters with * and IR with IR)</label><textarea class="is-input" id="mfRoster" rows="10" placeholder="* Josh Allen QB&#10;* Bijan Robinson RB&#10;Rachaad White RB&#10;IR Nico Collins WR">' + esc(mine ? mine.players.map(function (p) { return (p.slot === 'starter' ? '* ' : p.slot === 'ir' ? 'IR ' : '') + p.name + (p.position ? ' ' + p.position : ''); }).join(NL) : '') + '</textarea></div>' +
+      '<div class="is-field"><label>Your roster, one player per line (mark starters with * and IR with IR)</label><textarea class="is-input" id="mfRoster" rows="10" placeholder="* Josh Allen QB&#10;* Bijan Robinson RB&#10;Rachaad White RB&#10;IR Nico Collins WR">' + esc(o.prefill && o.prefill.length ? o.prefill.join(NL) : mine ? mine.players.map(function (p) { return (p.slot === 'starter' ? '* ' : p.slot === 'ir' ? 'IR ' : '') + p.name + (p.position ? ' ' + p.position : ''); }).join(NL) : '') + '</textarea></div>' +
       '<div class="is-btns"><button type="button" class="is-btn primary" id="mfSave">' + (L ? 'Save league' : 'Create league') + '</button>' + (o.cancel === false ? '' : '<button type="button" class="is-btn sec" id="mfCancel">Cancel</button>') + '</div><p class="is-note" id="mfMsg"></p></div>';
     // The cheat sheet's intake, on the by-hand form. What it replaces is a
     // reader retyping a settings page they are already looking at, into three
