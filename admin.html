@@ -221,6 +221,12 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     <div class="note">An output is one result for one input in one visit, so a rerender, a retry or a reload of the same board counts once. Empty means the tool answered with nothing to show; failed means it did not answer. Clicks are not counted here; they are in Clicks &amp; actions above.</div>
   </div>
 
+  <div class="card">
+    <h2>Homepage surfaces: clicked, then used</h2>
+    <div class="tblwrap"><table id="useSurfTbl"></table></div>
+    <div class="note">Visits that followed a marked homepage link (an example, the primary action, the sample My Week), and how many of those visits then produced a result or saved a league. The last column counts every visit with a result tagged to the surface, including picking a scoring on the examples, which needs no click. Rows under 20 visitors are small samples.</div>
+  </div>
+
   <div class="grid2">
     <div class="card">
       <h2>Returning browsers that did something useful, by NFL week</h2>
@@ -798,7 +804,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   var TOOL_NAMES = { rankings: 'Rankings board', position: 'Position page rail', vegas_edge: 'Vegas Edge differences', fantasy_board: 'Fantasy week board',
     lineup: 'My Week lineup', waiver: 'Waiver pickups (saved league)', faab: 'FAAB bid advisor', trade: 'My Week trade matches', matchup: 'My Week matchup',
     my_week_alerts: 'My Week alerts', playoffs: 'My Week playoffs', trade_finder: 'Trade Finder', trade_evaluator: 'Trade Evaluator',
-    league_scoring: 'League scoring save', league_rosters: 'League rosters save', compare: 'Player comparison' };
+    league_scoring: 'League scoring save', league_rosters: 'League rosters save', compare: 'Player comparison',
+    home_examples: 'Homepage examples (scoring picked)' };
+  var SURFACE_NAMES = { home_examples: 'Homepage examples', home_primary: 'Homepage primary action', home_sample: 'Homepage sample My Week' };
   function toolName(t){ return TOOL_NAMES[t] || t || '(unnamed)'; }
   function renderUsage(d){
     var v = d.visitors || {}, f = d.funnel || {}, r7 = d.retention7 || {}, sub = d.subscriptions || {};
@@ -859,6 +867,14 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       toolsAll.map(function(t){
         return '<tr><td>' + esc(toolName(t.tool)) + '</td><td class="num">' + num(t.success) + '</td><td class="num">' + num(t.successPeople) + '</td><td class="num">' + num(t.empty) + '</td><td class="num">' + num(t.error) +
           '</td><td class="num">' + cp(t.empty + t.error, t.attempts) + '</td></tr>';
+      }).join('');
+
+    var sf = d.surfaces || [];
+    $('useSurfTbl').innerHTML = !sf.length ? '<tr><td class="empty">' + (d.available ? 'No homepage surface was used in this window.' : 'Nothing collected yet.') + '</td></tr>' :
+      '<tr><th>Surface</th><th class="num">Visits that clicked</th><th class="num">Then a result</th><th class="num">Then saved a league</th><th class="num">Visits with a result here</th></tr>' +
+      sf.map(function(r){
+        return '<tr><td>' + esc(SURFACE_NAMES[r.surface] || r.surface) + (r.clickVisitors < 20 ? ' <span class="badge">small sample</span>' : '') + '</td><td class="num">' + num(r.clickVisits) +
+          '</td><td class="num">' + cp(r.usefulVisits, r.clickVisits) + '</td><td class="num">' + cp(r.leagueVisits, r.clickVisits) + '</td><td class="num">' + num(r.taggedVisits) + '</td></tr>';
       }).join('');
 
     $('useWeekTbl').innerHTML = !weeks.length ? '<tr><td class="empty">' + (d.available ? 'No visits in this window.' : 'Nothing collected yet.') + '</td></tr>' :

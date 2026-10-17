@@ -133,14 +133,19 @@ console.log('\nwhat sits under the front page\u2019s hero');
 {
   // October 2026: the hero is the first section and the position tiles are
   // the second; the choose-your-game band went with the lane cards. Each tile
-  // links a weekly position page, which is this section's own job.
+  // links a weekly position page, which is this section's own job. Since
+  // 17 Oct 2026 (growth plan Phase 3) the sample My Week sits between them,
+  // so the examples in the hero lead straight into what a saved league adds;
+  // nothing else may.
   const front = read('front.html');
   const heroStart = front.indexOf('<section class="hero-band');
   const heroEnd = front.indexOf('</section>', heroStart);
+  const sampleAt = front.indexOf('<section class="hm-sec" id="sample"');
+  const sampleEnd = front.indexOf('</section>', sampleAt);
   const tilesAt = front.indexOf('<section class="hm-sec" id="positions"');
-  const nextSec = front.indexOf('<section', heroEnd);
+  const nextSec = front.indexOf('<section', sampleAt === front.indexOf('<section', heroEnd) ? sampleEnd : heroEnd);
   ok('the hero band is still the first section', heroStart > 0 && heroStart === front.indexOf('<section'));
-  ok('the position tiles are the section after it', tilesAt > heroEnd && tilesAt === nextSec, `hero ends ${heroEnd}, tiles at ${tilesAt}, next ${nextSec}`);
+  ok('the position tiles are the section after it, the sample My Week aside', tilesAt > heroEnd && tilesAt === nextSec, `hero ends ${heroEnd}, tiles at ${tilesAt}, next ${nextSec}`);
   ok('and every position tile opens the position page on that position',
      POSITIONS.filter((p) => p !== 'flex').every((p) => front.includes('href="/position#pos=' + p.toUpperCase() + '"')));
   ok('no tile links a weekly page', !/href="\/weekly-[a-z]+-rankings"/.test(front));

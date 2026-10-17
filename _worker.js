@@ -10679,6 +10679,214 @@ function rankingsAsOf(b) {
     .filter(Boolean).join(' &middot; ') + '.';
 }
 
+// ── the homepage's examples (growth plan Phase 3, 17 Oct 2026) ─────────────
+// The homepage promises players whose betting-market expectation differs from
+// the fantasy consensus, so its first screen shows up to three, written into
+// the HTML here off the same week board /rankings pre-renders from. A
+// difference is only shown when nothing but the two projections explains it.
+// Each rule below is a way a gap appears without being a disagreement:
+//   - a game already kicked off, a bye, a listed absence or any injury
+//     designation but Active or Probable: the gap is the injury report or the
+//     scoreboard restated (Lamar Jackson, market 0.0 and consensus 18.9, Week 5);
+//   - a market side that is not fully priced off quoted props from two or more
+//     books (basis other than 'props', a partial projection, a missing market):
+//     the gap would rest on the game-line or fitted-rating assumption the
+//     board fills a missing prop with, not on what a book quoted;
+//   - a consensus under HOME_EX_FLOOR: a backup promoted to starter keeps his
+//     backup's projection until the consensus catches up (Tyson Bagent, 0.2);
+//   - scoring: both sides are scored here from their stat lines at the one
+//     preset the card names, never the payload's PPR points beside a
+//     re-scored figure; one week, one game, never a season or a sum;
+//   - the explanation must cite a line a book actually quoted this week for
+//     the stat that moves the gap most; a gap no quoted line explains is out.
+// What is left must clear the board's own strong thresholds in points AND
+// share (delta.minPointsStrong, delta.strongPct), and the player must be near
+// enough the start line (twice prominentBand at his position, on either
+// side's rank) that the call is a fantasy decision. Widest gap first, name to
+// break a tie. Fewer than three is three fewer than invented.
+const HOME_EX_MAX = 3;
+const HOME_EX_FLOOR = 3;
+const HOME_EX_MIN_BOOKS = 2;
+const HOME_EX_PRESETS = ['ppr', 'half', 'standard'];
+// The stat a quoted market prices, and how the sentence names it.
+const HOME_EX_STAT = {
+  passYd: { m: 'passYd', label: 'passing yards' }, passTD: { m: 'passTD', label: 'passing touchdowns' },
+  passInt: { m: 'passInt', label: 'interceptions' }, rushYd: { m: 'rushYd', label: 'rushing yards' },
+  rec: { m: 'rec', label: 'receptions' }, recYd: { m: 'recYd', label: 'receiving yards' },
+  rushTD: { m: 'anytimeTD', td: true }, recTD: { m: 'anytimeTD', td: true }
+};
+function homeExamples(b, markets, preset) {
+  if (!b || !b.ok || !Array.isArray(b.players) || !b.horizon || b.horizon.key !== 'week' || (b.horizon.weeks || []).length !== 1) return null;
+  const D = b.delta || {}, band = b.prominentBand || {};
+  if (!Number.isFinite(D.minPointsStrong) || !Number.isFinite(D.strongPct)) return null;
+  const rules = scoringRules(preset);
+  const mk = markets || {};
+  const r1 = (v) => Math.round(v * 10) / 10;
+  const out = [];
+  for (const p of b.players) {
+    const pos = p.position;
+    if (!band[pos]) continue;
+    const w = (p.weeks || [])[0];
+    if ((p.weeks || []).length !== 1 || !w || w.bye || w.out || w.gameState !== 'upcoming') continue;
+    if (p.injury && !/^(active|probable)$/i.test(String(p.injury.status || ''))) continue;
+    if (p.marketOut) continue;
+    const vp = w.vegasProjection || {};
+    if (!p.vegas || p.vegas.basis !== 'props' || vp.status !== 'full' || (vp.missing || []).length || !(vp.books >= HOME_EX_MIN_BOOKS)) continue;
+    const cs = p.consensus && p.consensus.stats, vs = p.vegas.stats;
+    if (!cs || !vs) continue;
+    const c = scoreStats(cs, pos, rules), v = scoreStats(vs, pos, rules);
+    if (!Number.isFinite(c) || !Number.isFinite(v) || c < HOME_EX_FLOOR) continue;
+    const gap = v - c;
+    if (Math.abs(gap) < D.minPointsStrong || Math.abs(gap) / c < D.strongPct) continue;
+    const near = (rk) => Number.isFinite(rk) && rk <= band[pos] * 2;
+    if (!near(p.consensus.rank) && !near(p.vegas.rank)) continue;
+    // The stat that carries the gap: each stat's own points on each side at
+    // this preset, the largest move in the gap's direction that a book quoted.
+    const h = mk[_oddsNorm(p.name)] || {};
+    let why = null;
+    const moves = Object.keys(HOME_EX_STAT).map(k => ({ k, d: scoreStats({ [k]: vs[k] || 0 }, pos, rules) - scoreStats({ [k]: cs[k] || 0 }, pos, rules) }))
+      .filter(x => x.d * gap > 0).sort((a, x) => Math.abs(x.d) - Math.abs(a.d) || (a.k < x.k ? -1 : 1));
+    for (const x of moves) {
+      const s = HOME_EX_STAT[x.k], q = h[s.m];
+      if (!q || !(q.books >= 1)) continue;
+      if (s.td) {
+        if (pos === 'QB' || q.tdCurrentProbability == null) continue;
+        const lam = (cs.rushTD || 0) + (cs.recTD || 0);
+        why = { kind: 'td', prob: q.tdCurrentProbability, books: q.books, lastSeen: q.lastSeen || null,
+                consTds: Math.round(lam * 100) / 100, consProb: Math.round((1 - Math.exp(-lam)) * 100) };
+      } else {
+        if (q.current == null) continue;
+        why = { kind: 'line', market: s.m, label: s.label, line: q.current, books: q.books, lastSeen: q.lastSeen || null, cons: r1(cs[x.k] || 0) };
+      }
+      break;
+    }
+    if (!why) continue;
+    out.push({ name: p.name, position: pos, team: p.team, opponent: w.opponent, home: !!w.home, kickoff: w.kickoff || null,
+               consensus: r1(c), market: r1(v), gap: r1(gap), books: vp.books, priced: (vp.priced || []).slice(), why });
+  }
+  out.sort((a, x) => Math.abs(x.gap) - Math.abs(a.gap) || (a.name < x.name ? -1 : 1));
+  return out.slice(0, HOME_EX_MAX);
+}
+// THE SAMPLE MY WEEK. A first-time reader has no league, so the homepage shows
+// what My Week does with one, built from real players on this week's board and
+// labelled a sample everywhere it appears. The roster is the made-up part and
+// the page says so; every number is the board's own at the card's scoring.
+// The lineup call is the flex choice between the players ranked FLEX 30 and
+// FLEX 34 (or the next one down who projects less) among the healthy players
+// still to play, which is the kind of close call My Week exists for. The alert is the widest homepage example, when
+// there is one. Pickups are not shown: whether a player is available depends
+// on a league's rosters, which a sample does not have.
+const HOME_SAMPLE_FLEX = [29, 33];
+// The two players are chosen once, at PPR, and each preset re-scores the same
+// two: a roster does not change with the scoring, though the call can.
+function homeSamplePair(b) {
+  if (!b || !b.ok || !Array.isArray(b.players) || !b.horizon || b.horizon.key !== 'week') return null;
+  const rules = scoringRules('ppr');
+  const r1 = (v) => Math.round(v * 10) / 10;
+  const pool = b.players.filter(p => /^(RB|WR|TE)$/.test(p.position) && (p.weeks || []).length === 1 && p.weeks[0].gameState === 'upcoming'
+      && !p.weeks[0].bye && !p.weeks[0].out && !p.marketOut && !(p.injury && !/^(active|probable)$/i.test(String(p.injury.status || ''))) && p.ironTuna && p.ironTuna.stats)
+    .map(p => ({ p, pts: scoreStats(p.ironTuna.stats, p.position, rules) }))
+    .filter(r => Number.isFinite(r.pts))
+    .sort((a, x) => x.pts - a.pts || (a.p.name < x.p.name ? -1 : 1));
+  const a = pool[HOME_SAMPLE_FLEX[0]];
+  // The first player at or below FLEX 34 who projects a printed tenth less,
+  // so the call is never "start one over his equal".
+  let z = null;
+  for (let i = HOME_SAMPLE_FLEX[1]; a && i < pool.length && !z; i++) if (r1(pool[i].pts) < r1(a.pts)) z = pool[i];
+  return a && z ? [a.p, z.p] : null;
+}
+function homeSample(pair, preset, examples) {
+  if (!pair) return null;
+  const rules = scoringRules(preset);
+  const rows = pair.map(p => ({ name: p.name, position: p.position, team: p.team, opponent: p.weeks[0].opponent, home: !!p.weeks[0].home,
+    pts: Math.round(scoreStats(p.ironTuna.stats, p.position, rules) * 10) / 10 }))
+    .sort((a, x) => x.pts - a.pts);
+  return { start: rows[0], sit: rows[1], level: rows[0].pts === rows[1].pts, alert: (examples && examples[0]) || null };
+}
+const HOME_PRESET_LABEL = { ppr: 'PPR', half: 'Half PPR', standard: 'Standard' };
+const _homeSlug = (n) => String(n).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const _homeFix = (x) => (x.home ? 'vs ' : 'at ') + x.opponent;
+const _homeN1 = (v) => (Math.round(v * 10) / 10).toFixed(1);
+const _homeSigned = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + _homeN1(Math.abs(v));
+// One example card. The market's points are a derived estimate (quoted props
+// turned into a fantasy line); the sentence under them is the quoted line
+// itself, and each carries its own label.
+function homeExampleHtml(x, week, preset) {
+  const e = _preEsc;
+  const up = x.gap > 0;
+  const q = x.why;
+  const said = q.kind === 'td'
+    ? 'Books price an anytime touchdown at ' + e(q.prob) + '%; the consensus projects ' + e(q.consTds) + ' touchdowns, about ' + e(q.consProb) + '%.'
+    : 'Books quote ' + e(q.line) + ' ' + e(q.label) + '; the consensus projects ' + e(q.cons) + '.';
+  const seen = q.lastSeen ? ' Line last seen ' + e(_etStamp(q.lastSeen)) + '.' : '';
+  return '<li class="hm-ex" data-player="' + e(x.name) + '">'
+    + '<p class="hm-ex-who"><a href="/player/' + e(_homeSlug(x.name)) + '" data-it-surface="home_examples"><b>' + e(x.name) + '</b></a> '
+    + '<span>' + e(x.position + ' ' + x.team) + ' ' + e(_homeFix(x)) + (x.kickoff ? ' &middot; ' + e(_etStamp(x.kickoff)) : '') + '</span></p>'
+    + '<p class="hm-ex-gap' + (up ? ' good' : '') + '">' + _homeSigned(x.gap) + ' pts</p>'
+    + '<p class="hm-ex-nums">Market <b>' + _homeN1(x.market) + '</b> &middot; consensus <b>' + _homeN1(x.consensus) + '</b>'
+    + ' <span class="hm-ex-per">Week ' + e(week) + ', ' + e(HOME_PRESET_LABEL[preset]) + '</span></p>'
+    + '<p class="hm-ex-lab"><span class="hm-tag">Derived estimate</span> Market points converted from ' + e(x.books) + ' books&rsquo; props.</p>'
+    + '<p class="hm-ex-why"><span class="hm-tag q">Quoted prop</span> ' + said + seen + '</p>'
+    + '</li>';
+}
+function homeSampleHtml(s, week, preset) {
+  const e = _preEsc, lab = e(HOME_PRESET_LABEL[preset]);
+  const row = (x) => '<b>' + e(x.name) + '</b> <span class="is-status">' + e(x.position + ' · ' + x.team + ' ' + _homeFix(x)) + '</span>';
+  let h = '<div class="hm-mw-dec"><p class="hm-mw-k">Flex decision &middot; Week ' + e(week) + ', ' + lab + '</p>'
+    + '<p>Start ' + row(s.start) + ' <span class="hm-mw-pts">' + _homeN1(s.start.pts) + '</span></p>'
+    + '<p>over ' + row(s.sit) + ' <span class="hm-mw-pts">' + _homeN1(s.sit.pts) + '</span></p>'
+    + '<p class="hm-mw-note">' + (s.level ? 'Iron Tuna projects the two level at ' + lab + ', so it is a coin flip.'
+      : 'Iron Tuna projects ' + _homeN1(s.start.pts - s.sit.pts) + ' more points for the starter at ' + lab + '.') + '</p></div>';
+  if (s.alert) {
+    h += '<div class="hm-mw-dec"><p class="hm-mw-k">Market alert</p><p>' + row(s.alert) + '</p>'
+      + '<p class="hm-mw-note">Books project ' + _homeN1(s.alert.market) + ' points against a consensus of ' + _homeN1(s.alert.consensus) + '.</p></div>';
+  }
+  h += '<div class="hm-mw-dec"><p class="hm-mw-k">Pickups</p><p class="hm-mw-note">Shown once your league&rsquo;s rosters are saved, because who is available depends on them.</p></div>';
+  return h;
+}
+// Everything the homepage writes into its shell, one set per preset. Null
+// when no preset has an example: the shell then keeps its examples hidden
+// rather than showing an empty frame.
+function homePrerender(b, markets) {
+  if (!b || !b.ok || !b.horizon || b.horizon.key !== 'week') return null;
+  const week = (b.horizon.weeks || [])[0];
+  const sets = {}, pair = homeSamplePair(b);
+  let any = false;
+  for (const preset of HOME_EX_PRESETS) {
+    const ex = homeExamples(b, markets, preset);
+    if (ex == null) return null;
+    if (ex.length) any = true;
+    sets[preset] = { examples: ex, sample: homeSample(pair, preset, ex) };
+  }
+  if (!any) return null;
+  const up = b.updated || {};
+  const asOf = ['Week ' + _preEsc(week), up.board ? 'board computed ' + _preEsc(_etStamp(up.board)) : null,
+    up.odds ? 'market points priced off odds read ' + _preEsc(_etStamp(up.odds)) : null].filter(Boolean).join(' &middot; ') + '.';
+  const ex = HOME_EX_PRESETS.map(pr => '<ol class="hm-ex-list" data-scoring="' + pr + '"' + (pr === 'ppr' ? '' : ' hidden') + '>'
+    + (sets[pr].examples.length ? sets[pr].examples.map(x => homeExampleHtml(x, week, pr)).join('')
+      : '<li class="hm-ex-none">No player clears the bar at ' + HOME_PRESET_LABEL[pr] + ' right now. See the <a href="/vegas-edge#board">whole board</a>.</li>')
+    + '</ol>').join('');
+  const sample = HOME_EX_PRESETS.map(pr => sets[pr].sample
+    ? '<div class="hm-mw-set" data-scoring="' + pr + '"' + (pr === 'ppr' ? '' : ' hidden') + '>' + homeSampleHtml(sets[pr].sample, week, pr) + '</div>' : '').join('');
+  return { ex, sample, asOf, counts: Object.fromEntries(HOME_EX_PRESETS.map(pr => [pr, sets[pr].examples.length])) };
+}
+
+// front.html with the pre-render written in: the examples and their as-of
+// line unhidden, and the sample section only when there is a sample. The
+// shell untouched when there is nothing to write or it is not the shell
+// it was written for.
+function homeShellFill(html, hp) {
+  if (!hp || html.indexOf('<div class="hm-ex-sets" id="hmExSets"></div>') < 0) return html;
+  let h = html
+    .replace('<div class="hm-examples" id="hmExamples" hidden>', '<div class="hm-examples" id="hmExamples">')
+    .replace('<div class="hm-ex-sets" id="hmExSets"></div>', () => '<div class="hm-ex-sets" id="hmExSets">' + hp.ex + '</div>')
+    .replace('<p class="hm-fine" id="hmExAsOf"></p>', () => '<p class="hm-fine" id="hmExAsOf">' + hp.asOf + '</p>');
+  if (hp.sample) h = h
+    .replace('<section class="hm-sec" id="sample" hidden aria-labelledby="sampleHead">', '<section class="hm-sec" id="sample" aria-labelledby="sampleHead">')
+    .replace('<div class="hm-mw-sets" id="hmMwSets"></div>', () => '<div class="hm-mw-sets" id="hmMwSets">' + hp.sample + '</div>');
+  return h;
+}
+
 // A desk piece's head and its first screen: headline, kicker, publication
 // time and dek, the four things desk.html's piece() paints before the body.
 // A held or skipped piece is not an article and stays out of the index.
@@ -15586,7 +15794,9 @@ async function logSiteEvent(env, request, raw) {
 // short scalar fields: nothing a reader typed, no roster, no email. The page
 // script already sends only these; the worker enforces it so a future call
 // site cannot widen it by accident.
-const OUTCOME_EVENTS = new Set(['visit_start', 'tool_success', 'tool_empty', 'tool_error', 'league_setup_start', 'league_setup_complete', 'subscribe_request', 'share_click']);
+// surface_click (Phase 3) is a followed link marked data-it-surface: the
+// homepage's examples, its primary action and its sample My Week.
+const OUTCOME_EVENTS = new Set(['visit_start', 'tool_success', 'tool_empty', 'tool_error', 'league_setup_start', 'league_setup_complete', 'subscribe_request', 'share_click', 'surface_click']);
 const OUTCOME_PROPS = ['path', 'vid', 'tool', 'key', 'src', 'med', 'cmp', 'land', 'new', 'fs', 'n', 'rows', 'horizon', 'pos', 'scoring', 'mode', 'kind', 'method', 'step', 'status', 'platform', 'teams', 'surface'];
 const EMAIL_LIKE = /[^\s@]+@[^\s@]+\.[^\s@]+/;
 function cleanEventProps(name, props) {
@@ -15762,6 +15972,23 @@ async function adminUsage(env, url) {
     "SELECT uid, " + EV_WEEK + " AS wk, MIN(COALESCE(" + EVJ('fs') + ", day)) AS fs, MAX(event = 'tool_success') AS useful FROM site_events WHERE event IN ('visit_start','tool_success') AND ts >= ?" + F + " GROUP BY uid, wk) GROUP BY wk ORDER BY wk", since);
   out.weekly = wk.map(r => ({ weekStart: r.wk, active: r.active || 0, returning: r.back || 0, returningUseful: r.backUseful || 0, useful: r.useful || 0,
     returningUsefulPct: pct(r.backUseful || 0, r.back || 0), partial: utcDay(Date.parse(r.wk + 'T00:00:00Z') + 6 * 86400000) >= today }));
+
+  // Homepage surfaces (Phase 3): visits that followed a marked link, and how
+  // many of those visits then produced a result or a saved league that
+  // it-metrics.js tagged with the same surface. A reader choosing a scoring on
+  // the homepage examples is its own tool_success under that surface, so a
+  // surface can have tagged results with no click: `taggedVisits` counts every
+  // visit with a tagged result, `usefulVisits` only the ones that clicked.
+  const sf = await rows(
+    "WITH c AS (SELECT DISTINCT " + EVJ('surface') + " AS s, " + EVJ('vid') + " AS vid, uid FROM site_events WHERE event = 'surface_click' AND ts >= ?" + F + "), " +
+    "u AS (SELECT DISTINCT " + EVJ('surface') + " AS s, " + EVJ('vid') + " AS vid FROM site_events WHERE event = 'tool_success' AND " + EVJ('surface') + " IS NOT NULL AND ts >= ?" + F + "), " +
+    "l AS (SELECT DISTINCT " + EVJ('surface') + " AS s, " + EVJ('vid') + " AS vid FROM site_events WHERE event = 'league_setup_complete' AND " + EVJ('surface') + " IS NOT NULL AND ts >= ?" + F + "), " +
+    "a AS (SELECT s FROM c UNION SELECT s FROM u UNION SELECT s FROM l) " +
+    "SELECT a.s AS surface, (SELECT COUNT(*) FROM c WHERE c.s = a.s) AS clickVisits, (SELECT COUNT(DISTINCT uid) FROM c WHERE c.s = a.s) AS clickVisitors, " +
+    "(SELECT COUNT(*) FROM u WHERE u.s = a.s AND u.vid IN (SELECT vid FROM c WHERE c.s = a.s)) AS usefulVisits, (SELECT COUNT(*) FROM u WHERE u.s = a.s) AS taggedVisits, " +
+    "(SELECT COUNT(*) FROM l WHERE l.s = a.s AND l.vid IN (SELECT vid FROM c WHERE c.s = a.s)) AS leagueVisits FROM a WHERE a.s IS NOT NULL ORDER BY clickVisits DESC LIMIT 20", since, since, since);
+  out.surfaces = sf.map(r => ({ surface: r.surface, clickVisits: r.clickVisits || 0, clickVisitors: r.clickVisitors || 0,
+    usefulVisits: r.usefulVisits || 0, taggedVisits: r.taggedVisits || 0, leagueVisits: r.leagueVisits || 0 }));
 
   if (readErr) out.readError = { limit: d1ReadLimit(readErr), detail: String(readErr.message || readErr).slice(0, 200) };
   return { status: 200, body: out };
@@ -19283,6 +19510,24 @@ export default {
             .replace('<p class="rk-fine" id="rkAsOf"></p>', () => '<p class="rk-fine" id="rkAsOf">' + __pre.asOf + '</p>');
         }
         const __r = new Response(__h, resp);
+        __r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        __r.headers.delete('content-length');
+        return secure(__r);
+      }
+      // "/": up to three current market-versus-consensus examples and the
+      // sample My Week, one set per scoring preset, off the week board the
+      // rankings pre-render reads and the week's quoted lines (the digest, so
+      // one small read). Outside Washington only, where the market is not
+      // shown; anywhere the board or the lines are missing the shell keeps
+      // both blocks hidden, which is the page's own honest answer.
+      if (__seoKey === '/' && !IS_WASHINGTON(request)) {
+        let __hp = null;
+        try {
+          const __b = boardStillToPlay(await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr', through: null }));
+          const __wk = __b && __b.ok && __b.horizon ? (__b.horizon.weeks || [])[0] : null;
+          if (__wk != null) __hp = homePrerender(__b, await marketHistoryWeek(env, __b.season, __wk));
+        } catch (e) { __hp = null; }
+        const __r = new Response(homeShellFill(await resp.text(), __hp), resp);
         __r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
         __r.headers.delete('content-length');
         return secure(__r);

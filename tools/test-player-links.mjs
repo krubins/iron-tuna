@@ -408,9 +408,12 @@ console.log('\nwiring');
        /data-players="/.test(read(`${ed}-insights-2026-08-10.html`))));
 
   // The surfaces that paint their stories from data have to ask again once they
-  // have; boot() only sees what was in the served HTML.
+  // have; boot() only sees what was in the served HTML. front.html no longer
+  // paints a name from data (17 Oct 2026): its examples arrive in the HTML
+  // with each name already linked by the worker (homeExampleHtml), which
+  // tools/test-home-examples.mjs pins.
   for (const [f, call] of [
-    ['front.html', 'linkPlayers'], ['player.html', 'linkPlayers'],
+    ['player.html', 'linkPlayers'],
     ['lead.html', 'linkPlayers'], ['my-insights.html', 'linkAllPlayers'],
     ['insights-vault.html', 'linkAllPlayers'], ['insights.html', 'linkAllPlayers'],
   ]) ok(`${f} re-links after it paints`, read(f).includes(`.${call}(`));

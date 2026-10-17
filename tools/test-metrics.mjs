@@ -23,6 +23,7 @@ import fs from 'fs';
 import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { homeBoard, homeMarkets } from './fixtures/home-board.mjs';
 import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -72,11 +73,32 @@ const full = makeDb();
     if (i % 6 === 0) { seed(t + 4000, 'league_setup_complete', uid, { vid: 'v' + i, tool: 'league_scoring', key: 'save' }); }
     if (i % 4 === 0) { const t2 = t + 2 * 86400000; if (t2 < now) seed(t2, 'visit_start', uid, { vid: 'w' + i, src: 'direct', med: 'none', new: 0, fs: dayOf(t) }); }
   }
+  // Homepage surfaces (Phase 3): ten visits click an example, three of those
+  // get a tagged result and one saves a league; two other visits pick a
+  // scoring without clicking anything (a tagged result, no click); four
+  // visits click the primary action and none of them gets a result.
+  for (let i = 0; i < 10; i++) {
+    const t = now - i * 3600000, uid = 'srf' + i;
+    seed(t, 'surface_click', uid, { vid: 's' + i, tool: 'player', key: 'home_examples', surface: 'home_examples' });
+    if (i < 3) seed(t + 500, 'tool_success', uid, { vid: 's' + i, tool: 'rankings', key: 'x', surface: 'home_examples' });
+    if (i === 0) seed(t + 900, 'league_setup_complete', uid, { vid: 's' + i, tool: 'league_scoring', key: 'save', surface: 'home_examples' });
+  }
+  for (let i = 0; i < 2; i++) seed(now - i * 1000, 'tool_success', 'pick' + i, { vid: 'p' + i, tool: 'home_examples', key: 'half', surface: 'home_examples' });
+  for (let i = 0; i < 4; i++) seed(now - i * 1000, 'surface_click', 'prim' + i, { vid: 'q' + i, tool: 'vegas-edge', key: 'home_primary', surface: 'home_primary' });
 }
 const USAGE_FULL = await workerJson(full, '/api/admin/usage?key=k&days=30');
 const USAGE_EMPTY = await workerJson(makeDb(), '/api/admin/usage?key=k&days=30');
 const TRAFFIC = await workerJson(makeDb(), '/api/admin/traffic?key=k&days=30');
 ok('the worker answers the seeded usage read', USAGE_FULL.ok && USAGE_FULL.available && USAGE_FULL.visitors.visitors === 30, JSON.stringify(USAGE_FULL).slice(0, 200));
+{
+  const sf = Object.fromEntries((USAGE_FULL.surfaces || []).map(r => [r.surface, r]));
+  const ex = sf.home_examples || {}, pr = sf.home_primary || {};
+  ok('surfaces: visits that clicked an example, and how many went on to a result or a saved league',
+     ex.clickVisits === 10 && ex.clickVisitors === 10 && ex.usefulVisits === 3 && ex.leagueVisits === 1, JSON.stringify(ex));
+  ok('surfaces: a scoring picked without a click is a tagged result, not a clicked one', ex.taggedVisits === 5, JSON.stringify(ex));
+  ok('surfaces: the primary action\'s clicks with no result read zero results, not missing', pr.clickVisits === 4 && pr.usefulVisits === 0 && pr.leagueVisits === 0, JSON.stringify(pr));
+  ok('surfaces: an empty database has none', Array.isArray(USAGE_EMPTY.surfaces) && USAGE_EMPTY.surfaces.length === 0, JSON.stringify(USAGE_EMPTY.surfaces));
+}
 
 // ── the site, served locally, with /api stubbed and /api/track recorded ─────
 const st = (i, k) => ({ rec: (5 - i * 0.05) * k * 14, recYd: (60 - i) * k * 14, recTD: 0.4 * k * 14, rushYd: (40 - i * 0.5) * k * 14, rushTD: 0.3 * k * 14, passYd: 250 * k * 14, passTD: 1.6 * k * 14 });
@@ -92,6 +114,16 @@ const NAMES = [['Bijan Robinson', 'RB'], ['Ja\'Marr Chase', 'WR'], ['Josh Allen'
 const BOARDS = { ok: true, scoring: { label: 'PPR' }, season: 2026, played: 0, horizon: { label: 'This week', weeks: [3] }, sources: { props: 120, usage: 2 },
   delta: { strongRank: 8, strongPct: 0.2, minPointsStrong: 2, leanRank: 4, leanPct: 0.1, minPointsLean: 1, classes: ['STRONG VEGAS BUY', 'VEGAS LEANS HIGHER', 'MARKET AGREES', 'VEGAS LEANS LOWER', 'STRONG VEGAS FADE'] },
   players: Array.from({ length: 40 }, (_, i) => mkPlayer(i, NAMES[i % 5][0] + (i < 5 ? '' : ' ' + i), NAMES[i % 5][1])) };
+// The homepage's examples and sample, written into front.html by the worker's
+// own functions over the fixture board (tools/fixtures/home-board.mjs).
+const FRONT = (() => {
+  const W = fs.readFileSync(path.join(ROOT, '_worker.js'), 'utf8');
+  const lift = (a, b) => { const i = W.indexOf(a); return W.slice(i, W.indexOf(b, i) + b.length); };
+  const H = new Function([W.slice(W.indexOf('// ── the scoring engine ─'), W.indexOf('const COLUMN_SCORING = {')), lift('const _oddsNorm = ', ';\n'), lift('const _preEsc = ', ';\n'),
+    lift('function _etStamp(ms) {', '\n}'), W.slice(W.indexOf('const HOME_EX_MAX = 3;'), W.indexOf('function homeShellFill(html, hp) {')), lift('function homeShellFill(html, hp) {', '\n}')].join('\n')
+    + '\nreturn { homePrerender, homeShellFill, _oddsNorm };')();
+  return H.homeShellFill(fs.readFileSync(path.join(ROOT, 'front.html'), 'utf8'), H.homePrerender(homeBoard(), homeMarkets(H._oddsNorm)));
+})();
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
 let MODE = 'live';
 const TRACK = [];
@@ -109,7 +141,9 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'content-type': 'application/json' });
     return res.end(JSON.stringify(body));
   }
-  const p = u.pathname === '/' ? '/front.html' : /\.[a-z0-9]+$/.test(u.pathname) ? u.pathname : u.pathname + '.html';
+  // "/" as the worker serves it: front.html with the examples written in.
+  if (u.pathname === '/') { res.writeHead(200, { 'content-type': 'text/html' }); return res.end(FRONT); }
+  const p = /\.[a-z0-9]+$/.test(u.pathname) ? u.pathname : u.pathname + '.html';
   const fp = path.join(ROOT, p.slice(1));
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); return res.end('nf'); }
   res.writeHead(200, { 'content-type': TYPES[path.extname(fp)] || 'application/octet-stream' });
@@ -217,6 +251,54 @@ const errors = [];
   await ctx.close();
 }
 
+// ── 4a. the homepage's surfaces (Phase 3) ──
+// Picking a scoring is a result for the examples; following a marked link
+// sends surface_click and tags the visit's next result and league save with
+// the surface; a later visit starts clean.
+{
+  TRACK.length = 0; MODE = 'live';
+  const ctx = await personContext({ viewport: { width: 390, height: 844 } }); const page = await ctx.newPage();
+  page.on('pageerror', e => errors.push('home: ' + e.message));
+  await page.goto(BASE + '/', { waitUntil: 'load' });
+  await settle();
+  ok('the homepage starts a visit and sends no result on its own', evs('visit_start').length === 1 && evs('tool_success').length === 0, JSON.stringify(TRACK.map(t => t.event)));
+  await page.click('#hmScore button[data-scoring="standard"]');
+  await page.click('#hmScore button[data-scoring="standard"]');
+  await settle();
+  const pick = evs('tool_success', 'home_examples');
+  ok('picking a scoring is one result for the examples, with the scoring, the rows and the surface',
+     pick.length === 1 && pick[0].props.key === 'standard' && pick[0].props.scoring === 'standard' && pick[0].props.rows === 3 && pick[0].props.surface === 'home_examples', JSON.stringify(pick));
+  await Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.click('a.hm-primary')]);
+  await settle();
+  const sc = evs('surface_click');
+  ok('following the primary action is a surface click, named for where it goes', sc.length === 1 && sc[0].props.surface === 'home_primary' && sc[0].props.key === 'home_primary' && sc[0].props.tool === 'vegas-edge', JSON.stringify(sc));
+  ok('and it does not start a visit', evs('visit_start').length === 1);
+  await page.goto(BASE + '/rankings', { waitUntil: 'load' });
+  await page.waitForFunction(() => document.querySelectorAll('#rkBody tr').length > 0, null, { timeout: 8000 }).catch(() => {});
+  await settle();
+  const rs = evs('tool_success', 'rankings');
+  ok('the visit\'s next result carries the surface it came through', rs.length === 1 && rs[0].props.surface === 'home_primary', JSON.stringify(rs));
+  // The sample's action, then a league saved in the same visit.
+  await page.goto(BASE + '/', { waitUntil: 'load' });
+  await settle();
+  await Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.click('#sample .hm-how-more a')]);
+  await page.goto(BASE + '/my-league', { waitUntil: 'load' });
+  await settle();
+  await page.check('#lsForm input[type=radio][name=teams][value="12"]', { force: true }).catch(() => {});
+  await page.evaluate(() => { const f = document.getElementById('lsForm'); if (f.requestSubmit) f.requestSubmit(); else f.submit(); });
+  await settle();
+  const ls = evs('league_setup_complete');
+  ok('a league saved after the sample\'s action carries the sample surface', ls.length === 1 && ls[0].props.surface === 'home_sample', JSON.stringify(ls));
+  // Half an hour later: a new visit, and nothing carried over.
+  await page.evaluate(() => { const v = JSON.parse(localStorage.getItem('it.visit')); v.last = Date.now() - 31 * 60000; localStorage.setItem('it.visit', JSON.stringify(v)); });
+  await page.goto(BASE + '/rankings#pos=TE', { waitUntil: 'load' });
+  await page.waitForFunction(() => document.querySelectorAll('#rkBody tr').length > 0, null, { timeout: 8000 }).catch(() => {});
+  await settle();
+  const later = evs('tool_success', 'rankings').slice(-1)[0];
+  ok('a later visit\'s result carries no old surface', evs('visit_start').length === 2 && later && !later.props.surface, JSON.stringify(later));
+  await ctx.close();
+}
+
 // ── 4b. every instrumented page loads cleanly with its feeds refusing ──
 // The outcome calls sit in error paths, which are the paths least often seen.
 {
@@ -261,6 +343,9 @@ for (const [w, h] of [[390, 844], [1280, 900]]) {
       ok(`admin ${w}px: a row per acquisition source`, r.src >= 5, String(r.src));
       ok(`admin ${w}px: tools named in plain words`, /Rankings board/.test(r.tools) && /Vegas Edge/.test(r.tools));
       ok(`admin ${w}px: maturing cohorts are labeled`, /maturing/.test(r.ret));
+      const surf = await page.textContent('#useSurfTbl');
+      ok(`admin ${w}px: homepage surfaces in plain words, clicks beside what followed`,
+         /Homepage examples/.test(surf) && /Homepage primary action/.test(surf) && /10.*3 \(30%\)/.test(surf) && /small sample/.test(surf), surf);
       ok(`admin ${w}px: percentages sit beside counts`, /\d+ \(\d+(\.\d)?%\)/.test(await page.textContent('#useTiles')), await page.textContent('#useTiles'));
       if (w === 390) await page.screenshot({ path: path.join(process.env.SHOT_DIR || '/tmp', 'admin-usage-390.png'), fullPage: true }).catch(() => {});
     } else {

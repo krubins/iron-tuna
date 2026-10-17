@@ -2,14 +2,23 @@
 // The homepage, driven in a browser.
 //   node tools/test-homepage.mjs
 //
-// October 2026: "/" is the ledger-style front described in docs/design/brief.md.
-// Six sections, in this order: a white centred hero (one headline, one
-// sentence, the search field, three entry points, a hairline and the row of
-// live market figures), the six position tiles, the five newest desk pieces as
-// story cards (game photographs, credited; a thin feed filled from findings),
-// the two lane tiles (DFS and season long), the three How-it-works cards, and the navy KPI band; then the
-// shared footer. The cover rotation, the photograph, the lead story, the two
-// lane cards and the quick-links strip all came off with it.
+// October 2026: "/" is the ledger-style front described in docs/design/brief.md,
+// reworked for the first visit on 17 Oct 2026 (docs/growth-plan.md, Phase 3).
+// Five sections, in this order: a white centred hero (the promise, one
+// sentence, the one primary action, up to three current market-versus-
+// consensus examples with a scoring switch, the search field and the other
+// tools as plain links), a labelled sample My Week, the six position tiles,
+// the five newest desk pieces as story cards (game photographs, credited; a
+// thin feed filled from findings) and the three How-it-works cards; then the
+// shared footer. The rotating market band, the two lane tiles and the KPI band
+// came off with that rework.
+//
+// The examples and the sample are written into the HTML by the worker, so
+// this test serves "/" the way the worker does: front.html through the
+// worker's own homePrerender and homeShellFill, over the fixture board in
+// tools/fixtures/home-board.mjs (which tools/test-home-examples.mjs pins rule
+// by rule). The refusing pass serves the plain shell, as the worker does when
+// it has no board.
 //
 // THE RULE THIS EXISTS FOR, and the one the old page broke constantly: A BAND
 // IS EITHER FULL OF REAL CURRENT DATA OR IT IS HIDDEN. So every feed here is
@@ -26,6 +35,7 @@ import fs from 'fs';
 import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { homeBoard, homeMarkets } from './fixtures/home-board.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -58,77 +68,20 @@ if (!CHROME) absent('no Chromium binary', 'set CHROMIUM_PATH, or run `npx playwr
 let pass = 0, fail = 0;
 const ok = (n, c, x = '') => { if (c) { pass++; console.log(`  ok   ${n}`); } else { fail++; console.log(`  FAIL ${n}${x ? ' — ' + x : ''}`); } };
 
-// ── the feeds, as the worker actually shapes them ───────────────────────────
-// Field for field what _worker.js sends: vsExperts.buys/fades carry the `brief`
-// shape (three point figures, a positional ironTunaRank and the marketDelta
-// classification), and `opponent` is a bare team key with no home/away flag.
-const mk = (name, position, team, opponent, c, v, it, classification, ironTunaRank) => ({
-  name, position, team, opponent,
-  consensusPoints: c, vegasPoints: v, ironTunaPoints: it, ironTunaRank,
-  delta: { points: Math.round((v - c) * 10) / 10, rank: 4, classification }
-});
-const EDGE = { ok: true, week: 'Week 3', vsExperts: {
-  buys: [
-    mk('Drake London', 'WR', 'ATL', 'CAR', 12.1, 16.8, 15.2, 'STRONG VEGAS BUY', 14),
-    mk('Cam Ward', 'QB', 'TEN', 'IND', 15.2, 19.9, 18.4, 'STRONG VEGAS BUY', 8),
-    mk('Tank Bigsby', 'RB', 'JAX', 'HOU', 6.0, 10.4, 9.1, 'STRONG VEGAS BUY', 38),
-    mk('James Cook', 'RB', 'BUF', 'NYJ', 13.4, 15.9, 15.0, 'VEGAS LEANS HIGHER', 9),
-    // A promoted backup the consensus still projects as a backup: the widest
-    // gap on the board, and only a stale line (Tyson Bagent, Week 5, 2026).
-    mk('Promoted Backup', 'QB', 'CHI', 'GB', 0.2, 15.3, 11.6, 'STRONG VEGAS BUY', 20)
-  ],
-  fades: [
-    mk('Derrick Henry', 'RB', 'BAL', 'CIN', 17.8, 13.1, 14.6, 'STRONG VEGAS FADE', 11),
-    mk('Blake Corum', 'RB', 'LAR', 'SEA', 11.5, 7.0, 8.4, 'STRONG VEGAS FADE', 41),
-    // MARKET AGREES is not a disagreement and must never become a figure.
-    mk('Agreeable Wideout', 'WR', 'SEA', 'LAR', 12.0, 12.1, 12.0, 'MARKET AGREES', 20),
-    // An injured man's gap is the injury report, not a market read, and it is
-    // the widest on the board, so it would lead the row (Week 5, 2026: Lamar
-    // Jackson at Market 0.0, consensus 18.9). None of these may be a figure.
-    { ...mk('Lamar Jackson', 'QB', 'BAL', 'ATL', 18.9, 0, 0, 'STRONG VEGAS FADE', 30), injury: 'Out' },
-    { ...mk('Hobbled Runner', 'RB', 'PHI', 'JAX', 16.0, 7.1, 8.0, 'STRONG VEGAS FADE', 6), injury: 'Questionable' },
-    { ...mk('Priced Out Wideout', 'WR', 'PHI', 'JAX', 14.0, 3.0, 4.0, 'STRONG VEGAS FADE', 9), marketOut: 'out' },
-    mk('Zeroed Tight End', 'TE', 'MIA', 'BUF', 9.0, 0, 0, 'STRONG VEGAS FADE', 20),
-    // A designation that says he plays is not an injury.
-    { ...mk('Cleared Receiver', 'WR', 'DEN', 'KC', 10.0, 6.0, 7.0, 'STRONG VEGAS FADE', 40), injury: 'Active' },
-    // A stale consensus on a promoted backup is no price (Week 5, 2026).
-    // It is a buy-side row, so it is checked on the value list.
-    // A row with a hole in it is dropped, not printed with a dash.
-    { name: 'Holey Wideout', position: 'WR', team: 'NYG', opponent: 'DAL',
-      consensusPoints: 11.0, vegasPoints: null, ironTunaPoints: 9.5, ironTunaRank: 30,
-      delta: { points: -3.0, rank: -9, classification: 'STRONG VEGAS FADE' } }
-  ]
-},
-// The season-to-date lists: `brief` plus the season average, the games behind
-// it and the gap to this week's consensus. Six overperformers, so the list of
-// five has to choose, and the widest three are all starters: dealt on the raw
-// gap alone, no longshot would make it.
-seasonForm: { minGames: 3,
-  over: [
-    { ...mk('Puka Nacua', 'WR', 'LAR', 'SEA', 18.0, 19.0, 18.6, 'MARKET AGREES', 2), seasonPpg: 26.4, seasonGames: 5, formGap: 8.4 },
-    { ...mk('Jahmyr Gibbs', 'RB', 'DET', 'GB', 19.0, 20.0, 19.5, 'MARKET AGREES', 3), seasonPpg: 26.1, seasonGames: 5, formGap: 7.1 },
-    { ...mk('Josh Allen', 'QB', 'BUF', 'NYJ', 22.0, 23.0, 22.5, 'MARKET AGREES', 1), seasonPpg: 28.8, seasonGames: 5, formGap: 6.8 },
-    { ...mk('Elite Fourth', 'WR', 'CIN', 'PIT', 15.0, 15.5, 15.2, 'MARKET AGREES', 10), seasonPpg: 21.0, seasonGames: 5, formGap: 6.0 },
-    { ...mk('Deep Sleeper', 'WR', 'NO', 'TB', 6.0, 6.5, 6.2, 'MARKET AGREES', 55), seasonPpg: 11.9, seasonGames: 4, formGap: 5.9 },
-    { ...mk('Bench Flier', 'RB', 'ARI', 'SF', 5.0, 5.4, 5.1, 'MARKET AGREES', 44), seasonPpg: 9.2, seasonGames: 3, formGap: 4.2 },
-    // A season average against a stale backup's line is the promotion, not form.
-    { ...mk('Stale Line', 'QB', 'LV', 'NE', 0.6, 14.0, 11.0, 'STRONG VEGAS BUY', 18), seasonPpg: 18.8, seasonGames: 3, formGap: 18.2 },
-    // Hurt is not overperforming, and not overvalued either.
-    { ...mk('Sidelined Star', 'RB', 'SF', 'ARI', 17.0, 0, 0, 'STRONG VEGAS FADE', 4), seasonPpg: 30.0, seasonGames: 4, formGap: 13.0, injury: 'Out' }
-  ],
-  under: [
-    { ...mk('Tyreek Hill', 'WR', 'MIA', 'BUF', 15.0, 14.0, 14.4, 'MARKET AGREES', 18), seasonPpg: 8.1, seasonGames: 5, formGap: -6.9 },
-    { ...mk('Faded Vet', 'RB', 'NYG', 'DAL', 11.0, 10.0, 10.4, 'MARKET AGREES', 33), seasonPpg: 5.5, seasonGames: 5, formGap: -5.5 },
-    { ...mk('Slow Starter', 'TE', 'KC', 'LV', 12.0, 11.5, 11.8, 'MARKET AGREES', 6), seasonPpg: 7.4, seasonGames: 5, formGap: -4.6 }
-  ]
-}};
-// The forward pair: the season rows, which Iron Tuna's projection agrees
-// with here, plus one hot streak it does not believe (Iron Tuna 15.0 under a
-// 16.0 consensus, however high the market has him). The page must drop him
-// on its own, and he would lead the list if it did not.
-EDGE.seasonForm.likelyOver = [...EDGE.seasonForm.over,
-  { ...mk('Tuna Doubts', 'WR', 'DAL', 'NYG', 16.0, 17.5, 15.0, 'MARKET AGREES', 7), seasonPpg: 30.0, seasonGames: 5, formGap: 14.0 }];
-EDGE.seasonForm.likelyUnder = [...EDGE.seasonForm.under];
+// ── "/" as the worker serves it ─────────────────────────────────────────────
+// front.html with the examples and the sample written in, by the worker's own
+// functions, lifted out of _worker.js rather than copied.
+const WSRC = fs.readFileSync(path.join(ROOT, '_worker.js'), 'utf8');
+const wlift = (a, b) => { const i = WSRC.indexOf(a); if (i < 0) throw new Error('not found: ' + a); return WSRC.slice(i, WSRC.indexOf(b, i) + b.length); };
+const W = new Function([WSRC.slice(WSRC.indexOf('// ── the scoring engine ─'), WSRC.indexOf('const COLUMN_SCORING = {')),
+  wlift('const _oddsNorm = ', ';\n'), wlift('const _preEsc = ', ';\n'), wlift('function _etStamp(ms) {', '\n}'),
+  WSRC.slice(WSRC.indexOf('const HOME_EX_MAX = 3;'), WSRC.indexOf('function homeShellFill(html, hp) {')), wlift('function homeShellFill(html, hp) {', '\n}')].join('\n')
+  + '\nreturn { homePrerender, homeShellFill, _oddsNorm };')();
+const SHELL = fs.readFileSync(path.join(ROOT, 'front.html'), 'utf8');
+const FILLED = W.homeShellFill(SHELL, W.homePrerender(homeBoard(), homeMarkets(W._oddsNorm)));
+if (FILLED === SHELL) throw new Error('the pre-render did not fill the shell');
+// Any read of the old market feed is recorded: the homepage must not make one.
+const edgeReads = [];
 // The board behind the sixteen position pages: who is ranked, who carries a
 // market line, and when the odds were read. Counts per position are what the
 // tiles print, so each position gets a different, checkable count.
@@ -214,17 +167,16 @@ const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
   if (u.pathname.startsWith('/api/')) {
     let body = { ok: false, error: 'unavailable' };
+    if (u.pathname === '/api/vegas-edge') edgeReads.push(MODE);
     if (MODE === 'live') {
-      if (u.pathname === '/api/vegas-edge') body = EDGE;
-      else if (u.pathname === '/api/rankings') body = RANK;
+      if (u.pathname === '/api/rankings') body = RANK;
       else if (u.pathname === '/api/newsroom') body = CONTENT;
       else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
       else if (u.pathname === '/api/season') body = SEASON;
     } else if (MODE === 'noboard') {
       // The worker with nothing in this week's prop store: the board answers,
       // but with no book quoting anyone every row comes back unpriced.
-      if (u.pathname === '/api/vegas-edge') body = EDGE;
-      else if (u.pathname === '/api/rankings') body = { ...RANK, marketBoard: false, oddsAsOf: null, oddsProvider: null,
+      if (u.pathname === '/api/rankings') body = { ...RANK, marketBoard: false, oddsAsOf: null, oddsProvider: null,
         props: { live: false, season: 2026, week: 3, players: 0, asOf: null }, players: RANK_PLAYERS.map(p => ({ ...p, priced: false })) };
       else if (u.pathname === '/api/newsroom') body = CONTENT;
       else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
@@ -237,7 +189,10 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'content-type': 'application/json' });
     return res.end(JSON.stringify(body));
   }
-  const fp = path.join(ROOT, u.pathname === '/' ? 'front.html' : u.pathname.slice(1));
+  // "/" is the filled page, except in the refusing pass, where the worker had
+  // no board to fill it from and served the shell.
+  if (u.pathname === '/') { res.writeHead(200, { 'content-type': 'text/html' }); return res.end(MODE === 'dead' ? SHELL : FILLED); }
+  const fp = path.join(ROOT, u.pathname.slice(1));
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); return res.end('nf'); }
   res.writeHead(200, { 'content-type': TYPES[path.extname(fp)] || 'application/octet-stream' });
   res.end(fs.readFileSync(fp));
@@ -279,7 +234,9 @@ const read = page => page.evaluate(() => {
     findInput: input ? { search: input.getAttribute('data-player-search'), role: input.getAttribute('role'), ph: input.getAttribute('placeholder') || '',
       h: input.closest('.search-field') ? input.closest('.search-field').getBoundingClientRect().height : 0,
       radius: input.closest('.search-field') ? parseFloat(getComputedStyle(input.closest('.search-field')).borderTopLeftRadius) : 0 } : null,
-    entries: [...document.querySelectorAll('.hm-entry a')].map(a => a.getAttribute('href')),
+    primary: [...document.querySelectorAll('a.hm-primary')].filter(vis).map(a => ({ href: a.getAttribute('href'), text: text(a), surface: a.getAttribute('data-it-surface'),
+      top: Math.round(a.getBoundingClientRect().top), bg: getComputedStyle(a).backgroundColor })),
+    more: [...document.querySelectorAll('.hm-more a')].filter(vis).map(a => a.getAttribute('href')),
     // The header chrome, shared with every other page.
     line: text(document.querySelector('.site-line')),
     lineH: document.querySelector('.site-line') ? document.querySelector('.site-line').getBoundingClientRect().height : null,
@@ -288,30 +245,30 @@ const read = page => page.evaluate(() => {
     tabbar: [...document.querySelectorAll('.tabbar a')].filter(vis).map(a => a.getAttribute('href')),
     toggle: (() => { const b = document.querySelector('header.site .nav-toggle'); return b && vis(b) ? b.getAttribute('aria-controls') : null; })(),
     ribbonH: (() => { const r = document.querySelector('header.site > .wrap'); return r ? Math.round(r.getBoundingClientRect().height) : 0; })(),
-    // The market figures.
-    market: vis(byId('different')),
-    figs: [...document.querySelectorAll('#diffBody .hm-fig')].map(f => ({
-      c: text(f.querySelector('.c')), k: text(f.querySelector('.k')), v: text(f.querySelector('.v')), s: text(f.querySelector('.s')),
-      face: (() => { const b = f.querySelector('.hm-face'); return b ? { name: b.getAttribute('data-face-name'), done: b.hasAttribute('data-face-done'), w: Math.round(b.getBoundingClientRect().width), h: Math.round(b.getBoundingClientRect().height), ini: text(b.querySelector('i')) } : null; })(),
-      good: f.querySelector('.v').classList.contains('good'), vPx: px(f.querySelector('.v')), kPx: px(f.querySelector('.k')),
-      color: getComputedStyle(f.querySelector('.v')).color
-    })),
-    cats: [...document.querySelectorAll('#diffCats button')].filter(vis).map(b => ({ t: b.textContent.trim(), on: b.getAttribute('aria-selected') === 'true' })),
-    fine: vis(byId('diffFine')) ? text(byId('diffFine')) : null,
-    tag: (() => { const t = document.querySelector('#diffFine .hm-tag'); return t && vis(t) ? { t: t.textContent.trim(), px: px(t) } : null; })(),
+    // The examples, written in by the worker.
+    examples: vis(byId('hmExamples')),
+    exTop: byId('hmExamples') && vis(byId('hmExamples')) ? Math.round(byId('hmExamples').getBoundingClientRect().top) : null,
+    score: [...document.querySelectorAll('#hmScore button')].filter(vis).map(b => ({ t: b.textContent.trim(), on: b.getAttribute('aria-pressed') === 'true' })),
+    exShown: [...document.querySelectorAll('#hmExSets .hm-ex-list')].filter(vis).map(l => l.getAttribute('data-scoring')),
+    cards: [...document.querySelectorAll('#hmExSets .hm-ex-list:not([hidden]) .hm-ex')].map(c => ({
+      name: text(c.querySelector('.hm-ex-who b')), href: c.querySelector('.hm-ex-who a').getAttribute('href'), surface: c.querySelector('.hm-ex-who a').getAttribute('data-it-surface'),
+      who: text(c.querySelector('.hm-ex-who span')), gap: text(c.querySelector('.hm-ex-gap')), good: c.querySelector('.hm-ex-gap').classList.contains('good'),
+      color: getComputedStyle(c.querySelector('.hm-ex-gap')).color, nums: text(c.querySelector('.hm-ex-nums')), lab: text(c.querySelector('.hm-ex-lab')), why: text(c.querySelector('.hm-ex-why')),
+      tags: [...c.querySelectorAll('.hm-tag')].map(t => ({ t: t.textContent.trim(), px: px(t), bg: getComputedStyle(t).backgroundColor })),
+      left: Math.round(c.getBoundingClientRect().left), top: Math.round(c.getBoundingClientRect().top) })),
+    asOf: vis(byId('hmExAsOf')) ? text(byId('hmExAsOf')) : null,
+    // The sample My Week.
+    sample: vis(byId('sample')),
+    sampleHead: text(document.querySelector('#sampleHead')),
+    sampleSub: text(document.querySelector('#sample .hm-sub')),
+    sampleShown: [...document.querySelectorAll('#hmMwSets .hm-mw-set')].filter(vis).map(l => l.getAttribute('data-scoring')),
+    sampleCards: [...document.querySelectorAll('#hmMwSets .hm-mw-set:not([hidden]) .hm-mw-dec')].map(d => d.innerText.replace(/\s+/g, ' ').trim()),
+    sampleCta: (() => { const a = document.querySelector('#sample .hm-how-more a'); return a ? { href: a.getAttribute('href'), surface: a.getAttribute('data-it-surface') } : null; })(),
     // The tiles.
     tiles: [...document.querySelectorAll('.hm-tile')].map(a => ({ href: a.getAttribute('href'), name: text(a.querySelector('.hm-tile-name')),
       live: vis(a.querySelector('.hm-tile-live')) ? text(a.querySelector('.hm-tile-live')) : null, svg: !!a.querySelector('svg[aria-hidden="true"]'),
       w: Math.round(a.getBoundingClientRect().width), h: Math.round(a.getBoundingClientRect().height) })),
     tileTops: [...new Set([...document.querySelectorAll('.hm-tile')].map(a => Math.round(a.getBoundingClientRect().top)))].length,
-    // The two lane tiles.
-    lanes: [...document.querySelectorAll('#lanes .hm-lane')].map(a => ({ href: a.getAttribute('href'), name: text(a.querySelector('.hm-lane-name')), sub: text(a.querySelector('.hm-lane-sub')),
-      svg: !!a.querySelector('svg[aria-hidden="true"]'), top: Math.round(a.getBoundingClientRect().top),
-      w: Math.round(a.getBoundingClientRect().width), h: Math.round(a.getBoundingClientRect().height),
-      // The four function boxes under the lane, in the lane's own dress.
-      kit: [...a.parentElement.querySelectorAll('.hm-lane-kit .hm-lane-fn')].map(f => ({ href: f.getAttribute('href'), name: text(f.querySelector('.hm-lane-fn-name')),
-        svg: !!f.querySelector('svg[aria-hidden="true"]'), top: Math.round(f.getBoundingClientRect().top), bottom: Math.round(f.getBoundingClientRect().bottom),
-        w: Math.round(f.getBoundingClientRect().width), h: Math.round(f.getBoundingClientRect().height) })) })),
     // The story cards.
     articles: vis(byId('articles')),
     rows: [...document.querySelectorAll('#readGrid .hm-story')].map(r => {
@@ -323,14 +280,11 @@ const read = page => page.evaluate(() => {
         series: text(r.querySelector('.hm-story-chip')), face: pic.getAttribute('data-face-name'), team: pic.getAttribute('data-face-team'), headPx: px(r.querySelector('.hm-story-head')),
         picLeft: pb.right <= tb.left + 1, picTop: pb.bottom <= tb.top + 1, top: Math.round(b.top), w: Math.round(b.width), radius: parseFloat(getComputedStyle(r).borderTopLeftRadius), shadow: getComputedStyle(r).boxShadow };
     }),
-    // How it works, and the band.
+    // How it works.
     how: vis(byId('how')),
     howCards: [...document.querySelectorAll('#how .hm-input')].map(c => ({ h: text(c.querySelector('h3')), radius: parseFloat(getComputedStyle(c).borderTopLeftRadius), border: getComputedStyle(c).borderTopWidth })),
     tagline: text(document.querySelector('#how .hm-tagline')),
     italics: [...document.querySelectorAll('body *')].filter(e => vis(e) && getComputedStyle(e).fontStyle === 'italic' && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())).length,
-    kpi: vis(byId('kpi')),
-    kpis: [...document.querySelectorAll('#kpiGrid > div')].map(d => ({ v: text(d.querySelector('b')), k: text(d.querySelector('span')), good: d.querySelector('b').classList.contains('good'), px: px(d.querySelector('b')) })),
-    kpiBg: byId('kpi') ? getComputedStyle(byId('kpi')).backgroundColor : null,
     footBg: getComputedStyle(document.querySelector('footer.site')).backgroundColor,
     // Section order, top to bottom: the page's whole outline.
     order: [...document.querySelectorAll('section')].filter(vis).map(s => s.id || s.className).filter(Boolean),
@@ -353,7 +307,7 @@ const read = page => page.evaluate(() => {
     body: document.body.innerText,
     headings: [...document.querySelectorAll('h1,h2,h3')].map(h => h.tagName + ':' + h.textContent.trim().slice(0, 40)),
     // The desk's story cards are the one exception: they lift off the paper.
-    shadows: [...document.querySelectorAll('main *, #kpi *')].filter(e => vis(e) && !e.classList.contains('hm-story') && getComputedStyle(e).boxShadow !== 'none').map(e => e.className || e.tagName).slice(0, 5),
+    shadows: [...document.querySelectorAll('main *')].filter(e => vis(e) && !e.classList.contains('hm-story') && getComputedStyle(e).boxShadow !== 'none').map(e => e.className || e.tagName).slice(0, 5),
     pills: [...document.querySelectorAll('a, button')].filter(e => vis(e) && parseFloat(getComputedStyle(e).borderTopLeftRadius) > 10).map(e => e.className || e.tagName).slice(0, 5)
   };
 });
@@ -367,17 +321,20 @@ console.log('\nthe hero, at every width');
 for (const [w, h, tag] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
   const { page, ctx } = await open(w, h);
   const r = await read(page);
-  ok(`${tag}: the one h1 is the thesis`, r.h1 === 'Every player, priced off the betting market.', r.h1);
+  ok(`${tag}: the one h1 is the promise`, r.h1 === 'Where the betting market and fantasy consensus disagree.', r.h1);
   // 34px on a phone is what holds the headline to two lines there.
   const h1Min = w > 480 ? 44 : 34;
   ok(`${tag}: it is drawn, centred, at ${h1Min} to 68px, 700`, r.h1Drawn && r.h1Centered && r.h1Px >= h1Min && r.h1Px <= 68 && r.h1Weight === '700', `${r.h1Px}px ${r.h1Weight} centred=${r.h1Centered}`);
   ok(`${tag}: one sentence under it, 19px, inside the measure`,
-     /^Sportsbook lines and player props become fantasy point projections/.test(r.lede || '') && r.ledePx === 19 && r.ledeW <= 60, `${r.ledePx}px ${r.ledeW.toFixed(1)}ch`);
+     /^Sportsbook player props become fantasy points and sit beside the consensus projection/.test(r.lede || '') && r.ledePx === 19 && r.ledeW <= 60, `${r.ledePx}px ${r.ledeW.toFixed(1)}ch`);
+  ok(`${tag}: one primary action, to the differences board, filled in the accent`,
+     r.primary.length === 1 && r.primary[0].href === '/vegas-edge#board' && r.primary[0].text === 'See this week’s differences' && r.primary[0].surface === 'home_primary' && r.primary[0].bg === 'rgb(11, 79, 108)', JSON.stringify(r.primary));
+  ok(`${tag}: the examples come right after it, above the search field`, r.examples && r.exTop > r.primary[0].top, String(r.exTop));
   ok(`${tag}: the search field is a real form posting ?q= to /player`, r.find === true);
   ok(`${tag}: with the shared lookup on its input and a placeholder that says what to type`,
      !!r.findInput && r.findInput.search === 'front' && r.findInput.role === 'combobox' && /player/i.test(r.findInput.ph), JSON.stringify(r.findInput));
   ok(`${tag}: and it is the one pill on the page, 52px tall`, !!r.findInput && r.findInput.h >= 52 && r.findInput.radius > 20 && r.pills.length === 0, JSON.stringify({ h: r.findInput && r.findInput.h, pills: r.pills }));
-  ok(`${tag}: three entry points as text links`, r.entries.join(' ') === '/fantasy /dfs /in-season/desk', r.entries.join(' '));
+  ok(`${tag}: the other tools are secondary navigation, plain links`, r.more.join(' ') === '/rankings /fantasy#startsit /waivers /trade-finder /dfs /in-season/desk', r.more.join(' '));
   // The chrome is the shared one.
   ok(`${tag}: the black bar above the ribbon carries no text`, r.line === '', r.line);
   ok(`${tag}: the navy bar above the ribbon is 3px`, r.lineH === 3, String(r.lineH));
@@ -403,27 +360,13 @@ for (const [w, h, tag] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
 }
 
 // ── 2. the outline ──────────────────────────────────────────────────────────
-console.log('\nsix sections, in order, and nothing else');
+console.log('\nfive sections, in order, and nothing else');
 {
   const { page, ctx } = await open(1440, 900);
   const r = await read(page);
-  ok('hero, tiles, newest, lanes, method, band', r.allSections.join(' > ') === 'heroBand > positions > articles > lanes > how > kpi', r.allSections.join(' > '));
-  ok('two lane tiles under the desk: DFS to /dfs, season long to /fantasy',
-     r.lanes.map(l => l.href + ' ' + l.name).join(' | ') === '/dfs DFS | /fantasy Season long', r.lanes.map(l => l.href + ' ' + l.name).join(' | '));
-  ok('each lane is landscape, side by side, with its own illustration and a line under the name',
-     r.lanes.every(l => l.svg && l.w > l.h && l.sub) && new Set(r.lanes.map(l => l.top)).size === 1, JSON.stringify(r.lanes));
-  // Four smaller boxes under each lane, one per key function, each with its own
-  // illustration and the name at the foot. The DFS four open the four boards
-  // /dfs switches between (the hash names the board); the season four are the
-  // lane's tools. On a desk all eight sit in one row under the two lanes.
-  ok('four function boxes under each lane: the DFS boards, then the season tools',
-     r.lanes.map(l => l.kit.map(f => f.href + ' ' + f.name).join(' | ')).join(' || ')
-       === '/dfs#lineup The Lineup | /dfs#values Vegas Values | /dfs#stacks Game Stacks | /dfs#td TD Board || /rankings Rankings | /fantasy#startsit Start / Sit | /waivers Waivers | /trade-finder Trade Tools',
-     r.lanes.map(l => l.kit.map(f => f.href + ' ' + f.name).join(' | ')).join(' || '));
-  ok('the eight boxes line up in one row under the lanes, each illustrated, square and narrower than its lane',
-     r.lanes.every(l => l.kit.length === 4 && l.kit.every(f => f.svg && Math.abs(f.w - f.h) <= 1 && f.w < l.w / 3 && f.top > l.top + l.h))
-       && new Set(r.lanes.flatMap(l => l.kit.map(f => f.top))).size === 1, JSON.stringify(r.lanes.map(l => l.kit)));
-  ok('the market figures live inside the hero, not as a sixth section', !r.allSections.includes('different') && !!(await page.$('#heroBand #different')));
+  ok('hero, sample, tiles, newest, method', r.allSections.join(' > ') === 'heroBand > sample > positions > articles > how', r.allSections.join(' > '));
+  ok('the examples live inside the hero, not as a section of their own', !!(await page.$('#heroBand #hmExamples')));
+  ok('no lane tiles and no KPI band compete with the primary action', !(await page.$('#lanes')) && !(await page.$('#kpi')) && !(await page.$('.hm-lane')));
   ok('six tiles, one per position, each opening the one rankings page on that position',
      r.tiles.map(t => t.href).join(' ') === '/position#pos=QB /position#pos=RB /position#pos=WR /position#pos=TE /position#pos=K /position#pos=DST', r.tiles.map(t => t.href).join(' '));
   ok('each tile is portrait, with its own illustration', r.tiles.every(t => t.svg && t.h > t.w), JSON.stringify(r.tiles.map(t => [t.w, t.h])));
@@ -439,77 +382,34 @@ console.log('\nwith the boards answering');
 {
   const { page, ctx } = await open(1440, 900);
   const r = await read(page);
-  ok('the market row is shown', r.market === true);
-  ok('the overview, then four lists, in order, the overview showing',
-     r.cats.map(c => c.t).join(' | ') === 'Overview | This week’s value | Long term overperform | This week’s headwinds | Long term underperform' && r.cats[0].on && r.cats.filter(c => c.on).length === 1,
-     JSON.stringify(r.cats));
-  ok('the overview is the top figure of each list, in list order, each labelled with its list',
-     r.figs.length === 4 && r.figs.map(f => f.c).join(' | ') === 'This week’s value | Long term overperform | This week’s headwinds | Long term underperform'
-       && r.figs[0].v === '+4.7 pts' && r.figs[1].k.startsWith('Trust · Puka Nacua')
-       && r.figs[2].v === '-4.7 pts' && r.figs[3].k.startsWith('Sell high · Tyreek Hill'),
-     JSON.stringify(r.figs.map(f => [f.c, f.k, f.v])));
-  ok('and its note covers both kinds of figure', /weekly fantasy points/.test(r.fine || '') && /at least 3 games played/.test(r.fine || ''), r.fine);
-  await page.click('#diffCats button:nth-child(2)');
-  Object.assign(r, { figs: (await read(page)).figs });
-  ok('a list figure carries no list label', r.figs.every(f => !f.c), r.figs.map(f => f.c).join(','));
-  ok('this week\'s value is the buys, widest gap first', r.figs.length === 4 && r.figs.map(f => f.v).join(' | ') === '+4.7 pts | +4.7 pts | +4.4 pts | +2.5 pts', r.figs.map(f => f.v).join(' | '));
-  ok('and only the buys', r.figs.every(f => f.good));
-  ok('a consensus under 3 points is a stale line, not a price, and not a figure', !r.figs.some(f => f.k.includes('Promoted Backup')), r.figs.map(f => f.k).join(' / '));
-  const ACTIONS = new Set(['Start', 'Sit', 'Upgrade', 'Downgrade', 'Value play', 'Fade']);
-  ok('every figure leads with one of the six decisions', r.figs.every(f => ACTIONS.has(f.k.split(' · ')[0])), r.figs.map(f => f.k).join(' / '));
-  ok('a strong buy on a bench player is a Value play', r.figs.some(f => f.k.startsWith('Value play · Tank Bigsby')), r.figs.map(f => f.k).join(' / '));
-  // The headwinds, picked by the reader: the decisions below are on that list.
-  const weekValue = r;
-  await page.click('#diffCats button:nth-child(4)');
-  const hw = await read(page);
-  ok('picking a list shows it', hw.cats[3].on && hw.figs.every(f => !f.good) && hw.figs.map(f => f.v).join(' | ') === '-4.7 pts | -4.5 pts | -4.0 pts', hw.figs.map(f => f.v).join(' | '));
-  const by = n => weekValue.figs.concat(hw.figs).find(f => f.k.includes(n));
-  ok('a strong buy on a startable player is a Start', by('Drake London') && by('Drake London').k.startsWith('Start'));
-  ok('a strong fade on a player you would be starting is a Sit', by('Derrick Henry') && by('Derrick Henry').k.startsWith('Sit'));
-  ok('a strong fade on a bench player is a Fade', by('Blake Corum') && by('Blake Corum').k.startsWith('Fade'));
-  ok('and every figure states the three projections under it',
-     r.figs.every(f => /^Market \d+\.\d · consensus \d+\.\d · Iron Tuna \d+\.\d$/.test(f.s)), r.figs.map(f => f.s).join(' / '));
-  ok('a 16px label over a 34px figure', r.figs.every(f => f.kPx === 16 && f.vPx === 34), JSON.stringify(r.figs.map(f => [f.kPx, f.vPx])));
-  ok('only a positive edge is green, and the negative ones are ink',
-     r.figs.filter(f => f.v.startsWith('+')).every(f => f.good && f.color === 'rgb(10, 106, 76)') && r.figs.filter(f => f.v.startsWith('-')).every(f => !f.good && f.color === 'rgb(17, 20, 24)'),
-     JSON.stringify(r.figs.map(f => [f.v, f.color])));
-  ok('a player the market agrees about is not a figure', !hw.figs.some(f => f.k.includes('Agreeable')));
-  ok('no injured player, no player the books left off, and no zero projection is a figure',
-     !hw.figs.some(f => /Lamar Jackson|Hobbled|Priced Out|Zeroed/.test(f.k)) && !hw.figs.some(f => /Market 0\.0|Iron Tuna 0\.0/.test(f.s)), hw.figs.map(f => f.k).join(' / '));
+  ok('the examples are shown', r.examples === true);
+  ok('three cards, widest gap first, at PPR', r.cards.map(c => c.name + ' ' + c.gap).join(' | ') === 'Drake London +5.0 pts | Derrick Henry \u22124.8 pts | Goal Line Back +3.8 pts', r.cards.map(c => c.name + ' ' + c.gap).join(' | '));
+  ok('PPR is pressed and only its list shows', r.score.map(b => b.t + (b.on ? '*' : '')).join(' ') === 'PPR* Half PPR Standard' && r.exShown.join() === 'ppr', JSON.stringify([r.score, r.exShown]));
+  ok('each card names the player, his position, club and fixture, and the kickoff',
+     r.cards[0].who.startsWith('WR ATL vs CAR · Sun, 10/18, 1:00 PM ET') && r.cards[1].who.startsWith('RB BAL at CIN'), r.cards.map(c => c.who).join(' / '));
+  ok('and links him to his page, marked as the examples surface', r.cards.every(c => /^\/player\/[a-z-]+$/.test(c.href) && c.surface === 'home_examples'), JSON.stringify(r.cards.map(c => c.href)));
+  ok('both projections, with the week and the scoring', r.cards.every(c => /^Market \d+\.\d · consensus \d+\.\d Week 6, PPR$/.test(c.nums)), r.cards.map(c => c.nums).join(' / '));
+  ok('the market points labelled a derived estimate, the line labelled a quoted prop',
+     r.cards.every(c => c.tags.map(t => t.t).join() === 'Derived estimate,Quoted prop' && c.tags.every(t => t.px === 12)), JSON.stringify(r.cards.map(c => c.tags)));
+  ok('the two labels look different: amber for the estimate, the accent tint for the quote',
+     r.cards[0].tags[0].bg === 'rgb(255, 242, 199)' && r.cards[0].tags[1].bg === 'rgb(230, 239, 243)', JSON.stringify(r.cards[0].tags));
+  ok('the explanation is the quoted line, with when it was seen',
+     r.cards[0].why === 'Quoted prop Books quote 89.5 receiving yards; the consensus projects 60. Line last seen Sat, 10/17, 12:40 PM ET.', r.cards[0].why);
+  ok('only a positive gap is green, and a fade is ink',
+     r.cards[0].good && r.cards[0].color === 'rgb(10, 106, 76)' && !r.cards[1].good && r.cards[1].color === 'rgb(17, 20, 24)', JSON.stringify(r.cards.map(c => [c.gap, c.color])));
+  ok('the three sit side by side on a desk', new Set(r.cards.map(c => c.top)).size === 1 && new Set(r.cards.map(c => c.left)).size === 3, JSON.stringify(r.cards.map(c => [c.left, c.top])));
+  ok('the as-of line: the week, when the board was computed, when the odds were read',
+     r.asOf === 'Week 6 · board computed Sat, 10/17, 2:13 PM ET · market points priced off odds read Sat, 10/17, 7:00 AM ET.', r.asOf);
+  ok('no player the rules exclude is on the page', !/Questionable Runner|Priced Out|Partly Priced|Game Lines Only|Promoted Backup|Kicked Off|Bye Week|Deep Bench|No Quoted Line/.test(r.body));
+  ok('the homepage made no read of /api/vegas-edge', edgeReads.length === 0, edgeReads.join(','));
 
-  // The season sides: one tab each, the forward call standing in for the record.
-  ok('the season record and the forward call are one tab a side, not two',
-     !r.cats.some(c => /their projections/.test(c.t)), r.cats.map(c => c.t).join(' | '));
-  await page.click('#diffCats button:nth-child(3)');
-  const lo = await read(page);
-  ok('long term overperform: the season call Iron Tuna backs, five, starters and longshots both, widest first',
-     lo.figs.length === 5 && lo.figs.map(f => f.k.split(', ')[0]).join(' / ') === 'Trust · Puka Nacua / Trust · Jahmyr Gibbs / Trust · Josh Allen / Buy · Deep Sleeper / Buy · Bench Flier',
-     lo.figs.map(f => f.k).join(' / '));
-  ok('the starter dealt out for a longshot is the narrowest starter', !lo.figs.some(f => f.k.includes('Elite Fourth')));
-  ok('an injured player is not a call', !lo.figs.some(f => f.k.includes('Sidelined')));
-  ok('nor is a season average set against a stale line', !lo.figs.some(f => f.k.includes('Stale Line')));
-  ok('a hot streak Iron Tuna projects under his consensus is no call', !lo.figs.some(f => f.k.includes('Tuna Doubts')), lo.figs.map(f => f.k).join(' / '));
-  ok('each leads with this week\'s two projections, then the season',
-     lo.figs.every(f => f.good && /^\+\d+\.\d pts\/g$/.test(f.v) && /^Consensus \d+\.\d · Iron Tuna \d+\.\d · averaging \d+\.\d over \d$/.test(f.s)),
-     lo.figs.map(f => f.v + ' ' + f.s).join(' / '));
-  ok('and the note says Iron Tuna has to agree', /at least 3 games played/.test(lo.fine || '') && /Iron Tuna’s projection for the week does not disagree/.test(lo.fine || ''), lo.fine);
-  await page.click('#diffCats button:nth-child(5)');
-  const lu = await read(page);
-  ok('long term underperform: Sell high on a starter, Sell on a longshot, in ink',
-     lu.figs.map(f => f.k.split(', ')[0] + ' ' + f.v).join(' / ') === 'Sell high · Tyreek Hill -6.9 pts/g / Sell · Faded Vet -5.5 pts/g / Sell high · Slow Starter -4.6 pts/g'
-       && lu.figs.every(f => !f.good), lu.figs.map(f => f.k + ' ' + f.v).join(' / '));
-  await page.click('#diffCats button:nth-child(2)');
-  r.figs = (await read(page)).figs;
-  ok('every figure carries the player\'s photograph, an 88px circle',
-     r.figs.every(f => f.face && f.face.w === 88 && f.face.h === 88 && f.k.includes(f.face.name)), JSON.stringify(r.figs.map(f => f.face)));
-  ok('resolved off the shared player index, ESPN first',
-     r.figs.every(f => f.face.done) && ['4426502', '4688380', '4429096'].every(id => photos.some(u => u.includes('/headshots/nfl/players/full/' + id + '.png'))),
-     JSON.stringify(photos.filter(u => /headshots/.test(u))));
-  ok('and the initials stand in when the photograph does not load', r.figs.every(f => /^[A-Z]{2}$/.test(f.face.ini || '')), r.figs.map(f => f.face.ini).join(','));
-  ok('a row missing a projection is dropped, not printed with a dash', !hw.figs.some(f => f.k.includes('Holey')) && !hw.figs.some(f => /—/.test(f.k + f.v + f.s)));
-  ok('the note says the week, the scoring and when the odds were read',
-     /Week 3/.test(r.fine || '') && /default scoring/.test(r.fine || '') && /Odds read .* ET/.test(r.fine || ''), r.fine);
-  ok('under the amber Estimate label, at 12px', !!r.tag && r.tag.t === 'Estimate' && r.tag.px === 12, JSON.stringify(r.tag));
+  ok('the sample My Week is shown, labelled a sample in its heading', r.sample === true && r.sampleHead === 'My Week, with a league Sample', r.sampleHead);
+  ok('and the sentence under it says the roster is made up and not saved', /^A made-up roster of real players/.test(r.sampleSub || '') && /not your league, and nothing here is saved/.test(r.sampleSub || ''), r.sampleSub);
+  ok('a flex call, a market alert, and pickups deferred to a saved league',
+     r.sampleCards.length === 3 && /^Flex decision · Week 6, PPR Start Flex Filler 29 .*24\.2 over Flex Filler 34 .*23\.2/i.test(r.sampleCards[0])
+       && /^Market alert Drake London/i.test(r.sampleCards[1]) && /Books project 16\.0 points against a consensus of 11\.0/.test(r.sampleCards[1])
+       && /^Pickups Shown once your league’s rosters are saved/i.test(r.sampleCards[2]), JSON.stringify(r.sampleCards));
+  ok('its action sets up My Week, marked as the sample surface', r.sampleCta && r.sampleCta.href === '/my-leagues#connect' && r.sampleCta.surface === 'home_sample', JSON.stringify(r.sampleCta));
 
   ok('every tile carries its live line off the board',
      r.tiles.map(t => t.live).join(' | ') === '34 ranked · 22 priced | 72 ranked · 48 priced | 98 ranked · 65 priced | 42 ranked · 28 priced | 32 ranked · 21 priced | 32 ranked · 21 priced',
@@ -528,8 +428,8 @@ console.log('\nwith the boards answering');
   ok('every card casts a soft shadow, like the reference row', r.rows.every(x => x.shadow && x.shadow !== 'none'), r.rows.map(x => x.shadow).join(' | '));
   ok('each card names its time and byline at the foot',
      r.rows[0].meta === '6m ago · Iron Tuna desk' && r.rows[4].meta === 'Yesterday', r.rows.map(x => x.meta).join(' / '));
-  // The desk's photographs are lazy, and the market band above it now holds
-  // four lists, so at 900px the row under the lead starts below the fold.
+  // The desk's photographs are lazy, and the examples and the sample sit
+  // above it, so at 900px the row under the lead starts below the fold.
   // Bring the desk into view, as a reader scrolling to it would, and read it
   // again before asking which photographs loaded.
   await page.evaluate(() => document.querySelector('#readGrid').scrollIntoView({ block: 'center' }));
@@ -556,101 +456,43 @@ console.log('\nwith the boards answering');
   ok('no held draft reaches the front', !/HELD DRAFT/.test(r.body), (r.body.match(/HELD DRAFT \d/) || [''])[0]);
   ok('and no story is on the front twice', new Set(r.rows.map(x => x.href)).size === r.rows.length);
 
-  ok('the KPI band is shown, navy, with white 44px figures', r.kpi === true && r.kpiBg === 'rgb(0, 30, 71)' && r.kpis.every(k => k.px === 44), JSON.stringify({ bg: r.kpiBg, px: r.kpis.map(k => k.px) }));
-  ok('its figures come off the board and the desk',
-     r.kpis.map(k => k.v + ' ' + k.k).join(' | ') === '310 Players ranked this week (Week 3) | 205 Priced off a prop this week | 7 Pieces the desk published',
-     r.kpis.map(k => k.v + ' ' + k.k).join(' | '));
-  ok('only the market-priced count is mint', r.kpis.filter(k => k.good).map(k => k.k).join() === 'Priced off a prop this week');
   ok('and no loading copy survives anywhere on the page', !LOADING.test(r.body), (r.body.match(LOADING) || [''])[0]);
   await ctx.close();
 }
 
-// ── 3a. the rotation ────────────────────────────────────────────────────────
-// The band advances on its own every nine seconds, holds while the pointer is
-// on it, and stops for good once the reader picks a list. Driven on the page's
-// own clock so the test does not wait the seconds out.
-console.log('\nthe band rotates');
+// ── 3a. the scoring switch ──────────────────────────────────────────────────
+// The worker wrote a list per preset; the buttons show the one picked, in the
+// examples and the sample together, and the browser remembers the choice.
+console.log('\nthe scoring switch');
 {
+  const { page, ctx } = await open(1440, 900);
+  await page.click('#hmScore button[data-scoring="standard"]');
+  let r = await read(page);
+  ok('Standard shows its own list, re-ordered and re-scored', r.exShown.join() === 'standard' && r.cards.map(c => c.name).join(' | ') === 'Derrick Henry | Goal Line Back | Yards Guy', r.cards.map(c => c.name).join(' | '));
+  ok('with its own scoring on every card', r.cards.every(c => / Week 6, Standard$/.test(c.nums)), r.cards.map(c => c.nums).join(' / '));
+  ok('the button says so', r.score.map(b => b.t + (b.on ? '*' : '')).join(' ') === 'PPR Half PPR Standard*');
+  ok('the sample follows, with the same two players re-scored', r.sampleShown.join() === 'standard' && /Week 6, Standard Start Flex Filler 29 .*over Flex Filler 34/i.test(r.sampleCards[0]) && /Derrick Henry/.test(r.sampleCards[1]), JSON.stringify(r.sampleCards));
+  const q = await page.evaluate(() => JSON.stringify((window.ITMetricsQ && window.ITMetricsQ.length != null) ? [].slice.call(window.ITMetricsQ) : 'drained'));
+  ok('the pick is handed to the metrics queue (a result produced for the reader)', /home_examples/.test(q) || q === '"drained"', q);
+  await page.reload({ waitUntil: 'networkidle' });
+  r = await read(page);
+  ok('a reload keeps the reader\'s scoring', r.exShown.join() === 'standard' && r.sampleShown.join() === 'standard' && r.score.find(b => b.on).t === 'Standard', JSON.stringify([r.exShown, r.score]));
+  await page.click('#hmScore button[data-scoring="ppr"]');
+  r = await read(page);
+  ok('and PPR comes back', r.exShown.join() === 'ppr' && r.cards[0].name === 'Drake London');
+  await ctx.close();
+}
+{
+  // A browser whose storage throws still gets the page, at PPR.
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
-  page.on('pageerror', e => errors.push(`rotation: ${e.message}`));
+  page.on('pageerror', e => errors.push(`no storage: ${e.message}`));
+  await page.addInitScript(() => { Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked'); } }); });
   await page.route(/espncdn\.com|static\.www\.nfl\.com|googletagmanager\.com|wikimedia\.org/, r => r.abort());
-  await page.clock.install();
   await page.goto(BASE, { waitUntil: 'networkidle' });
-  await page.mouse.move(5, 890);
-  const on = () => page.evaluate(() => { const b = document.querySelector('#diffCats button[aria-selected="true"]'); return b ? b.textContent.trim() : null; });
-  const first = await on();
-  await page.clock.runFor(9500);
-  const second = await on();
-  await page.clock.runFor(9000);
-  const third = await on();
-  ok('it opens on the overview and advances through the lists on its own', first === 'Overview' && second === 'This week’s value' && third === 'Long term overperform', [first, second, third].join(' → '));
-  await page.hover('#diffBody');
-  await page.clock.runFor(20000);
-  ok('and holds while the pointer is on it', (await on()) === 'Long term overperform', await on());
-  await page.click('#diffCats button:nth-child(3)');
-  await page.mouse.move(5, 890);
-  await page.clock.runFor(30000);
-  ok('a list the reader picks stays picked', (await on()) === 'Long term overperform', await on());
-  await ctx.close();
-}
-
-// ── 3b. a short board ───────────────────────────────────────────────────────
-console.log('\nwith a board too short to print');
-{
-  const full = EDGE.vsExperts, fullForm = EDGE.seasonForm;
-  EDGE.vsExperts = { buys: full.buys.slice(0, 1), fades: full.fades.slice(0, 1) };
-  EDGE.seasonForm = { minGames: 3, over: fullForm.over.slice(0, 2), under: fullForm.under.slice(0, 2) };
-  const { page, ctx } = await open(1440, 900);
+  await page.click('#hmScore button[data-scoring="half"]');
   const r = await read(page);
-  ok('two gaps are not a row: the market figures are hidden rather than short', r.market === false && r.figs.length === 0, String(r.figs.length));
-  ok('and nothing on the page apologizes for it', !LOADING.test(r.body));
-  EDGE.vsExperts = full;
-  EDGE.seasonForm = fullForm;
-  await ctx.close();
-}
-// A season list with three rows stands on its own when the week has none:
-// the band shows that one list, with no tabs over it.
-{
-  const full = EDGE.vsExperts, fullForm = EDGE.seasonForm;
-  EDGE.vsExperts = { buys: [], fades: [] };
-  let { page, ctx } = await open(1440, 900);
-  let r = await read(page);
-  ok('with the week empty, the overview and the two season sides are the band', r.market === true && r.cats.map(c => c.t).join(' | ') === 'Overview | Long term overperform | Long term underperform' && r.figs.length === 2, JSON.stringify(r.cats));
-  await ctx.close();
-  // A forward call too short to print gives its tab back to the season record.
-  EDGE.seasonForm = { ...fullForm, likelyOver: [], likelyUnder: [] };
-  ({ page, ctx } = await open(1440, 900));
-  r = await read(page);
-  ok('with no forward call, each side falls back to the season record', r.cats.map(c => c.t).join(' | ') === 'Overview | Outscoring their projections | Trailing their projections', JSON.stringify(r.cats));
-  await ctx.close();
-  // A player who leads two lists is printed once, on the season call: the
-  // week's value takes its next player instead.
-  EDGE.vsExperts = full;
-  EDGE.seasonForm = { ...fullForm, likelyOver: [{ ...fullForm.over[0], name: 'Drake London', position: 'WR', team: 'ATL', opponent: 'CAR', formGap: 9.9 }, ...fullForm.likelyOver] };
-  ({ page, ctx } = await open(1440, 900));
-  r = await read(page);
-  const names = r.figs.map(f => f.k.split(' · ')[1].split(',')[0]);
-  ok('a player leading two lists is on the overview once, under the season call, the value card showing its next player',
-     r.figs.length === 4 && new Set(names).size === 4 && names[0] !== 'Drake London' && names[1] === 'Drake London', JSON.stringify(names));
-  // And across the tabs: no player on two, the season call keeping him.
-  const tabs = [];
-  for (let i = 2; i <= 5; i++) {
-    await page.click(`#diffCats button:nth-child(${i})`);
-    tabs.push((await read(page)).figs.map(f => f.k.split(' · ')[1].split(',')[0]));
-  }
-  const tabNames = tabs.flat();
-  ok('no player is on two tabs, and the season call keeps the player both lists want',
-     new Set(tabNames).size === tabNames.length && tabs[1].includes('Drake London') && !tabs[0].includes('Drake London') && tabs[0].length >= 3,
-     JSON.stringify(tabs));
-  await ctx.close();
-  EDGE.vsExperts = { buys: [], fades: [] };
-  EDGE.seasonForm = { ...fullForm, under: [], likelyOver: [], likelyUnder: [] };
-  ({ page, ctx } = await open(1440, 900));
-  r = await read(page);
-  ok('one list long enough is a band of one, with no tabs', r.market === true && r.cats.length === 0 && r.figs.length === 5 && r.figs[0].k.startsWith('Trust · Puka Nacua'), JSON.stringify([r.cats, r.figs.map(f => f.k)]));
-  EDGE.vsExperts = full;
-  EDGE.seasonForm = fullForm;
+  ok('with storage blocked the switch still works', r.exShown.join() === 'half' && r.cards[0].name === 'Derrick Henry', JSON.stringify(r.exShown));
   await ctx.close();
 }
 
@@ -663,11 +505,12 @@ console.log('\non a phone');
     const ul = document.querySelector('.hm-tiles'), first = document.querySelector('.hm-tiles li');
     const cs = getComputedStyle(ul);
     return { scrolls: cs.overflowX === 'auto' && ul.scrollWidth > ul.clientWidth, left: Math.round(first.getBoundingClientRect().left),
-      ulLeft: Math.round(ul.getBoundingClientRect().left), figsStacked: new Set([...document.querySelectorAll('#diffBody .hm-fig')].map(f => Math.round(f.getBoundingClientRect().left))).size,
+      ulLeft: Math.round(ul.getBoundingClientRect().left), exStacked: new Set([...document.querySelectorAll('#hmExSets .hm-ex-list:not([hidden]) .hm-ex')].map(f => Math.round(f.getBoundingClientRect().left))).size,
       tab: (() => { const t = document.querySelector('.tabbar'); const b = t.getBoundingClientRect(); return { h: Math.round(b.height), bottom: Math.round(b.bottom), fixed: getComputedStyle(t).position }; })() };
   });
   ok('the tile row scrolls sideways, edge to edge, with the first tile on the gutter', row.scrolls && row.ulLeft === 0 && row.left === 16, JSON.stringify(row));
-  ok('the market figures stack, one per row', row.figsStacked === 1 && r.figs.length === 4, String(row.figsStacked));
+  ok('the examples stack, one per row', row.exStacked === 1 && r.cards.length === 3, String(row.exStacked));
+  ok('the sample stacks too', r.sample && r.sampleCards.length === 3);
   ok('the tab bar is fixed to the foot of the screen, 68px', row.tab.fixed === 'fixed' && row.tab.h === 68 && row.tab.bottom === 844, JSON.stringify(row.tab));
   ok('the lead stacks its photograph on top, and the four cards go two across',
      r.rows.length === 5 && r.rows[0].picTop && new Set(r.rows.slice(1).map(x => x.top)).size === 2 && r.rows.slice(1).every(x => x.w < 200), JSON.stringify(r.rows.map(x => [x.top, x.w])));
@@ -706,7 +549,7 @@ console.log('\nkeyboard focus');
 {
   const { page, ctx } = await open(1440, 900);
   const rings = [];
-  for (const sel of ['header.site .nav a', '.hm-entry a', '#different .hm-sec-head a', '.hm-tile', '#readGrid a', '#lanes .hm-lane', '#how .hm-how-more a', '.foot-nav a']) {
+  for (const sel of ['header.site .nav a', 'a.hm-primary', '#hmScore button', '#hmExSets a', '.hm-more a', '#sample .hm-how-more a', '.hm-tile', '#readGrid a', '#how .hm-how-more a', '.foot-nav a']) {
     rings.push(await page.evaluate(sel => { const e = document.querySelector(sel); if (!e) return null; e.focus(); const cs = getComputedStyle(e);
       return { sel, style: cs.outlineStyle, width: parseFloat(cs.outlineWidth) }; }, sel));
   }
@@ -772,18 +615,12 @@ MODE = 'live';
 // ── 3g. a board with no market behind it ────────────────────────────────────
 // When this week's prop store is empty (props.live false) every row is
 // unpriced. That zero is not a figure, it is the props not having been read,
-// so the KPI band drops the cell and the tiles drop their priced count rather
-// than printing a 0.
+// so the tiles drop their priced count rather than printing a 0.
 console.log('\na board with no market behind it');
 MODE = 'noboard';
 {
   const { page, ctx } = await open(1440, 900);
   const r = await read(page);
-  ok('the KPI band still shows', r.kpi === true && r.kpis.length === 2, JSON.stringify(r.kpis));
-  ok('the priced cell is dropped, not printed as zero',
-     r.kpis.map(k => k.v + ' ' + k.k).join(' | ') === '310 Players ranked this week (Week 3) | 7 Pieces the desk published',
-     r.kpis.map(k => k.v + ' ' + k.k).join(' | '));
-  ok('and nothing on the band is mint', r.kpis.every(k => !k.good));
   ok('the tiles keep their ranked count and drop the priced one',
      r.tiles.map(t => t.live).join(' | ') === '34 ranked | 72 ranked | 98 ranked | 42 ranked | 32 ranked | 32 ranked', r.tiles.map(t => t.live).join(' | '));
   await ctx.close();
@@ -796,13 +633,13 @@ MODE = 'dead';
 for (const [w, h, tag] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
   const { page, ctx } = await open(w, h);
   const r = await read(page);
-  ok(`${tag}: the page still has its h1 and its search field`, r.h1 === 'Every player, priced off the betting market.' && r.find === true);
-  ok(`${tag}: the three entry points still stand`, r.entries.length === 3);
-  ok(`${tag}: the market row is hidden, not empty`, r.market === false && r.figs.length === 0);
+  ok(`${tag}: the page still has its h1 and its search field`, r.h1 === 'Where the betting market and fantasy consensus disagree.' && r.find === true);
+  ok(`${tag}: the primary action and the other tools still stand`, r.primary.length === 1 && r.more.length === 6);
+  ok(`${tag}: the examples are hidden, not an empty frame`, r.examples === false && r.cards.length === 0 && r.asOf === null);
+  ok(`${tag}: the sample is hidden, not empty`, r.sample === false);
   ok(`${tag}: the tiles stay, without a live line`, r.tiles.length === 6 && r.tiles.every(t => t.live === null), r.tiles.map(t => t.live).join(','));
   ok(`${tag}: the story cards are hidden, not empty`, r.articles === false && r.rows.length === 0);
   ok(`${tag}: the method is still there`, r.how === true);
-  ok(`${tag}: the KPI band is hidden rather than a band of blanks`, r.kpi === false && r.kpis.length === 0);
   ok(`${tag}: nowhere on the page says it is loading`, !LOADING.test(r.body), (r.body.match(LOADING) || [''])[0]);
   ok(`${tag}: and it still does not scroll sideways`, r.overflow === 0, String(r.overflow));
   await ctx.close();

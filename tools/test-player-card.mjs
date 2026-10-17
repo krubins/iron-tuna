@@ -186,7 +186,9 @@ ok('the cards are advertised, one URL per slug',
 console.log('\nthe lookup is reachable from the homepage');
 ok('the masthead links the card directly', /<nav class="nav"[\s\S]*?href="\/player">Search<\/a>/.test(front));
 ok('front.html loads the lookup', front.includes('src="/player-search.js"'));
-ok('and uses it to link the names it paints', /ITPlayerSearch\.linkPlayers/.test(front));
+// The names on the homepage arrive linked: the worker writes each example's
+// player as a link to his card (17 Oct 2026, growth plan Phase 3).
+ok('and the names it shows link to their cards', /<a href="\/player\/' \+ e\(_homeSlug\(x\.name\)\)/.test(read('_worker.js')));
 // October 2026: the hero's search field IS the page's search box, mounted on
 // the shared lookup; the masthead's Search link is the route to the card.
 ok('it carries exactly one in-page search box', (front.match(/data-player-search=/g) || []).length === 1 && !/rb-search/.test(front));
