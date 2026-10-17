@@ -673,7 +673,9 @@ body.dk-tailback #dkTitle{max-width:920px}
     lens = b.getAttribute('data-lens'); try { localStorage.setItem('it.lane', lens === 'dfs' ? 'dfs' : 'fantasy'); } catch (x) {}
     paintLens();
   });
-  var vacant = function (head, detail) { $('dkEmptyH').textContent = head; $('dkEmptyP').textContent = detail || ''; };
+  // The worker may have painted the piece's first screen (headline, dek) and
+  // hidden this box; a failure still has to be said, under it.
+  var vacant = function (head, detail) { $('dkEmptyH').textContent = head; $('dkEmptyP').textContent = detail || ''; $('dkEmpty').hidden = false; };
   function boot() {
     var w = wanted();
     if (w.kind) {

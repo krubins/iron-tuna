@@ -825,6 +825,14 @@ jobs:
         if: ${{ !cancelled() }}
         run: node tools/test-usage.mjs
 
+      # The worker writes the opening rankings view, a player's weekly take
+      # and a desk piece's head into the HTML (docs/growth-plan.md, Phase 2).
+      # The pre-render has to rank and classify exactly as the page does, say
+      # a bye as a bye, read only this week's props, and 404 an unknown player.
+      - name: Pre-rendered answers and the week
+        if: ${{ !cancelled() }}
+        run: node tools/test-prerender.mjs
+
       # it-metrics.js rides on every public page (build-seo stamps it), so a
       # syntax error there would silently stop every outcome event site-wide.
       - name: Parse it-metrics.js

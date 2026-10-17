@@ -66,6 +66,9 @@ p{color:var(--sec);margin:0 0 16px}
 .pi-conf{font-size:12px;font-weight:800;padding:2px 6px;border-radius:3px;border:1px solid var(--line2);color:var(--sec);margin-left:6px}
 .pi-conf.HIGH{color:var(--teal)} .pi-conf.LOW{color:var(--muted)}
 .pi-note{font-size:14.5px;color:var(--muted);line-height:1.55}
+#piFresh{margin:4px 0 14px}
+.pi-state{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line2);border-radius:10px;padding:14px 16px;margin:0 0 12px}
+.pi-state b{display:block;font-size:18px;color:var(--text);margin-bottom:2px}
 </style>
 </head>
 <body>
@@ -115,17 +118,18 @@ p{color:var(--sec);margin:0 0 16px}
   <h1 id="piName">Player</h1>
   <div class="pi-meta" id="piMeta"></div>
 </div>
+<p class="pi-note" id="piFresh"></p>
+<div class="pi-take" id="piTake" hidden></div>
 <p class="is-empty" id="piEmpty">Reading the boards&hellip;</p>
 <div id="piBody" hidden>
   <div class="pi-boards" id="piBoards"></div>
   <div id="piDelta"></div>
-  <div class="pi-take" id="piTake" hidden></div>
 
   <h2>Every horizon</h2>
   <div class="is-scroll"><table class="is-table" id="piHorizons"><thead><tr><th>Horizon</th><th class="num">Iron Tuna</th><th class="num">Consensus</th><th class="num">Vegas</th><th class="num">Points</th><th class="num">Games</th><th>Bye</th><th>Schedule</th><th>Confidence</th><th>Vegas basis</th></tr></thead><tbody></tbody></table></div>
   <p class="pi-note" id="piHorizonNote"></p>
 
-  <h2>Current props and line movement</h2>
+  <h2>This week&rsquo;s props and line movement</h2>
   <div class="is-scroll"><table class="is-table" id="piProps" hidden><thead><tr><th>Market</th><th class="num">Open</th><th class="num">Current</th><th class="num">Move</th><th class="num">Books</th><th class="num">Agreement</th></tr></thead><tbody></tbody></table></div>
   <p class="is-empty" id="piPropsEmpty"></p>
   <div class="is-grid" id="piCards"></div>
@@ -200,7 +204,26 @@ p{color:var(--sec);margin:0 0 16px}
     // used to (the one rankings page's own keys: DST, not DEF).
     if (/^(QB|RB|WR|TE|K|DST)$/.test(pos)) { $('piBack').href = '/rankings#pos=' + pos; $('piBack').innerHTML = '&larr; Every ' + e(pos) + ' this week'; }
     var L = window.ITLeague, mine = !!(L && L.has);
-    if (w) {
+    // WHAT THE NUMBERS ARE AND HOW OLD (Phase 2, 17 Oct 2026): the week, the
+    // scoring they are at, when the board was computed and when the market
+    // under it was last read, with the method one click away and the next
+    // useful step beside it. A time the payload did not send is not printed.
+    var wkN = (w && w.week) || j.week, up = j.updated || {};
+    var stamp = function (ms) { return ms && window.ITSeason ? ITSeason.kickoff(ms) : ''; };
+    $('piFresh').innerHTML = [wkN ? 'Week ' + e(wkN) : null, mine ? 'points at your league&rsquo;s scoring' : 'points at PPR',
+      up.board ? 'board computed ' + e(stamp(up.board)) : null,
+      up.odds ? 'market read ' + e(stamp(up.odds)) : 'no market read on file'].filter(Boolean).join(' &middot; ') +
+      '. <a href="/rankings#method">How these are built</a>' + (mine ? '' : ' &middot; <a href="/my-league#settings">Score it at my league</a>');
+    // A bye or a listed absence is the week's answer: no rank, no Market
+    // Delta, because a zero ranked WR99 "with the market in agreement" is a
+    // verdict on the calendar, not on him. A kicked-off game keeps its
+    // pregame numbers and says that is what they are.
+    var started = w && (w.gameState === 'in_progress' || w.gameState === 'completed');
+    if (w && (w.bye || w.out)) {
+      $('piBoards').innerHTML = '<div class="pi-state"><b>' + (w.bye ? 'On bye in Week ' + e(wkN) : 'Listed ' + e((w.injury && (w.injury.thisWeek || w.injury.status)) || 'out') + ' for Week ' + e(wkN)) + '</b>' +
+        'No projection this week. The longer horizons below still count him' + (w.bye ? '.' : ' for the games he is expected back.') + '</div>';
+      $('piDelta').innerHTML = '';
+    } else if (w) {
       var pts = function (b) { var m = score(w[b].stats, pos, 1); return m != null ? m : w[b].points; };
       $('piBoards').innerHTML =
         '<div class="pi-board"><i>Iron Tuna</i><b>' + e(pos) + w.ironTuna.rank + '</b><span>' + n1(pts('ironTuna')) + ' pts <span class="pi-conf ' + e(w.ironTuna.confidence) + '">' + e(w.ironTuna.confidence) + '</span></span></div>' +
@@ -215,6 +238,7 @@ p{color:var(--sec);margin:0 0 16px}
         (drivers.length ? '<p style="margin:0 0 4px;font-weight:700;color:var(--text)">' + (kind === 'agree' ? 'What moved' : d.points > 0 ? 'Why Vegas likes him' : 'Why Vegas is lower on him') + '</p><table class="pi-drivers">' +
           drivers.map(function (x) { return '<tr><td>' + e(x.label) + '</td><td class="num">' + (x.from == null ? '' : (x.market === 'anytimeTD' ? sign(x.from) : n1(x.from)) + ' → ') + (x.market === 'anytimeTD' ? sign(x.to) : x.market === 'teamImplied' ? n1(x.to) : n1(x.to)) + '</td><td class="num ' + (x.delta > 0 ? 'up' : 'dn') + '">' + sign(x.delta, x.unit === 'probability points' ? ' pts' : x.unit === 'points vs season average' ? ' pts' : '') + (x.pct != null ? ' (' + sign(x.pct, '%') + ')' : '') + '</td></tr>'; }).join('') + '</table>' : '') +
         '<p style="margin:6px 0 0">' + e(w.why ? w.why.summary : '') + '</p></div>';
+      if (started) $('piDelta').insertAdjacentHTML('afterbegin', '<p class="pi-note"><b>His Week ' + e(wkN) + ' game has ' + (w.gameState === 'completed' ? 'finished' : 'kicked off') + '.</b> These are the numbers from before kickoff, kept as they were.</p>');
     }
     if (j.take) { $('piTake').innerHTML = '<h2>Iron Tuna Take</h2>' + e(j.take); $('piTake').hidden = false; }
     var rows = Object.keys(HZ).filter(function (k) { return j.horizons[k]; }).map(function (k) {
@@ -230,11 +254,16 @@ p{color:var(--sec);margin:0 0 16px}
     if (mk.length) {
       $('piProps').querySelector('tbody').innerHTML = mk.map(function (m) { var h = j.movement[m]; var td = m === 'anytimeTD';
         return '<tr><td><b>' + e(LABEL[m] || m) + '</b></td><td class="num">' + (td ? sign(h.tdOpenProbability, '%') : n1(h.open)) + '</td><td class="num">' + (td ? sign(h.tdCurrentProbability, '%') : n1(h.current)) + '</td><td class="num">' + (td ? sign(h.tdCurrentProbability != null && h.tdOpenProbability != null ? Math.round((h.tdCurrentProbability - h.tdOpenProbability) * 10) / 10 : null, ' pts') : sign(h.movement) + (h.percentChange != null ? ' (' + sign(h.percentChange, '%') + ')' : '')) + '</td><td class="num">' + h.booksMoved + ' of ' + h.books + '</td><td class="num">' + (h.agreement == null ? '—' : Math.round(h.agreement * 100) + '%') + '</td></tr>'; }).join('');
-      $('piProps').hidden = false; $('piPropsEmpty').hidden = true;
+      $('piProps').hidden = false;
+      $('piPropsEmpty').textContent = 'Week ' + (wkN || '') + ' lines' + (j.propsAsOf ? ', last seen ' + stamp(j.propsAsOf) : '') + '. Open is the first line pulled this week.';
     } else {
-      $('piPropsEmpty').textContent = 'No sportsbook has posted a prop on him this week. His Vegas number is the game line’s scoring environment applied to his line, and it says so above.';
+      $('piProps').hidden = true;
+      $('piPropsEmpty').textContent = w && w.bye ? 'He has no game this week, so there are no props to show. His last week\u2019s lines are not shown as this week\u2019s.'
+        : w && w.out ? 'Books do not price a player listed out, so there are no props to show.'
+        : 'No sportsbook has posted a prop on him this week. His Vegas number is the game line\u2019s scoring environment applied to his line, and it says so above.';
     }
-    if (w && w.vegasProjection) {
+    $('piCards').innerHTML = '';
+    if (w && w.vegasProjection && !w.bye && !w.out) {
       var vp = w.vegasProjection;
       $('piCards').innerHTML = '<div class="is-card"><span class="is-tag ' + (vp.status === 'full' ? 'is-live' : '') + '">' + e(vp.label || vp.status) + '</span><h3>Vegas projection</h3><p>' + (vp.priced ? 'Priced: ' + e(vp.priced.join(', ')) + '. ' : '') + (vp.missing && vp.missing.length ? 'Unpriced: ' + e(vp.missing.join(', ')) + '. ' : '') + (vp.reasons && vp.reasons.length ? e(vp.reasons.join('; ')) + '.' : '') + '</p></div>';
     }
