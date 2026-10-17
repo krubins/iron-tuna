@@ -13,6 +13,8 @@
  *   league_setup_start / league_setup_complete
  *   subscribe_request      an email form succeeded (the address is never sent)
  *   share_click            a share or copy-link control was used
+ *   surface_click          a link marked data-it-surface was followed (the
+ *                          homepage examples, its primary action, its sample)
  *
  * A success is its own event, never a click. Each one is sent at most once per
  * visit for the same tool and key, so a rerender, a retry or a reload of the
@@ -27,6 +29,13 @@
  * outside referrer's host, else "direct". A click between our own pages never
  * starts a visit or changes its source. See docs/growth-plan.md for the UTM
  * convention the owner's own links follow.
+ *
+ * Surfaces (Phase 3): a link carrying data-it-surface="<name>" sends a
+ * surface_click and remembers the surface for the rest of the visit, and the
+ * next tool_success and league setup events in that visit carry it as
+ * `surface`, unless the page named one itself. That is how /admin can say how
+ * many visits that clicked a homepage example went on to a result or a saved
+ * league, without reading anything but the events.
  */
 (function () {
   if (window.ITMetrics) return;
@@ -138,9 +147,26 @@
     v.sent[id] = 1; v.last = Date.now();
     set('it.visit', JSON.stringify(v));
     var p = clean(props || {}); p.tool = tool; if (key != null) p.key = String(key).slice(0, 48);
+    if (!p.surface && v.surf && /^(tool_success|league_setup_start|league_setup_complete)$/.test(event)) p.surface = v.surf;
     send(event, p);
     return true;
   }
+  // The surface a reader clicked through, kept on the visit record so the page
+  // the link opens (same visit, same tab) can read it back.
+  function surfaceClick(el) {
+    var s = clip(el.getAttribute('data-it-surface'), 32);
+    if (!s) return;
+    var to = '';
+    try { to = new URL(el.getAttribute('href') || '', location.href).pathname.replace(/^\/+/, '').split('/')[0]; } catch (e) {}
+    try { v = JSON.parse(get('it.visit') || 'null') || v; } catch (e) {}
+    v.surf = s; v.last = Date.now();
+    set('it.visit', JSON.stringify(v));
+    once('surface_click', clip(to || 'home', 32), s, { surface: s });
+  }
+  document.addEventListener('click', function (e) {
+    var el = e.target && e.target.closest ? e.target.closest('a[data-it-surface]') : null;
+    if (el) surfaceClick(el);
+  }, true);
 
   api.uid = function () { return uid; };
   api.visit = function () { return v ? { id: v.id, src: v.src, med: v.med, cmp: v.cmp, n: v.n } : null; };

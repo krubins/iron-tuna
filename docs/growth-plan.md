@@ -43,8 +43,8 @@ expectations and fantasy consensus. The retention feature is My Week.
 | # | Phase | Status | Branch |
 |---|---|---|---|
 | 1 | Analytics and admin dashboard | **Done** (2026-10-17, merged as #442) | `claude/growth-phase-1` |
-| 2 | Reliability and search visibility | **Done** (2026-10-17, awaiting review and merge) | `claude/growth-phase-2` |
-| 3 | First-visit experience | Not started | |
+| 2 | Reliability and search visibility | **Done** (2026-10-17, merged as #443) | `claude/growth-phase-2` |
+| 3 | First-visit experience | **Done** (2026-10-17, awaiting review and merge) | `claude/growth-phase-3` |
 | 4 | Repeat usage (My Week) | Not started | |
 | 5 | Email and sharing | Not started | |
 | 6 | Distribution and evaluation | Not started | |
@@ -221,8 +221,8 @@ beside every percentage and `n/a` where there is no denominator:
 
 ## Outstanding configuration and access
 
-- **Merge and deploy** `claude/growth-phase-2` (owner). Phase 1 merged as
-  #442 and is live, but on 2026-10-17 production held no outcome events yet;
+- **Merge and deploy** `claude/growth-phase-3` (owner). Phases 1 and 2 merged
+  as #442 and #443. On 2026-10-17 production held no outcome events yet;
   check /admin's Tools table shows rows within a day, and if not, check that
   `/api/track` is accepting them. Retention needs 8 days of collection before
   the first mature cohort.
@@ -348,13 +348,119 @@ Read with raw HTTP and in Chromium at 390px against production, before any chang
 - The rest of the desk body stays client-rendered: its sections are typed data
   that only `desk.html` knows how to lay out.
 
-## Next steps: Phase 3 (first visit)
+## Phase 3: first-visit experience (2026-10-17)
 
-Start here when told "Start next phase". The Phase 3 requirements are under
-"Later phases" below. Two things Phase 2 leaves for it: `/vegas-edge`, the
-destination of the homepage's primary action, has no answer in its initial
-HTML yet, and `updated` on the boards payload is the timestamp each homepage
-example should carry.
+### What changed
+
+- **The promise and one action.** The homepage's h1 is now "Where the betting
+  market and fantasy consensus disagree.", with one sentence under it and one
+  primary action, "See this week's differences", to `/vegas-edge#board`. The
+  search field and the other tools (Rankings, Start / Sit, Waivers, Trade
+  tools, DFS lineups, Articles) sit under the examples as plain secondary
+  links. Title, description and social tags restate the promise
+  (`build-seo` regenerated the JSON-LD and Twitter tags).
+- **Up to three current examples, in the first HTML.** The worker writes them
+  into `/` (`homeExamples`, `homePrerender`, `homeShellFill` in `_worker.js`)
+  off the same week board `/rankings` pre-renders from, plus the week's quoted
+  lines from the market digest (`marketHistoryWeek`, one small read). Each
+  card: player, position, club, fixture and kickoff; the gap in points; market
+  and consensus projections; "Week N, <scoring>"; a **Derived estimate** label
+  on the market points ("converted from N books' props"); a **Quoted prop**
+  label on the sentence that explains the gap ("Books quote 31.5 rushing
+  yards; the consensus projects 63.8. Line last seen ..."). Under the cards:
+  the week, when the board was computed, and when the odds behind the market
+  points were read.
+- **Suppression.** A player is an example only when: skill position; one game
+  this week, still to be played; no bye, no listed absence, no injury
+  designation but Active or Probable, not left off a priced game; market side
+  priced entirely off quoted props (`basis` `props`, full projection, no
+  missing market, two or more books); consensus at least 3 points (a stale
+  backup line otherwise); both sides scored from their stat lines at the
+  card's own preset; gap at least `delta.minPointsStrong` (2) points and
+  `delta.strongPct` (15%); within twice `prominentBand` on either side's rank;
+  and the stat that moves the gap most has a line a book quoted this week.
+  Widest gap first, at most three; fewer is shown as fewer, none as one line
+  linking to the board, and no board or no lines at all leaves the block
+  hidden. Not in Washington.
+- **Scoring selector.** PPR, Half PPR and Standard buttons switch between
+  three lists the worker already computed (nothing is re-scored in the
+  browser). The choice is remembered in this browser (`it.hmScoring`) and the
+  page works without storage.
+- **Sample My Week**, a new section after the hero, labelled "Sample" in its
+  heading and "A made-up roster of real players ... not your league, and
+  nothing here is saved" under it. Three cards at the chosen scoring: a flex
+  call between the players ranked FLEX 30 and FLEX 34 (chosen once, so the
+  roster does not change with the scoring), a market alert (the widest
+  example), and pickups explicitly deferred until a league's rosters are
+  saved. Its action goes to `/my-leagues#connect`.
+- **Fewer competing sections.** The rotating five-tab market band, the "Play
+  Your Way" lane tiles (two lanes, eight tool tiles) and the KPI band are
+  gone. The page is now hero, sample My Week, position tiles, desk, How it
+  works. The homepage no longer fetches `/api/vegas-edge` (334 KB) at all.
+- **Measurement.** A link marked `data-it-surface` (`home_primary`,
+  `home_examples`, `home_sample`) sends a new outcome event, `surface_click`,
+  and `it-metrics.js` tags the rest of that visit's `tool_success` and league
+  setup events with `surface`. Picking a scoring is itself a `tool_success`
+  for tool `home_examples`. `/api/admin/usage` gains `surfaces` (visits that
+  clicked, then a result, then a saved league, plus visits with a tagged
+  result), shown on /admin as "Homepage surfaces: clicked, then used".
+
+### What the live data produced
+
+Run against production's Week 6 board and prop lines on 2026-10-17 (a scratch
+harness, not committed). At PPR: Omarion Hampton −9.5 (books quote 31.5
+rushing yards against a consensus 63.8), Braelon Allen +8.9 (65.5 against
+20.5), Marvin Harrison Jr. −6.6 (21.5 receiving yards against 56.1). These are
+disagreements between two projections, not claims about outcomes. Kendre
+Miller (consensus 0.9) and every no-line fade were suppressed.
+
+### Phase 3 verification (2026-10-17)
+
+- `node tools/test-home-examples.mjs` (new, in CI): 74 checks. One fixture
+  player per suppression rule, each proven to lead once its rule is lifted;
+  the cap at three; Half PPR and Standard re-ordering, and a Standard-only
+  disagreement; every figure equal to `it-league.js` at the card's preset;
+  the explanation's quoted line and touchdown sentence; card markup, labels,
+  escaping, no em dash; the sample pair fixed across presets, the tie skip and
+  the level case; the shell fill (literal `$`, untouched without data); the
+  route; the real worker with no data serving the shell with both blocks
+  hidden and no-store.
+- `tools/test-homepage.mjs` (Chromium, in CI) rewritten for the new page: 139
+  checks, including the scoring switch, persistence, blocked storage, phone
+  stacking, focus rings, no `/api/vegas-edge` read, and the refusing pass.
+- `tools/test-metrics.mjs`: 62 checks (13 new: surface counts off the real
+  worker SQL on SQLite, the scoring pick as one result, `surface_click` on the
+  primary action, the next rankings result and a league save tagged with the
+  surface, a later visit untagged, the /admin table).
+- `test-ranks`, `test-player-links`, `test-player-card` updated for the
+  deliberate changes (sample section before the tiles; homepage names are
+  linked by the worker, not repainted).
+- Full CI node suite less `test-dry-run`: 75 of 75 pass. `build-chrome`,
+  `build-ranks`, `build-seo`, `build-bylines --check` clean; `build-front`
+  and `build-worker-faces` produce no diff.
+- Browser against live production data through the branch's pre-render: no
+  page errors, no sideways scroll at 390 or 1280.
+- Not run: `test-dry-run.mjs` (nothing here touches the newsroom schedule).
+
+### Still open from Phase 3
+
+- **Baseline for the funnel.** No `surface_click` exists before this deploys.
+  After a full week, read /admin: homepage visits that clicked an example or
+  the primary action, and the share that went on to a result and to a saved
+  league. Small samples are flagged.
+- `/vegas-edge` itself is still client-rendered; its first screen is still
+  "the board did not answer" until its script runs.
+- The examples use the default board. A reader with a saved league sees the
+  presets, not their own scoring, on the homepage (every other board restates
+  in their points).
+
+## Next steps: Phase 4 (repeat usage)
+
+Start here when told "Start next phase". The Phase 4 requirements are under
+"Later phases" below. Phase 3 leaves it a labelled sample of what My Week
+should look like (flex call, market alert, pickups only with a known pool),
+and `home_sample` as the surface to measure whether the sample leads to a
+saved league.
 
 ## Phase 2 requirements, as given (for reference)
 

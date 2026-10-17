@@ -833,6 +833,13 @@ jobs:
         if: ${{ !cancelled() }}
         run: node tools/test-prerender.mjs
 
+      # Growth plan Phase 3: the homepage's examples and sample My Week, which
+      # the worker writes into "/". Each suppression rule has a fixture player
+      # that would otherwise lead; the numbers match it-league.js.
+      - name: Homepage examples and sample My Week
+        if: ${{ !cancelled() }}
+        run: node tools/test-home-examples.mjs
+
       # it-metrics.js rides on every public page (build-seo stamps it), so a
       # syntax error there would silently stop every outcome event site-wide.
       - name: Parse it-metrics.js
