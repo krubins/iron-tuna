@@ -11175,6 +11175,7 @@ async function nlHash(s) {
   const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
   return Array.from(new Uint8Array(d)).slice(0, 4).map(x => x.toString(16).padStart(2, '0')).join('');
 }
+const FINDING_HOURLY_CAP = 600;     // shared findings made per hour, site-wide
 async function findingFreeze(env, rec, now) {
   if (!(await nlReady(env))) return null;
   const at = Number.isFinite(now) ? now : Date.now();
@@ -18876,6 +18877,14 @@ export default {
       let b = {}; try { b = await request.json(); } catch (e) {}
       const preset = nlPreset(b.scoring);
       try {
+        // rl() above holds only once RATE_KV is bound, and it is not, while
+        // every distinct pair and scoring is a stored row. A site-wide hourly
+        // cap in D1 is what bounds the table. The edition's own findings do
+        // not come through here and are never capped.
+        if (await nlReady(env)) {
+          const n = await env.LEADS_DB.prepare('SELECT COUNT(*) AS n FROM findings WHERE created_at > ?').bind(Date.now() - 3600000).first();
+          if (n && n.n >= FINDING_HOURLY_CAP) return json({ ok: false, error: 'busy' }, 429, c);
+        }
         const nb = await nlBoardNow(env);
         if (!nb) return json({ ok: false, error: 'no_board' }, 409, c);
         let rec = null;

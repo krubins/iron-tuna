@@ -662,6 +662,10 @@ player page, whose numbers move.
   because one page per shared link is thin by design) says "Dated finding.
   Frozen ... These numbers do not update." and links to the live player page
   and board. Social title, description, canonical and URL name the finding.
+- **A cap that holds without KV.** `/api/share/*` uses `rl()`, which does
+  nothing until `RATE_KV` is bound, and every distinct pair and scoring is a
+  stored row. At 600 shared findings in the last hour, site-wide, a share is
+  refused (`busy`) before the board is read. Mailed editions are not counted.
 - **Share images.** `/finding/<id>/card.svg`: the player or pair, the
   numbers, the week, the scoring, when frozen, the market label and the site
   name, on the site's dark ground. The finding page's "Save image" turns it
@@ -683,7 +687,7 @@ player page, whose numbers move.
 
 ### Phase 5 verification (2026-10-17)
 
-- `node tools/test-newsletter.mjs` (new, in CI): 111 checks, against SQLite
+- `node tools/test-newsletter.mjs` (new, in CI): 112 checks (the share cap added after review), against SQLite
   and a recorded Resend. Edition (homepage prefix, four at PPR, five of eight,
   suppression carried over, kickoff margin at 3h59 and 4h01, no board, no
   lines); email (subject, labels, UTM, finding links, footer, text part,

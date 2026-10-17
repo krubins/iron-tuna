@@ -382,6 +382,12 @@ console.log('\nthe routes, on the real worker');
   ok('an unknown image is a 404', (await call(base, '/finding/2026-w6-nobody-ppr-00000000/card.svg')).status === 404);
   r = await call(base, '/api/share/finding', { method: 'POST', body: JSON.stringify({ player: 'Drake London', scoring: 'ppr' }) });
   ok('sharing with no week board: refused, nothing invented', r.status === 409 && (await r.json()).error === 'no_board');
+  // rl() is a no-op without RATE_KV, so the hourly cap in D1 is what bounds
+  // the table: at 600 findings in the last hour, a share is refused.
+  for (let i = 0; i < 600; i++) await rdb.prepare('INSERT INTO findings (id, kind, season, week, scoring, created_at, payload) VALUES (?, ?, ?, ?, ?, ?, ?)').bind('cap-' + i, 'gap', 2026, 6, 'ppr', Date.now(), '{}').run();
+  r = await call(base, '/api/share/finding', { method: 'POST', body: JSON.stringify({ player: 'Drake London', scoring: 'ppr' }) });
+  ok('600 shared findings in an hour: the next is refused before any board read', r.status === 429 && (await r.json()).error === 'busy');
+  await rdb.prepare("DELETE FROM findings WHERE id LIKE 'cap-%'").run();
   ok('the admin routes need the key', (await call(base, '/api/admin/newsletter')).status === 403 && (await call(base, '/api/admin/newsletter/preview')).status === 403 && (await call(base, '/api/admin/newsletter/test', { method: 'POST', body: '{}' })).status === 403);
   j = await (await call(base, '/api/admin/newsletter?key=k')).json();
   ok('/api/admin/newsletter: off, what it needs, and the counts', j.ok && j.config.open === false && j.config.need.includes('RESEND_API_KEY') && j.counts.unsubscribed === 1, JSON.stringify(j).slice(0, 300));
