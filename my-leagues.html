@@ -320,7 +320,10 @@ function rosterGrid(el) {
   var esc = window.ITSync ? ITSync.esc : function (x) { return String(x == null ? '' : x); };
   el.innerHTML = '<div class="ml-grid-card">' +
     '<div id="mlGridBox"></div>' +
-    '<div class="is-btns"><button type="button" class="is-btn primary" id="mlGridSave">Save these rosters</button></div>' +
+    // Typing is a way in from the start, not only the fallback after a failed
+    // read: a reader with no screenshot to hand should not have to fail first.
+    '<div class="is-btns"><button type="button" class="is-btn primary" id="mlGridSave">Save these rosters</button>' +
+      '<button type="button" class="is-btn sec" id="mlGridType">Type your roster instead</button></div>' +
     '<p class="is-note" id="mlGridMsg" role="status" aria-live="polite" style="margin:0"></p>' +
     // The boxes beside this one read their screenshots in the browser and say
     // so. This one cannot: a grid of two hundred names needs the reader on the
@@ -333,15 +336,18 @@ function rosterGrid(el) {
   // THE TYPED PATH (growth plan Phase 4). When the reader fails or the save
   // fails, the way forward is the by-hand form, opened with whatever was read
   // for the reader's own team already in it, so nothing read is lost.
-  function offerManual(lead) {
+  function openManual() {
     if (!window.ITLeagueForm) return;
     var t = grid && grid.teams && grid.mine >= 0 ? grid.teams[grid.mine] : null;
-    msg((lead ? lead + ' ' : '') + '<button type="button" class="is-btn sec" id="mlGridManual">Type your roster instead</button>', true);
-    document.getElementById('mlGridManual').addEventListener('click', function () {
-      ITLeagueForm.manual(null, { prefill: t ? t.players.map(function (p) { return p.name + (p.position ? ' ' + p.position : ''); }) : null,
-        note: t ? 'Your team as the reader found it is below. Check it, add the scoring and lineup, and save.' : 'Type your roster below, one player per line. Other teams can be added later from the rosters box.' });
-    });
+    ITLeagueForm.manual(null, { prefill: t ? t.players.map(function (p) { return p.name + (p.position ? ' ' + p.position : ''); }) : null,
+      note: t ? 'Your team as the reader found it is below. Check it, add the scoring and lineup, and save.' : 'Type your roster below, one player per line, or add players by name from the box under it. Other teams can be added later from the rosters box.' });
   }
+  function offerManual(lead) {
+    if (!window.ITLeagueForm) return;
+    msg((lead ? lead + ' ' : '') + '<button type="button" class="is-btn sec" id="mlGridManual">Type your roster instead</button>', true);
+    document.getElementById('mlGridManual').addEventListener('click', openManual);
+  }
+  document.getElementById('mlGridType').addEventListener('click', openManual);
 
   var grid = ITRosterGrid.mount(document.getElementById('mlGridBox'), {
     // The card above already carries the number and the title.
@@ -608,6 +614,9 @@ function rosterGrid(el) {
       '<div class="is-row2"><div class="is-field"><label>FAAB budget (blank if waiver priority)</label><input class="is-input" id="mfFaab" type="number" value="' + (S && S.faab != null ? esc(S.faab) : '') + '"></div><div class="is-field"><label>Your team name</label><input class="is-input" id="mfTeam" value="' + esc(L ? ((L.teams.find(function (t) { return t.teamId === L.userTeamId; }) || {}).name || 'My team') : 'My team') + '"></div></div>' +
       '<div class="is-field"><label>Your roster, one player per line (mark starters with * and IR with IR)</label><textarea class="is-input" id="mfRoster" rows="10" placeholder="* Josh Allen QB&#10;* Bijan Robinson RB&#10;Rachaad White RB&#10;IR Nico Collins WR">' + esc(o.prefill && o.prefill.length ? o.prefill.join(NL) : mine ? mine.players.map(function (p) { return (p.slot === 'starter' ? '* ' : p.slot === 'ir' ? 'IR ' : '') + p.name + (p.position ? ' ' + p.position : ''); }).join(NL) : '') + '</textarea></div>' +
       '<div class="is-btns"><button type="button" class="is-btn primary" id="mfSave">' + (L ? 'Save league' : 'Create league') + '</button>' + (o.cancel === false ? '' : '<button type="button" class="is-btn sec" id="mfCancel">Cancel</button>') + '</div><p class="is-note" id="mfMsg"></p></div>';
+    // Typing the roster gets the start/sit box's typeahead: pick a name and it
+    // lands as the next line, in the board's spelling.
+    if (window.ITPlayerSearch && ITPlayerSearch.rosterField) ITPlayerSearch.rosterField($('mfRoster'), { from: 'roster_manual' });
     // The cheat sheet's intake, on the by-hand form. What it replaces is a
     // reader retyping a settings page they are already looking at, into three
     // scoring boxes that cannot hold most of what it says.
