@@ -1993,6 +1993,10 @@ rather than every pageview in the window. It carries the same `internal = 0`
 filter as every other read: the operator reading their own site for twenty
 minutes does not become the site's time on site, and `&includeMe=1` puts it back.
 
+Since 2026-10-18 both figures read the **last 7 days** whatever range the page
+has selected (`Math.min(days, 7)`, shipped as `timeOnSite.days`), and the tiles
+say so. The other tiles still follow the selected window.
+
 If a real dwell time ever matters more than not touching ~100 static files, the
 shape is a `pagehide` beacon to `/api/track` and `timeOnSite` becomes a read over
 `site_events` — but the two-number habit should survive it, because a beacon that
