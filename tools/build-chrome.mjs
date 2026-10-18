@@ -133,6 +133,23 @@ const NAV = [
 // actually does and lands on that form.
 const CTA = { label: 'Customize My League', href: '/my-league#settings', cta: true };
 
+// The ribbon's player search, on every page (18 Oct 2026, Ken). The same
+// typeahead as the front page's hero and the player card, mounted by
+// /player-search.js off the data-player-search attribute. It sits OUTSIDE
+// <nav>: the nav is still the five headings and nothing else, and on a phone
+// the box stays in the top bar rather than behind the Menu button.
+//
+// Without script it is still a real form: Enter posts ?q= to /player, which
+// reads it. Pages that do not already load /player-search.js fetch it on first
+// use (NAV_JS below), so a page that never touches the box pays nothing.
+const FIND = [
+  '    <form class="search-field nav-find" role="search" autocomplete="off" action="/player" method="get">',
+  '      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>',
+  '      <input name="q" type="search" placeholder="Search players" aria-label="Search players and tools"',
+  '             role="combobox" aria-expanded="false" aria-autocomplete="list" data-player-search="ribbon" data-search-tools>',
+  '    </form>',
+];
+
 // The bar above the ribbon. It carried a key phrase until 2026-10-09; it is now
 // an empty navy rule matching the one under the ribbon, so it is hidden
 // from assistive tech.
@@ -238,6 +255,7 @@ function navHtml(file) {
     '    <nav class="nav" id="sitenav" aria-label="Main">',
     items,
     '    </nav>',
+    ...FIND,
     '    ' + link(CTA),
     '    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">',
     '      <span class="nav-toggle-bars"><span></span></span>Menu',
@@ -464,6 +482,25 @@ const NAV_JS = `${NAV_JS_OPEN}<script>
   document.addEventListener('click',function(e){
     if(h.getAttribute('data-nav-open')==='1'&&!h.contains(e.target)) set(false);
   });
+})();
+/* The ribbon search. A page that loads /player-search.js mounts it with its
+   own boxes; any other page fetches the file the first time a reader reaches
+   for the box, search-only (__itSearchOnly), so the page's tables and copy are
+   left exactly as they were. Once it has mounted, a focus event opens the
+   menu on whatever was typed while it loaded. */
+(function(){
+  var f=document.querySelector('header.site .nav-find'), q=f&&f.querySelector('input');
+  if(!q||document.querySelector('script[src="/player-search.js"]')) return;
+  var asked=false;
+  function want(){
+    if(asked||window.ITPlayerSearch) return;
+    asked=true; window.__itSearchOnly=true;
+    var s=document.createElement('script'); s.src='/player-search.js';
+    s.onload=function(){ if(document.activeElement===q){ try{ q.dispatchEvent(new Event('focus')) }catch(e){} } };
+    document.head.appendChild(s);
+  }
+  q.addEventListener('focus',want);
+  f.addEventListener('pointerenter',want);
 })();
 </script>${NAV_JS_CLOSE}`;
 function putNavJs(html) {

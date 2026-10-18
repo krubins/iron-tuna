@@ -102,6 +102,11 @@ td.you{color:var(--goldink);font-weight:700}
         <span class="nav-dd-menu" role="group" aria-label="Search"><a href="/player">Player Search</a><a href="/players">All Players</a></span>
       </span>
     </nav>
+    <form class="search-field nav-find" role="search" autocomplete="off" action="/player" method="get">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+      <input name="q" type="search" placeholder="Search players" aria-label="Search players and tools"
+             role="combobox" aria-expanded="false" aria-autocomplete="list" data-player-search="ribbon" data-search-tools>
+    </form>
     <a class="cta" href="/my-league#settings">Customize My League</a>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
       <span class="nav-toggle-bars"><span></span></span>Menu
@@ -189,6 +194,25 @@ function itInsSignup(e){e.preventDefault();var em=document.getElementById('itIns
   document.addEventListener('click',function(e){
     if(h.getAttribute('data-nav-open')==='1'&&!h.contains(e.target)) set(false);
   });
+})();
+/* The ribbon search. A page that loads /player-search.js mounts it with its
+   own boxes; any other page fetches the file the first time a reader reaches
+   for the box, search-only (__itSearchOnly), so the page's tables and copy are
+   left exactly as they were. Once it has mounted, a focus event opens the
+   menu on whatever was typed while it loaded. */
+(function(){
+  var f=document.querySelector('header.site .nav-find'), q=f&&f.querySelector('input');
+  if(!q||document.querySelector('script[src="/player-search.js"]')) return;
+  var asked=false;
+  function want(){
+    if(asked||window.ITPlayerSearch) return;
+    asked=true; window.__itSearchOnly=true;
+    var s=document.createElement('script'); s.src='/player-search.js';
+    s.onload=function(){ if(document.activeElement===q){ try{ q.dispatchEvent(new Event('focus')) }catch(e){} } };
+    document.head.appendChild(s);
+  }
+  q.addEventListener('focus',want);
+  f.addEventListener('pointerenter',want);
 })();
 </script><!--/chrome:navjs-->
 </body>

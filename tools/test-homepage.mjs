@@ -223,7 +223,9 @@ const read = page => page.evaluate(() => {
   const text = el => (el ? el.textContent.replace(/\s+/g, ' ').trim() : null);
   const px = el => el ? parseFloat(getComputedStyle(el).fontSize) : 0;
   const h1 = document.querySelector('h1');
-  const find = document.querySelector('form[role="search"]');
+  // The hero's field, not the ribbon's: every page's header carries a search
+  // box of its own since 18 Oct 2026, and it comes first in the document.
+  const find = document.querySelector('main form[role="search"], .hm-hero form[role="search"]');
   const input = find && find.querySelector('input[name="q"]');
   return {
     h1: text(h1), h1Px: px(h1), h1Drawn: vis(h1), h1Weight: h1 ? getComputedStyle(h1).fontWeight : null,

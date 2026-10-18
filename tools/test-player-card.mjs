@@ -191,7 +191,11 @@ ok('front.html loads the lookup', front.includes('src="/player-search.js"'));
 ok('and the names it shows link to their cards', /<a href="\/player\/' \+ e\(_homeSlug\(x\.name\)\)/.test(read('_worker.js')));
 // October 2026: the hero's search field IS the page's search box, mounted on
 // the shared lookup; the masthead's Search link is the route to the card.
-ok('it carries exactly one in-page search box', (front.match(/data-player-search=/g) || []).length === 1 && !/rb-search/.test(front));
+// 18 Oct 2026: the shared header carries the same box on every page, so the
+// count is of the page's own, outside <header class="site">.
+const frontBody = front.replace(/<header class="site">[\s\S]*?<\/header>/, '');
+ok('it carries exactly one in-page search box', (frontBody.match(/data-player-search=/g) || []).length === 1 && !/rb-search/.test(front));
+ok('and the ribbon carries the shared one', /<header class="site">[\s\S]*?data-player-search="ribbon"[\s\S]*?<\/header>/.test(front));
 // The widget contract itself is unchanged, and the card and the draft app are
 // the surfaces that mount it.
 ok('the box opts in by attribute, so the card and the app mount the same widget',

@@ -290,6 +290,19 @@ header.site a.cta {
   margin-left: auto; flex: 0 0 auto;
 }
 header.site a.cta:hover { background: #196559; text-decoration: none; color: #fff }
+/* The ribbon's player search (18 Oct 2026): the shared typeahead on every
+   page, between the five headings and the button. It takes the auto margin
+   the button used to, so the pair sits together on the right. The menu it
+   opens is .pl-menu below, parented to <body>, so the ribbon never clips it. */
+header.site .nav-find {
+  align-self: center; flex: 0 1 240px; min-width: 150px; min-height: 38px; height: 38px;
+  margin-left: auto; padding: 0 var(--space-3); gap: var(--space-2);
+  border: 1px solid transparent; border-radius: 999px; background: #fff;
+}
+header.site .nav-find:focus-within { border-color: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .35) }
+header.site .nav-find svg { width: 16px; height: 16px }
+header.site .nav-find input { min-height: 0; height: 100%; font-size: var(--fs-14) }
+header.site .nav-find + a.cta { margin-left: 0 }
 .nav-account {
   align-self: center; display: inline-flex; align-items: center; justify-content: center;
   min-width: 40px; min-height: 40px; border: 1px solid rgba(255, 255, 255, .6); border-radius: 2px;
@@ -313,6 +326,7 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
   header.site .site-ribbon, header.site > .wrap { gap: var(--space-3) }
   .brand { --logo-h: 28px; padding: 0 18px 0 10px; clip-path: polygon(0 0, 100% 0, calc(100% - 13px) 100%, 0 100%) }
   .nav a { padding: 0 6px }
+  header.site .nav-find { min-width: 120px }
 }
 
 /* ── nav dropdown ───────────────────────────────────────────────────────── */
@@ -414,6 +428,11 @@ header.site .nav .nav-dd-menu a::after { content: none }
   /* No header button: the top bar is the logo and Menu, and the league form
      has a tab below. */
   header.site a.cta { display: none }
+  /* The search box stays in the top bar, between the logo and Menu, and
+     takes the room between them. 16px type, or iOS zooms the page on focus. */
+  header.site .nav-find { flex: 1 1 auto; min-width: 0; height: 36px; min-height: 36px; margin-left: var(--space-2) }
+  header.site .nav-find input { font-size: var(--fs-16) }
+  header.site .nav-find ~ .nav-toggle { margin-left: 0 }
 
   /* The bottom tab bar: 68px, four labelled icon tabs, the active one in the
      accent and bold. The page gets the bar's height as bottom padding so
