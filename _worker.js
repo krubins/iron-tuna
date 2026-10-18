@@ -18672,7 +18672,9 @@ export default {
       return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=300' });
     }
     if (url.pathname === '/api/vegas-edge' || url.pathname === '/api/signals' || url.pathname === '/api/ros-update' || url.pathname === '/api/intel/player') {
-      if (IS_WASHINGTON(request) && (url.pathname === '/api/vegas-edge' || url.pathname === '/api/signals')) return WA_MARKET_BLOCK();
+      // /api/intel/player carries the same props, movement and Vegas points as
+      // the weekly page it feeds, so it is fenced with it (18 Oct 2026).
+      if (IS_WASHINGTON(request) && (url.pathname === '/api/vegas-edge' || url.pathname === '/api/signals' || url.pathname === '/api/intel/player')) return WA_MARKET_BLOCK();
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       const preset = String(url.searchParams.get('scoring') || '').toLowerCase();
@@ -20269,7 +20271,12 @@ export default {
     // ── betting-market pages are geofenced out of Washington State ───────────
     // This is evaluated at the edge before the asset layer. A direct URL, an
     // old bookmark or a hand-typed alias therefore gets the same 451 as a click.
-    if (IS_WASHINGTON(request) && WA_MARKET_PAGE_GEOFENCED(url.pathname)) {
+    // /player/<slug> is the weekly player page (player-intel.html: props, line
+    // movement, Vegas points, Market Delta) whenever the season gate serves it
+    // there, so it is fenced exactly when it is that page (18 Oct 2026; until
+    // then only its older /in-season/player address was).
+    if (IS_WASHINGTON(request) && (WA_MARKET_PAGE_GEOFENCED(url.pathname) ||
+        (/^\/player\/[A-Za-z0-9._-]+\/?$/.test(url.pathname) && (POST_DRAFT_OPEN(env) || postDraftPreview(env, url, request))))) {
         return new Response(WA_MARKET_BLOCKED_HTML, {
           status: 451,
           headers: {

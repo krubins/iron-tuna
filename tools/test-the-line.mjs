@@ -116,7 +116,7 @@ for (const p of ['/the-line', '/vegas-edge', '/game-intel', '/player-intel', '/w
 }
 ok('it fences the /in-season market aliases as well',
   fenced.includes('/in-season/the-line') && fenced.includes('/in-season/vegas-edge') && fenced.includes('/in-season/game-intel'));
-const fenceStart = worker.indexOf("if (IS_WASHINGTON(request) && WA_MARKET_PAGE_GEOFENCED(url.pathname))");
+const fenceStart = worker.indexOf("if (IS_WASHINGTON(request) && (WA_MARKET_PAGE_GEOFENCED(url.pathname) ||");
 const fence = worker.slice(fenceStart, worker.indexOf('let __assetReq = request;'));
 ok('the fence runs before the asset layer is asked for anything',
   fenceStart >= 0 && fenceStart < worker.indexOf('let __assetReq = request;'));
@@ -138,6 +138,10 @@ ok('the homepage market tab is removed server-side for Washington',
   /id="laneTabMarket"/.test(worker) &&
   /id="laneMarket"/.test(worker) &&
   /stripWashingtonMarketLane\(waHtml\)/.test(worker));
+ok('the weekly player page is fenced at /player/<slug> whenever the season gate serves it there',
+  /WA_MARKET_PAGE_GEOFENCED\(url\.pathname\) \|\|\s*\(\/\^\\\/player\\\/\[A-Za-z0-9\._-\]\+\\\/\?\$\/\.test\(url\.pathname\) && \(POST_DRAFT_OPEN\(env\) \|\| postDraftPreview\(env, url, request\)\)\)/.test(worker));
+ok('the weekly player data is fenced with it',
+  /IS_WASHINGTON\(request\) && \([^)]*url\.pathname === '\/api\/intel\/player'\)\) return WA_MARKET_BLOCK\(\)/.test(worker));
 ok('the current market APIs are also fenced in Washington',
   /IS_WASHINGTON\(request\)[\s\S]{0,180}api\/vegas-edge/.test(worker) &&
   /IS_WASHINGTON\(request\)[\s\S]{0,180}api\/signals/.test(worker) &&
@@ -421,6 +425,29 @@ ok('it files inside the same window that freezes the week board', /g\.kickoff - 
 ok('the record API is fenced in Washington like the board', /api\/the-line\/record'\)[\s\S]{0,120}IS_WASHINGTON\(request\)/.test(worker));
 ok('the page reads the record and never writes it', page.includes("fetch('/api/the-line/record')") && !/method:\s*'POST'/.test(page));
 ok('the prose says every stake goes on the record, and how it settles', /Every stake goes on the record/.test(flat) && /nothing filed is ever revised/.test(flat));
+
+// ── the weekly player page, through the real worker (18 Oct 2026) ──────────
+// /player/<slug> is the weekly player page only while the season gate is open,
+// so the fence is checked both ways, with requests placed where a reader is.
+console.log('\nthe weekly player page in Washington, on the real worker');
+{
+  const W = (await import(path.join(ROOT, '_worker.js'))).default;
+  const assets = { fetch: async () => new Response('<!doctype html><title>x</title>', { headers: { 'content-type': 'text/html; charset=utf-8' } }) };
+  const call = async (p, cf, env) => {
+    const r = new Request('https://irontuna.com' + p, { headers: { 'user-agent': 'Mozilla/5.0 Chrome/126' } });
+    Object.defineProperty(r, 'cf', { value: cf });
+    return (await W.fetch(r, env, { waitUntil() {} })).status;
+  };
+  const WA = { country: 'US', regionCode: 'WA' }, NY = { country: 'US', regionCode: 'NY' }, AUWA = { country: 'AU', regionCode: 'WA' };
+  const season = { POST_DRAFT_OPEN: '1', ASSETS: assets }, offseason = { POST_DRAFT_OPEN: '', ASSETS: assets };
+  ok('in season, /player/<slug> is 451 in Washington', await call('/player/josh-allen', WA, season) === 451);
+  ok('and served elsewhere in the US', await call('/player/josh-allen', NY, season) === 200);
+  ok('and in Western Australia', await call('/player/josh-allen', AUWA, season) === 200);
+  ok('out of season it is the draft card, and not fenced as a page', await call('/player/josh-allen', WA, offseason) === 200);
+  ok('the player search page stays open', await call('/player', WA, season) === 200);
+  ok('/api/intel/player is 451 in Washington', await call('/api/intel/player?name=Josh%20Allen&pos=QB', WA, season) === 451);
+  ok('and not elsewhere', await call('/api/intel/player?name=Josh%20Allen&pos=QB', NY, season) !== 451);
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
