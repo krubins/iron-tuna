@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18397866361"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-18397866361');
+  gtag('config', 'G-KLBZBZSJ25');
+</script>
+<script src="/it-metrics.js" defer></script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Compare Two Players: Season Long and DFS | Iron Tuna</title>
+<meta name="description" content="Compare two fantasy football players on this season's results and the projections for this week, the next three weeks, the rest of the season and the playoffs, or on salary and value for DFS. Choose what matters and get one call.">
+<link rel="canonical" href="https://irontuna.com/compare">
+<!--seo:meta-->
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+<meta property="og:site_name" content="Iron Tuna">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:site" content="@irontunafantasy">
+<meta name="twitter:title" content="Compare two players">
+<meta name="twitter:description" content="This season so far and every projection, weighed on what you choose, with one call.">
+<meta name="twitter:image" content="https://irontuna.com/og.png">
+<!--/seo:meta-->
+<meta property="og:title" content="Compare two players">
+<meta property="og:description" content="This season so far and every projection, weighed on what you choose, with one call.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://irontuna.com/compare">
+<meta property="og:image" content="https://irontuna.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/site.css">
+<style>
+body{overflow-x:hidden}
+/* ══ compare two players ═════════════════════════════════════════════════════
+   18 Oct 2026 (Ken: one feature, in season long and DFS, comparing two
+   players on this season's history and the projections, with the reader
+   choosing what matters and a clear signal on direction). In the homepage's
+   dress (body.ln-front): a short centred head, the two pickers, the weights
+   as rows of segmented buttons, then the call, the meter and the table. */
+.cp-head{padding:var(--sp-48) 0 0;text-align:center}
+.cp-head h1{margin:0 auto var(--sp-12);font-size:clamp(34px,4vw,52px);font-weight:700;letter-spacing:-.02em;line-height:1.05;color:var(--ink);text-transform:none}
+.cp-head p{margin:0 auto var(--sp-24);font-size:var(--fs-16);color:var(--ink-2);max-width:60ch;line-height:1.5}
+.cp-modes{display:inline-flex;border:1px solid var(--line2);border-radius:999px;padding:3px;gap:3px;background:var(--card)}
+.cp-modes button{font:inherit;font-size:var(--fs-16);font-weight:600;min-height:40px;padding:6px 20px;border:0;border-radius:999px;background:none;color:var(--ink-2);cursor:pointer}
+.cp-modes button[aria-selected="true"]{background:var(--teal);color:#fff}
+.cp-modes button:focus-visible,.cp-seg button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.cp-pick{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:var(--sp-16);align-items:end;margin-top:var(--sp-32);padding-top:var(--sp-32);border-top:1px solid var(--line)}
+.cp-who label{display:block;font-size:var(--fs-14);font-weight:600;color:var(--ink-2);margin-bottom:6px}
+.cp-who input{font:inherit;font-size:16px;width:100%;min-height:44px;padding:8px 12px;border:1px solid var(--line2);border-radius:6px;background:var(--bg);color:var(--text)}
+.cp-who input:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.cp-chosen{margin:4px 0 0;min-height:1.3em;font-size:var(--fs-13);color:var(--ink-3)}
+.cp-vs{padding-bottom:30px;font-weight:700;color:var(--ink-3)}
+.cp-crit{margin:0 0 var(--sp-48);padding-top:var(--sp-24);border-top:1px solid var(--line)}
+.cp-crit h2,.cp-out h2{margin:0 0 var(--sp-12);font-size:var(--fs-23);font-weight:600;letter-spacing:-.01em;text-transform:none}
+.cp-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-8) var(--sp-12);margin:0 0 var(--sp-12)}
+.cp-row[hidden]{display:none}
+.cp-row-label{min-width:7.5em;font-size:var(--fs-14);font-weight:600;color:var(--ink-2)}
+.cp-seg{display:flex;flex-wrap:wrap;gap:6px}
+.cp-seg button{font:inherit;font-size:var(--fs-14);font-weight:600;min-height:36px;padding:4px 12px;border:1px solid var(--line2);border-radius:999px;background:var(--card);color:var(--ink-2);cursor:pointer}
+.cp-seg button[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.cp-seg-sm button{min-height:32px;padding:2px 10px;font-size:var(--fs-13)}
+.cp-wlist{margin-top:var(--sp-16);border-top:1px solid var(--line)}
+.cp-w{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--sp-8) var(--sp-16);align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.cp-w-label b{display:block;color:var(--ink);font-weight:600}
+.cp-w-label span{display:block;font-size:var(--fs-13);color:var(--ink-3)}
+.cp-out{margin:var(--sp-24) 0 var(--sp-32)}
+.cp-empty{margin:var(--sp-16) 0;color:var(--ink-3);font-size:var(--fs-16)}
+.cp-verdict{border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:10px;background:var(--card);padding:var(--sp-16) var(--sp-20);margin:0 0 var(--sp-16)}
+.cp-call{margin:0 0 4px;font-size:var(--fs-28);font-weight:700;letter-spacing:-.01em;color:var(--ink);line-height:1.15}
+.cp-why{margin:0 0 var(--sp-12);color:var(--ink-2);line-height:1.5}
+.cp-meter{display:grid;grid-template-columns:auto minmax(80px,1fr) auto;gap:var(--sp-12);align-items:center;font-size:var(--fs-13);font-weight:600;color:var(--ink-2)}
+.cp-meter-b{text-align:right}
+.cp-meter-bar{position:relative;height:10px;border-radius:999px;background:linear-gradient(90deg,var(--teal-tint),var(--line) 50%,var(--teal-tint))}
+.cp-meter-bar::after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--ink-3)}
+.cp-meter-bar i{position:absolute;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:var(--teal);border:2px solid #fff;box-shadow:0 1px 3px rgba(17,20,24,.3)}
+.cp-tab{width:100%;border-collapse:collapse;font-size:15px;margin:0 0 var(--sp-12)}
+.cp-tab th,.cp-tab td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.cp-tab thead th{font-size:var(--fs-13);color:var(--ink-3);font-weight:700}
+.cp-tab th span,.cp-tab td span{display:block;font-size:12px;font-weight:500;color:var(--ink-3)}
+.cp-tab tbody th{font-weight:600;color:var(--ink)}
+.cp-tab .num{text-align:right;font-variant-numeric:tabular-nums}
+.cp-tab td.lead{color:var(--teal);font-weight:800}
+.cp-tab tr.off td,.cp-tab tr.off th{color:var(--ink-3)}
+.cp-edge{font-size:var(--fs-14);white-space:nowrap}
+.cp-note{margin:0 0 var(--sp-8);font-size:var(--fs-14);color:var(--ink-2);line-height:1.5}
+.cp-fine{font-size:var(--fs-13);color:var(--ink-3)}
+@media(max-width:600px){
+  .cp-head{padding-top:var(--sp-32)}
+  .cp-pick{grid-template-columns:minmax(0,1fr);gap:var(--sp-8)}
+  .cp-vs{padding:0;text-align:center}
+  .cp-w{grid-template-columns:minmax(0,1fr)}
+  .cp-call{font-size:var(--fs-23)}
+  .cp-tab{font-size:14px}
+  .cp-tab th,.cp-tab td{padding:7px 6px}
+}
+</style>
+
+<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/compare","name":"Compare Two Players: Season Long and DFS","description":"Compare two fantasy football players on this season's results and the projections for this week, the next three weeks, the rest of the season and the playoffs, or on salary and value for DFS. Choose what matters and get one call.","url":"https://irontuna.com/compare","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/compare"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Compare Two Players: Season Long and DFS"}]}]}</script>
+</head>
+<body class="ln-front">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site"><!--chrome:line--><p class="site-line" aria-hidden="true"></p><!--/chrome:line--><div class="wrap">
+  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
+  <!--chrome:nav-->
+    <nav class="nav" id="sitenav" aria-label="Main">
+      <span class="nav-dd">
+        <a class="nav-dd-top" href="/fantasy">Fantasy</a>
+        <span class="nav-dd-menu" role="group" aria-label="Fantasy"><a href="/rankings">Rankings</a><a href="/my-week">My Week</a><a href="/faab">Waivers &amp; FAAB</a><a href="/trade-finder">Trade Finder</a><a href="/compare">Compare Players</a><a href="/weekly-intel">Weekly Intel</a><a href="/depth-charts">Depth Charts</a><a href="/my-league">My League</a></span>
+      </span>
+      <span class="nav-dd">
+        <a class="nav-dd-top" href="/dfs">DFS</a>
+        <span class="nav-dd-menu" role="group" aria-label="DFS"><a href="/dfs">DFS Lobby</a><a href="/compare?mode=dfs">Compare Players</a><a href="/dfs-getting-started">Getting Started</a><a href="/dfs-strategy-guide">Strategy Guide</a><a href="/analysts/dfs">DFS Desk</a></span>
+      </span>
+      <span class="nav-dd">
+        <a class="nav-dd-top" href="/in-season/desk">Articles</a>
+        <span class="nav-dd-menu" role="group" aria-label="Articles"><a href="/in-season/desk">The Desk</a><a href="/the-pick">The Pick</a><a href="/the-tell">The Tell</a><a href="/weekly-wrap">Weekly Wrap</a><a href="/analysts">The Analysts</a></span>
+      </span>
+      <span class="nav-dd">
+        <a class="nav-dd-top" href="/faq#faq-start">How It Works</a>
+        <span class="nav-dd-menu" role="group" aria-label="How It Works"><a href="/faq#faq-start">Getting Started</a><a href="/faq">FAQ</a><a href="/data">Data Sources</a><a href="/support">Support</a></span>
+      </span>
+      <span class="nav-dd">
+        <a class="nav-dd-top" href="/player">Search</a>
+        <span class="nav-dd-menu" role="group" aria-label="Search"><a href="/player">Player Search</a><a href="/players">All Players</a></span>
+      </span>
+    </nav>
+    <a class="cta" href="/my-league#settings">Customize My League</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
+      <span class="nav-toggle-bars"><span></span></span>Menu
+    </button>
+    <!--/chrome:nav-->
+</div><!--chrome:tabbar-->
+  <nav class="tabbar" aria-label="Sections">
+    <a href="/fantasy"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h16M12 4v16"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Fantasy</a>
+    <a href="/dfs"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19h16M6 15l4-5 4 3 4-7"/></svg>DFS</a>
+    <a href="/in-season/desk"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 4h14v16H5zM8 9h8M8 13h8M8 17h5"/></svg>Articles</a>
+    <a href="/my-league#settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>My league</a>
+  </nav>
+<!--/chrome:tabbar-->
+</header>
+<main id="main">
+<div class="wrap">
+
+<!-- ── 1 · the head ─────────────────────────────────────────────────────────
+     Which game, the two players, then what matters. -->
+<section class="cp-head" aria-labelledby="cpTitle">
+  <h1 id="cpTitle">Compare two players</h1>
+  <p>What each has done this season and what he is projected to do next, weighed on the things you say matter, with one call at the end.</p>
+  <div class="cp-modes" role="tablist" aria-label="Game">
+    <button type="button" role="tab" id="cpModeSeason" data-mode="season" aria-selected="true">Season long</button>
+    <button type="button" role="tab" id="cpModeDfs" data-mode="dfs" aria-selected="false">DFS</button>
+  </div>
+</section>
+
+<section class="cp-pick" aria-label="Players">
+  <div class="cp-who">
+    <label for="cpA">Player A</label>
+    <input id="cpA" type="search" placeholder="Type a player&rsquo;s name" autocomplete="off" spellcheck="false" aria-expanded="false">
+    <p class="cp-chosen" id="cpAChosen"></p>
+  </div>
+  <div class="cp-vs" aria-hidden="true">vs</div>
+  <div class="cp-who">
+    <label for="cpB">Player B</label>
+    <input id="cpB" type="search" placeholder="Type a player&rsquo;s name" autocomplete="off" spellcheck="false" aria-expanded="false">
+    <p class="cp-chosen" id="cpBChosen"></p>
+  </div>
+  <datalist id="cpSlate"></datalist>
+</section>
+
+<!-- ── 2 · the answer ───────────────────────────────────────────────────────
+     Above the weights, so on a phone the call is the first thing under the
+     two names and a changed weight redraws it in view. -->
+<section class="cp-out" id="cpOut" aria-live="polite">
+  <p class="cp-empty" id="cpEmpty">Pick two players to compare.</p>
+</section>
+
+<!-- ── 3 · what matters ─────────────────────────────────────────────────────
+     A purpose sets the weights; every weight can then be changed. -->
+<section class="cp-crit" aria-labelledby="cpCritHead">
+  <h2 id="cpCritHead">What matters to you</h2>
+  <div class="cp-row" id="cpPurposeRow">
+    <span class="cp-row-label" id="cpPurposeLabel">Deciding</span>
+    <div class="cp-seg" id="cpPurpose" role="group" aria-labelledby="cpPurposeLabel"></div>
+  </div>
+  <div class="cp-row" id="cpSourceRow">
+    <span class="cp-row-label" id="cpSourceLabel">Projections</span>
+    <div class="cp-seg" id="cpSource" role="group" aria-labelledby="cpSourceLabel"></div>
+  </div>
+  <div class="cp-row" id="cpScoringRow">
+    <span class="cp-row-label" id="cpScoringLabel">Scoring</span>
+    <div class="cp-seg" id="cpScoring" role="group" aria-labelledby="cpScoringLabel"></div>
+  </div>
+  <div class="cp-row" id="cpSiteRow" hidden>
+    <span class="cp-row-label" id="cpSiteLabel">Site</span>
+    <div class="cp-seg" id="cpSite" role="group" aria-labelledby="cpSiteLabel"></div>
+  </div>
+  <div class="cp-wlist" id="cpWeights"></div>
+</section>
+
+
+</div>
+</main>
+<footer class="site"><div class="wrap">
+  <!--chrome:foot-->
+  <nav class="foot-nav" aria-label="Footer">
+   <ul>
+    <li><a href="/fantasy">Fantasy</a></li>
+    <li><a href="/dfs">DFS</a></li>
+    <li><a href="/in-season/desk">Articles</a></li>
+    <li><a href="/players">Players</a></li>
+    <li><a href="/faq#faq-start">How It Works</a></li>
+    <li><a href="/data">Data Sources</a></li>
+    <li><a href="/newsletter">Sunday Email</a></li>
+    <li><a href="/faq">FAQ</a></li>
+    <li><a href="/privacy">Privacy</a></li>
+    <li><a href="/terms">Terms</a></li>
+    <li><a href="/support">Support</a></li>
+   </ul>
+  </nav>
+  <div class="foot-note">
+   <p>Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.</p>
+   <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site — projections, odds, salaries and contract prices alike — is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-MY-RESET</b>.</p>
+   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span><a class="foot-admin" href="/admin" rel="nofollow">Admin</a></p>
+  </div>
+  <!--/chrome:foot-->
+</div></footer>
+<script src="/it-season.js" defer></script>
+<script src="/it-league.js" defer></script>
+<script src="/player-search.js" defer></script>
+<script>
+(function () {
+  // ── COMPARE TWO PLAYERS (18 Oct 2026) ───────────────────────────────────
+  // Ken: one feature in both season long and DFS that compares two players,
+  // with this season's history (recent and season to date) beside the
+  // projections (this week, the next few weeks, the rest of the season and
+  // the playoffs), lets the reader choose what matters, and gives a clear
+  // signal on direction.
+  //
+  // NOTHING NEW IS PROJECTED HERE. Season long reads /api/intel/player, the
+  // answer the weekly player page is built from (its `history` is the usage
+  // overlay's game log). DFS reads /api/dfs, the lobby's own slate. The page
+  // only weighs numbers those two already publish, so the call can never
+  // disagree with the boards it sits beside.
+  //
+  // THE SIGNAL. Each criterion gives a relative edge, (A - B) over the pair's
+  // average, capped at 100% either way so one lopsided number cannot carry
+  // the call alone. The edges are averaged with the reader's weights, and
+  // the average is the meter. Under 5% is a toss-up and says so rather than
+  // dressing a coin flip up as a pick.
+  var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var $ = function (id) { return document.getElementById(id); };
+  var n1 = function (v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
+  var LEVEL = ['Off', 'Low', 'Normal', 'High'];
+  var FLEX = { RB: 1, WR: 1, TE: 1 };
+
+  // ── the criteria ────────────────────────────────────────────────────────
+  // `get` reads one player's record (seasonRec / dfsRec below) and answers a
+  // number or null. Null means nobody publishes it for him, and the criterion
+  // then drops out of the call for both players rather than counting as zero.
+  var CRIT = {
+    season: [
+      { k: 'week', label: 'This week', hint: 'projected points', get: function (x) { return x.week; } },
+      { k: 'next3', label: 'Next 3 weeks', hint: 'projected points, total', get: function (x) { return x.next3; } },
+      { k: 'ros', label: 'Rest of season', hint: 'projected points, total', get: function (x) { return x.ros; } },
+      { k: 'playoffs', label: 'Fantasy playoffs', hint: 'Weeks 15–17, projected total', get: function (x) { return x.playoffs; } },
+      { k: 'recent', label: 'Recent form', hint: 'points a game, last 3 games', get: function (x) { return x.recent; } },
+      { k: 'ytd', label: 'Season to date', hint: 'points a game, this season', get: function (x) { return x.ytd; } },
+      { k: 'usage', label: 'Usage', hint: 'targets and carries a game, last 3', get: function (x) { return x.usage; } }
+    ],
+    dfs: [
+      { k: 'proj', label: 'Projection', hint: 'points at the site’s scoring', get: function (x) { return x.proj; } },
+      { k: 'value', label: 'Value', hint: 'projected points per $1K of salary', get: function (x) { return x.value; }, dp: 2 },
+      { k: 'floor', label: 'Floor', hint: 'modeled bad-day outcome', get: function (x) { return x.floor; } },
+      { k: 'ceiling', label: 'Ceiling', hint: 'modeled big-day outcome', get: function (x) { return x.ceiling; } },
+      { k: 'own', label: 'Lower ownership', hint: 'modeled share of lineups; lower wins', get: function (x) { return x.own; }, lower: true, unit: '%' },
+      { k: 'td', label: 'Touchdown chance', hint: 'anytime TD probability', get: function (x) { return x.td; }, unit: '%' },
+      { k: 'team', label: 'Team scoring', hint: 'his team’s implied points', get: function (x) { return x.team; } },
+      { k: 'recent', label: 'Recent form', hint: 'PPR points a game, last 3 games', get: function (x) { return x.recent; } },
+      { k: 'ytd', label: 'Season to date', hint: 'PPR points a game, this season', get: function (x) { return x.ytd; } }
+    ]
+  };
+  // A purpose is a set of starting weights, nothing more: every weight can
+  // be changed, and changing one makes the purpose Custom.
+  var PURPOSE = {
+    season: {
+      start: { label: 'Who to start', w: { week: 3, next3: 0, ros: 0, playoffs: 0, recent: 1, ytd: 1, usage: 1 } },
+      trade: { label: 'Trade, add or drop', w: { week: 1, next3: 2, ros: 3, playoffs: 2, recent: 1, ytd: 1, usage: 1 } },
+      playoffs: { label: 'Playoff push', w: { week: 0, next3: 1, ros: 1, playoffs: 3, recent: 1, ytd: 0, usage: 0 } }
+    },
+    dfs: {
+      cash: { label: 'Cash game', w: { proj: 3, value: 2, floor: 3, ceiling: 0, own: 0, td: 0, team: 1, recent: 1, ytd: 1 } },
+      gpp: { label: 'Tournament', w: { proj: 1, value: 2, floor: 0, ceiling: 3, own: 2, td: 1, team: 1, recent: 0, ytd: 0 } }
+    }
+  };
+  var SOURCE = { ironTuna: 'Iron Tuna', consensus: 'Consensus', vegas: 'Vegas' };
+  var SCORING = { ppr: 'PPR', half: 'Half PPR', standard: 'Standard' };
+  var SITE = { dk: 'DraftKings', fd: 'FanDuel' };
+  var ST = { mode: 'season', purpose: { season: 'start', dfs: 'cash' }, w: { season: {}, dfs: {} }, source: 'ironTuna', scoring: 'ppr', site: 'dk',
+             pick: { season: [null, null], dfs: [null, null] }, intel: {}, slate: null, slateFor: '', seq: 0 };
+
+  function itm() { (window.ITMetricsQ = window.ITMetricsQ || []).push([].slice.call(arguments)); }
+  function league() { var L = window.ITLeague; return L && L.has && L.config && L.config.scoring ? L : null; }
+  function score(stats, position, games) {
+    var L = league();
+    if (!L || !L.score || !stats) return null;
+    return L.score(stats, position === 'DST' ? 'DEF' : position, L.config.scoring, games);
+  }
+  function getJson(u) { return fetch(u).then(function (r) { return r.json(); }); }
+
+  // ── one player's record, season long ────────────────────────────────────
+  function seasonRec(j) {
+    var p = j.player, pos = p.position, w = j.thisWeek, mine = ST.scoring === 'league';
+    var src = ST.source;
+    var pts = function (row) {
+      if (!row || !row[src]) return null;
+      var m = mine ? score(row[src].stats, pos, row.games) : null;
+      return m != null ? m : (row[src].points != null ? row[src].points : null);
+    };
+    var x = { name: p.name, pos: pos, team: p.team, notes: [] };
+    var hz = j.horizons || {};
+    x.wk = (w && w.week) || j.week;
+    x.bye = !!(w && w.bye); x.out = !!(w && w.out);
+    x.opp = w && w.opponent ? (w.home ? 'vs ' : 'at ') + w.opponent : '';
+    // A bye or a listed absence is worth nothing to a lineup this week, and
+    // that is a real zero, not a missing number.
+    x.week = !w ? null : (x.bye || x.out) ? 0 : pts(hz.week);
+    x.next3 = pts(hz.next3); x.ros = pts(hz.ros); x.playoffs = pts(hz.playoffs);
+    x.games = { next3: hz.next3 ? hz.next3.games : null, ros: hz.ros ? hz.ros.games : null, playoffs: hz.playoffs ? hz.playoffs.games : null };
+    if (x.bye) x.notes.push(p.name + ' is on bye in Week ' + x.wk + '.');
+    else if (x.out) x.notes.push(p.name + ' is listed out for Week ' + x.wk + '.');
+    else if (w && w.injury && w.injury.status) x.notes.push(p.name + ' is listed ' + w.injury.status + '. Check the inactive list about 90 minutes before kickoff.');
+    if (w && (w.gameState === 'in_progress' || w.gameState === 'completed')) x.notes.push(p.name + '’s Week ' + x.wk + ' game has ' + (w.gameState === 'completed' ? 'finished' : 'kicked off') + '; this week’s number is his pregame projection.');
+    histInto(x, j.history, pos, mine);
+    return x;
+  }
+  // This season's games: the last three and the season average. A league's
+  // own scoring rescores each game's raw line; otherwise the preset's points.
+  function histInto(x, h, pos, mine) {
+    x.log = [];
+    if (!h || !h.games || !h.games.length) { x.recent = x.ytd = x.usage = null; return; }
+    x.log = h.games.map(function (g) {
+      var m = mine ? score(g.stats, pos, 1) : null;
+      return { week: g.week, opp: g.opponent, pts: m != null ? m : g.points, touches: (g.targets || 0) + (g.carries || 0) };
+    });
+    var last = x.log.slice(-3), sum = function (a, f) { return a.reduce(function (s, g) { return s + f(g); }, 0); };
+    x.recent = sum(last, function (g) { return g.pts; }) / last.length;
+    x.ytd = sum(x.log, function (g) { return g.pts; }) / x.log.length;
+    x.usage = FLEX[pos] ? sum(last, function (g) { return g.touches; }) / last.length : null;
+  }
+
+  // ── one player's record, DFS ────────────────────────────────────────────
+  function dfsRec(r, j) {
+    var src = ST.source === 'vegas' ? 'vegasPoints' : ST.source === 'consensus' ? 'consensusPoints' : 'ironTunaPoints';
+    var x = { name: r.name, pos: r.position, team: r.team, salary: r.salary, notes: [] };
+    x.opp = r.opponent ? (r.home === false ? 'at ' : r.home ? 'vs ' : '') + r.opponent : '';
+    x.proj = r.projected === false ? null : r[src];
+    x.value = x.proj != null && r.salary ? x.proj / (r.salary / 1000) : null;
+    x.floor = r.floor != null ? r.floor : null;
+    x.ceiling = r.ceiling != null ? r.ceiling : null;
+    x.own = r.ownership != null ? r.ownership : null;
+    x.td = isFinite(r.tdProbability) ? r.tdProbability : null;
+    x.team = r.teamTotal != null ? r.teamTotal : null;
+    x.unavailable = r.available === false;
+    if (x.unavailable) x.notes.push(r.name + ' is ' + (r.weekStatus ? 'listed ' + r.weekStatus : 'not expected to play') + (r.weekStatusNote ? ' (' + r.weekStatusNote + ')' : '') + '.');
+    else if (r.injury) x.notes.push(r.name + ' is listed ' + r.injury + '. Check the inactive list before lock.');
+    if (r.actualPoints != null) x.notes.push(r.name + '’s game has been played: he scored ' + n1(r.actualPoints) + '. The projection is the pregame one.');
+    if (r.supplemental) x.notes.push(r.why || (r.name + ' is not on this week’s board; his projection is a season-average estimate.'));
+    histInto(x, j && j.history, r.position, false);
+    return x;
+  }
+
+  // ── the call ────────────────────────────────────────────────────────────
+  function edge(a, b, lower) {
+    if (a == null || b == null || !isFinite(a) || !isFinite(b)) return null;
+    var d = (a - b) / Math.max((Math.abs(a) + Math.abs(b)) / 2, 1);
+    if (lower) d = -d;
+    return Math.max(-1, Math.min(1, d));
+  }
+  function judge(A, B) {
+    var crit = CRIT[ST.mode], w = ST.w[ST.mode], num = 0, den = 0, forA = [], forB = [], even = [], rows = [];
+    crit.forEach(function (c) {
+      var va = c.get(A), vb = c.get(B), d = edge(va, vb, c.lower), wt = w[c.k] || 0;
+      rows.push({ c: c, va: va, vb: vb, d: d, wt: wt });
+      if (d == null || !wt) return;
+      num += wt * d; den += wt;
+      (Math.abs(d) < 0.03 ? even : d > 0 ? forA : forB).push(c.label);
+    });
+    return { s: den ? num / den : null, rows: rows, forA: forA, forB: forB, even: even, used: forA.length + forB.length + even.length };
+  }
+  function tier(s) { var a = Math.abs(s); return a < 0.05 ? 'Toss-up' : a < 0.12 ? 'Slight edge' : a < 0.25 ? 'Clear edge' : 'Strong edge'; }
+  var VERB = {
+    start: function (n) { return 'Start ' + n + '.'; }, trade: function (n) { return 'Value ' + n + ' more.'; },
+    playoffs: function (n) { return n + ' for the playoff run.'; }, cash: function (n) { return 'Play ' + n + ' in cash games.'; },
+    gpp: function (n) { return 'Play ' + n + ' in tournaments.'; }, custom: function (n) { return n + ' comes out ahead.'; }
+  };
+  function verdict(A, B, J) {
+    var purpose = ST.purpose[ST.mode];
+    // Who cannot play decides a this-week call before any weighing does.
+    if (ST.mode === 'dfs' && (A.unavailable || B.unavailable)) {
+      if (A.unavailable && B.unavailable) return { head: 'Neither is expected to play.', sub: '' };
+      var ok = A.unavailable ? B : A;
+      return { head: VERB[purpose === 'gpp' || purpose === 'cash' ? purpose : 'custom'](ok.name), sub: (A.unavailable ? A : B).name + ' is not expected to play, so the weighing below is moot.', forced: ok === A ? 1 : -1 };
+    }
+    if (ST.mode === 'season' && purpose === 'start' && A.week != null && B.week != null && (A.week === 0) !== (B.week === 0)) {
+      var on = A.week === 0 ? B : A, off = on === A ? B : A;
+      return { head: 'Start ' + on.name + '.', sub: off.name + ' has no game for you this week (' + (off.bye ? 'bye' : 'listed out') + ').', forced: on === A ? 1 : -1 };
+    }
+    if (J.s == null) return { head: 'Not enough to go on.', sub: 'None of the criteria you turned on has a number for both players.' };
+    var lead = J.s > 0 ? A : B, trail = J.s > 0 ? B : A, t = tier(J.s);
+    var head = t === 'Toss-up' ? 'Too close to call.' : VERB[purpose](lead.name);
+    var count = (J.s > 0 ? J.forA : J.forB).length;
+    var sub = t === 'Toss-up'
+      ? 'On what you chose, the two are within 5% of each other. Either is defensible; break the tie on something this page does not weigh.'
+      : t + ': ' + count + ' of the ' + J.used + ' criteria you counted favor ' + lead.name + '.';
+    var other = J.s > 0 ? J.forB : J.forA;
+    if (t !== 'Toss-up' && other.length) sub += ' ' + trail.name + ' is ahead on ' + list(other) + '.';
+    return { head: head, sub: sub };
+  }
+  function list(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
+  function fmt(c, v) { return v == null ? '—' : c.unit === '%' ? n1(v) + '%' : c.dp === 2 ? (Math.round(v * 100) / 100).toFixed(2) : n1(v); }
+
+  function show(A, B, meta) {
+    var J = judge(A, B), V = verdict(A, B, J);
+    var s = V.forced != null ? V.forced : J.s, pctA = s == null ? 50 : Math.round(50 + Math.max(-1, Math.min(1, s / 0.4)) * 50);
+    var row = function (r) {
+      var lead = r.d == null || Math.abs(r.d) < 0.03 ? 0 : r.d > 0 ? 1 : -1;
+      var who = r.d == null ? 'No number for both' : !r.wt ? 'Not counted' : lead === 0 ? 'Even' : (lead > 0 ? A : B).name.split(' ').slice(-1)[0] + ' +' + Math.round(Math.abs(r.d) * 100) + '%';
+      return '<tr class="' + (r.wt ? '' : 'off') + '"><th scope="row">' + e(r.c.label) + '<span>' + e(r.c.hint) + '</span></th>'
+        + '<td class="num' + (lead > 0 && r.wt ? ' lead' : '') + '">' + fmt(r.c, r.va) + '</td><td class="num' + (lead < 0 && r.wt ? ' lead' : '') + '">' + fmt(r.c, r.vb) + '</td>'
+        + '<td class="cp-edge">' + e(who) + '<span>' + LEVEL[r.wt] + '</span></td></tr>';
+    };
+    var strip = function (x) {
+      if (!x.log || !x.log.length) return '<p class="cp-note">' + e(x.name) + ': no games in this season’s stats yet.</p>';
+      return '<p class="cp-note"><b>' + e(x.name) + '</b>, this season: ' + x.log.slice(-6).map(function (g) { return 'Wk ' + g.week + ' ' + n1(g.pts); }).map(e).join(' · ') + (x.log.length > 6 ? ' (last 6 of ' + x.log.length + ' games)' : '') + '</p>';
+    };
+    var who = function (x) { return e(x.pos + ' · ' + x.team + (x.opp ? ' · ' + x.opp : '') + (x.salary ? ' · $' + x.salary.toLocaleString('en-US') : '')); };
+    var notes = A.notes.concat(B.notes);
+    if (A.pos !== B.pos && !(FLEX[A.pos] && FLEX[B.pos])) notes.push('They play different positions, so the points compare across positions and say nothing about what each is worth at his own spot in your lineup.');
+    else if (A.pos !== B.pos) notes.push('Different positions: the call is on points, and does not weigh how scarce each position is in your league.');
+    $('cpOut').innerHTML =
+      '<div class="cp-verdict"><p class="cp-call">' + e(V.head) + '</p><p class="cp-why">' + e(V.sub) + '</p>'
+      + '<div class="cp-meter" role="img" aria-label="' + e(s == null ? 'No signal' : (s > 0 ? A.name : s < 0 ? B.name : 'Neither') + ' favored') + '"><span class="cp-meter-a">' + e(A.name) + '</span><span class="cp-meter-bar"><i style="left:' + (100 - pctA) + '%"></i></span><span class="cp-meter-b">' + e(B.name) + '</span></div></div>'
+      + '<div class="is-scroll"><table class="cp-tab"><thead><tr><th>' + e(meta.title) + '</th><th class="num">' + e(A.name) + '<span>' + who(A) + '</span></th><th class="num">' + e(B.name) + '<span>' + who(B) + '</span></th><th>Edge<span>weight</span></th></tr></thead><tbody>'
+      + J.rows.map(row).join('') + '</tbody></table></div>'
+      + strip(A) + strip(B)
+      + notes.map(function (t) { return '<p class="cp-note">' + e(t) + '</p>'; }).join('')
+      + '<p class="cp-note cp-fine">' + e(meta.fine) + ' Edge is the gap over the pair’s average, capped at 100%; the call is the weighted average of the edges you counted. Projections are not predictions of the result, and nothing here is betting advice.</p>';
+    var key = (A.name + '-vs-' + B.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 48);
+    itm('success', 'compare', key, { mode: ST.mode, method: ST.purpose[ST.mode] });
+  }
+  function say(t) { $('cpOut').innerHTML = '<p class="cp-empty">' + e(t) + '</p>'; }
+
+  // ── season long: fetch and run ──────────────────────────────────────────
+  function intel(p) {
+    var sc = ST.scoring === 'league' ? 'ppr' : ST.scoring, k = p.n + '|' + p.p + '|' + sc;
+    if (!ST.intel[k]) ST.intel[k] = getJson('/api/intel/player?name=' + encodeURIComponent(p.n) + '&pos=' + encodeURIComponent(p.p) + '&scoring=' + sc)
+      .then(function (j) { return j && j.ok && j.player ? j : null; }, function () { delete ST.intel[k]; throw new Error('fetch'); });
+    return ST.intel[k];
+  }
+  function runSeason() {
+    var P = ST.pick.season, seq = ++ST.seq;
+    if (!P[0] || !P[1]) return say('Pick two players to compare.');
+    if (P[0].n === P[1].n) return say('That is the same player twice. Pick a different second player.');
+    say('Reading both players…');
+    Promise.all([intel(P[0]), intel(P[1])]).then(function (js) {
+      if (seq !== ST.seq) return;
+      var miss = [0, 1].filter(function (i) { return !js[i]; }).map(function (i) { return P[i].n; });
+      if (miss.length) { itm('empty', 'compare', 'season', { kind: 'not_on_board' }); return say(list(miss) + (miss.length > 1 ? ' are' : ' is') + ' not on this season’s boards, so there is nothing to compare.'); }
+      var A = seasonRec(js[0]), B = seasonRec(js[1]);
+      var sc = ST.scoring === 'league' ? 'your league’s scoring' : SCORING[ST.scoring];
+      show(A, B, { title: 'Week ' + (A.wk || ''), fine: SOURCE[ST.source] + ' projections at ' + sc + '. History is this season’s box scores (nflverse) at the same scoring. Vegas numbers are a derived estimate converted from sportsbook lines, not a quoted price.' });
+    }).catch(function () {
+      if (seq !== ST.seq) return;
+      itm('error', 'compare', 'season', { kind: 'fetch' });
+      say('The board did not answer. Try again in a moment.');
+    });
+  }
+
+  // ── DFS: the slate, the picker, and run ─────────────────────────────────
+  function slateLabel(r) { return r.name + ' · ' + r.position + ' · ' + r.team + ' · $' + r.salary; }
+  function loadSlate() {
+    var want = ST.site + '|' + ST.purpose.dfs;
+    if (ST.slateFor === want && ST.slate) return Promise.resolve(ST.slate);
+    ST.slateFor = want; ST.slate = null;
+    return getJson('/api/dfs?site=' + ST.site + '&contest=' + (ST.purpose.dfs === 'cash' ? 'cash' : 'gpp')).then(function (j) {
+      if (ST.slateFor !== want) return null;
+      ST.slate = j && j.ok && j.players && j.players.length ? j : { ok: false, players: [] };
+      var dl = $('cpSlate');
+      dl.innerHTML = (ST.slate.players || []).filter(function (r) { return r.salary; }).map(function (r) { return '<option value="' + e(slateLabel(r)) + '">'; }).join('');
+      return ST.slate;
+    });
+  }
+  function slateFind(v) {
+    var rows = (ST.slate && ST.slate.players) || [], t = String(v || '').trim().toLowerCase();
+    if (!t) return null;
+    for (var i = 0; i < rows.length; i++) if (slateLabel(rows[i]).toLowerCase() === t) return rows[i];
+    var hits = rows.filter(function (r) { return r.name.toLowerCase() === t.split(' · ')[0]; });
+    return hits.length ? hits[0] : null;
+  }
+  function runDfs() {
+    var seq = ++ST.seq;
+    say('Reading the ' + SITE[ST.site] + ' slate…');
+    loadSlate().then(function (sl) {
+      if (seq !== ST.seq || !sl) return;
+      if (!sl.ok) { itm('empty', 'compare', 'dfs', { kind: 'no_slate' }); return say('No ' + SITE[ST.site] + ' salaries are loaded for this week yet, so there is no slate to compare on. Try the other site, or come back once the lobby opens.'); }
+      var P = ST.pick.dfs.map(function (p) { return p ? slateFind(p) : null; });
+      ['cpA', 'cpB'].forEach(function (id, i) { $(id + 'Chosen').textContent = ST.pick.dfs[i] && !P[i] ? 'Not on this ' + SITE[ST.site] + ' slate.' : ''; });
+      if (!P[0] || !P[1]) return say('Pick two players from this week’s ' + SITE[ST.site] + ' slate. Start typing a name and choose from the list.');
+      if (P[0].name === P[1].name) return say('That is the same player twice. Pick a different second player.');
+      // History is the season-long answer for the same player, at PPR: the
+      // slate carries his salary and this week, not his past games.
+      var hist = function (r) { return intel({ n: r.name, p: r.position === 'DST' ? 'DST' : r.position }).catch(function () { return null; }); };
+      Promise.all([hist(P[0]), hist(P[1])]).then(function (js) {
+        if (seq !== ST.seq) return;
+        var A = dfsRec(P[0], js[0]), B = dfsRec(P[1], js[1]);
+        var modeled = A.own != null || A.floor != null;
+        show(A, B, { title: SITE[ST.site] + (sl.week ? ', Week ' + sl.week : ''), fine: SOURCE[ST.source] + ' projections at ' + SITE[ST.site] + ' scoring, priced on the ' + (sl.formatLabel || SITE[ST.site]) + ' slate.' + (modeled ? ' Floor, ceiling and ownership are modeled, not a feed.' : ' Floor, ceiling and ownership are not published for this slate.') + ' History is this season’s box scores at PPR.' });
+      });
+    }).catch(function () {
+      if (seq !== ST.seq) return;
+      ST.slateFor = '';
+      itm('error', 'compare', 'dfs', { kind: 'fetch' });
+      say('The slate did not answer. Try again in a moment.');
+    });
+  }
+  function run() { remember(); return ST.mode === 'dfs' ? runDfs() : runSeason(); }
+
+  // ── the controls ────────────────────────────────────────────────────────
+  function seg(id, opts, cur, onPick) {
+    var box = $(id);
+    box.innerHTML = Object.keys(opts).map(function (k) { return '<button type="button" data-k="' + e(k) + '" aria-pressed="' + (k === cur) + '">' + e(opts[k]) + '</button>'; }).join('');
+    box.onclick = function (ev) { var b = ev.target.closest('button'); if (b) onPick(b.getAttribute('data-k')); };
+  }
+  function paintControls() {
+    var m = ST.mode, P = PURPOSE[m], cur = ST.purpose[m], labels = {};
+    Object.keys(P).forEach(function (k) { labels[k] = P[k].label; });
+    if (cur === 'custom') labels.custom = 'Custom';
+    seg('cpPurpose', labels, cur, function (k) { if (k === 'custom') return; ST.purpose[m] = k; ST.w[m] = copy(P[k].w); if (m === 'dfs') ST.slateFor = ''; paintControls(); run(); });
+    seg('cpSource', SOURCE, ST.source, function (k) { ST.source = k; paintControls(); run(); });
+    var sc = {}; if (league()) sc.league = 'My league'; Object.keys(SCORING).forEach(function (k) { sc[k] = SCORING[k]; });
+    seg('cpScoring', sc, ST.scoring, function (k) { ST.scoring = k; paintControls(); run(); });
+    seg('cpSite', SITE, ST.site, function (k) { ST.site = k; paintControls(); run(); });
+    $('cpScoringRow').hidden = m === 'dfs'; $('cpSiteRow').hidden = m !== 'dfs';
+    $('cpWeights').innerHTML = CRIT[m].map(function (c) {
+      var wt = ST.w[m][c.k] || 0;
+      return '<div class="cp-w"><div class="cp-w-label"><b>' + e(c.label) + '</b><span>' + e(c.hint) + '</span></div><div class="cp-seg cp-seg-sm" role="group" aria-label="' + e(c.label) + ': how much it counts">'
+        + LEVEL.map(function (l, i) { return '<button type="button" data-c="' + c.k + '" data-v="' + i + '" aria-pressed="' + (i === wt) + '">' + l + '</button>'; }).join('') + '</div></div>';
+    }).join('');
+    ['cpModeSeason', 'cpModeDfs'].forEach(function (id) { var b = $(id); b.setAttribute('aria-selected', String(b.getAttribute('data-mode') === m)); });
+  }
+  function copy(o) { var r = {}; for (var k in o) r[k] = o[k]; return r; }
+  $('cpWeights').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-c]'); if (!b) return;
+    var m = ST.mode;
+    ST.w[m][b.getAttribute('data-c')] = +b.getAttribute('data-v');
+    ST.purpose[m] = 'custom';
+    paintControls(); run();
+  });
+
+  // The two pickers. Season long uses the site's player lookup; DFS lists the
+  // slate itself, because a man the slate does not price cannot be played.
+  var mounted = false;
+  function setMode(m) {
+    ST.mode = m;
+    var a = $('cpA'), b = $('cpB');
+    [a, b].forEach(function (inp, i) {
+      var p = ST.pick[m][i];
+      inp.value = !p ? '' : m === 'season' ? p.n : p;
+      if (m === 'dfs') inp.setAttribute('list', 'cpSlate'); else inp.removeAttribute('list');
+      $(inp.id + 'Chosen').textContent = '';
+    });
+    a.placeholder = b.placeholder = m === 'dfs' ? 'Type a name, then pick from the slate' : 'Type a player’s name';
+    paintControls();
+    if (m === 'dfs') loadSlate().catch(function () {});
+    run();
+  }
+  function mountPickers() {
+    var S = window.ITPlayerSearch;
+    ['cpA', 'cpB'].forEach(function (id, i) {
+      var inp = $(id);
+      if (S && S.mount) S.mount(inp, { from: 'compare', onPick: function (p) {
+        if (ST.mode !== 'season') return;
+        inp.value = p.n; ST.pick.season[i] = { n: p.n, p: p.p, k: p.k };
+        $(id + 'Chosen').textContent = p.p + (p.t ? ' · ' + p.t : '');
+        run();
+      } });
+      inp.addEventListener('change', function () {
+        if (ST.mode !== 'dfs') return;
+        var r = slateFind(inp.value);
+        ST.pick.dfs[i] = r ? slateLabel(r) : inp.value.trim() || null;
+        if (r) inp.value = slateLabel(r);
+        run();
+      });
+    });
+    mounted = true;
+  }
+  // The comparison lives in the address, so a reload or a shared link keeps it.
+  function remember() {
+    try {
+      var q = new URLSearchParams(), P = ST.pick[ST.mode];
+      if (ST.mode === 'dfs') { q.set('mode', 'dfs'); q.set('site', ST.site); }
+      if (P[0]) q.set('a', ST.mode === 'season' ? P[0].k : String(P[0]).split(' · ')[0]);
+      if (P[1]) q.set('b', ST.mode === 'season' ? P[1].k : String(P[1]).split(' · ')[0]);
+      if (ST.purpose[ST.mode] !== 'custom') q.set('for', ST.purpose[ST.mode]);
+      var qs = q.toString();
+      history.replaceState(null, '', location.pathname + (qs ? '?' + qs : ''));
+    } catch (err) {}
+  }
+  function boot() {
+    var q = new URLSearchParams(location.search), S = window.ITPlayerSearch;
+    var m = q.get('mode') === 'dfs' ? 'dfs' : 'season';
+    if (SITE[q.get('site')]) ST.site = q.get('site');
+    var f = q.get('for');
+    if (f && PURPOSE[m][f]) ST.purpose[m] = f;
+    ST.w.season = copy(PURPOSE.season[ST.purpose.season].w);
+    ST.w.dfs = copy(PURPOSE.dfs[ST.purpose.dfs].w);
+    if (league()) ST.scoring = 'league';
+    ['a', 'b'].forEach(function (k, i) {
+      var v = q.get(k); if (!v) return;
+      if (m === 'dfs') ST.pick.dfs[i] = v;
+      else { var hit = S && S.get ? S.get(v) || (S.search ? S.search(v.replace(/-/g, ' '), 1)[0] : null) : null; if (hit) ST.pick.season[i] = { n: hit.n, p: hit.p, k: hit.k }; }
+    });
+    if (!mounted) mountPickers();
+    $('cpModeSeason').onclick = function () { setMode('season'); };
+    $('cpModeDfs').onclick = function () { setMode('dfs'); };
+    setMode(m);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
+<!--chrome:navjs--><script>
+(function(){
+  var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');
+  if(!h||!b) return;
+  function set(open){
+    h.setAttribute('data-nav-open', open?'1':'0');
+    b.setAttribute('aria-expanded', open?'true':'false');
+  }
+  b.addEventListener('click',function(){ set(h.getAttribute('data-nav-open')!=='1') });
+  /* Escape closes it, and focus goes back to the button that opened it. */
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&h.getAttribute('data-nav-open')==='1'){ set(false); b.focus() }
+  });
+  /* A tap outside the open menu closes it. */
+  document.addEventListener('click',function(e){
+    if(h.getAttribute('data-nav-open')==='1'&&!h.contains(e.target)) set(false);
+  });
+})();
+</script><!--/chrome:navjs-->
+</body>
+</html>

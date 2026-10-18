@@ -89,11 +89,11 @@ p{color:var(--sec);margin:0 0 16px}
     <nav class="nav" id="sitenav" aria-label="Main">
       <span class="nav-dd">
         <a class="nav-dd-top" href="/fantasy">Fantasy</a>
-        <span class="nav-dd-menu" role="group" aria-label="Fantasy"><a href="/rankings">Rankings</a><a href="/my-week">My Week</a><a href="/faab">Waivers &amp; FAAB</a><a href="/trade-finder">Trade Finder</a><a href="/weekly-intel">Weekly Intel</a><a href="/depth-charts">Depth Charts</a><a href="/my-league">My League</a></span>
+        <span class="nav-dd-menu" role="group" aria-label="Fantasy"><a href="/rankings">Rankings</a><a href="/my-week">My Week</a><a href="/faab">Waivers &amp; FAAB</a><a href="/trade-finder">Trade Finder</a><a href="/compare">Compare Players</a><a href="/weekly-intel">Weekly Intel</a><a href="/depth-charts">Depth Charts</a><a href="/my-league">My League</a></span>
       </span>
       <span class="nav-dd">
         <a class="nav-dd-top" href="/dfs">DFS</a>
-        <span class="nav-dd-menu" role="group" aria-label="DFS"><a href="/dfs">DFS Lobby</a><a href="/dfs-getting-started">Getting Started</a><a href="/dfs-strategy-guide">Strategy Guide</a><a href="/analysts/dfs">DFS Desk</a></span>
+        <span class="nav-dd-menu" role="group" aria-label="DFS"><a href="/dfs">DFS Lobby</a><a href="/compare?mode=dfs">Compare Players</a><a href="/dfs-getting-started">Getting Started</a><a href="/dfs-strategy-guide">Strategy Guide</a><a href="/analysts/dfs">DFS Desk</a></span>
       </span>
       <span class="nav-dd">
         <a class="nav-dd-top" href="/in-season/desk">Articles</a>
@@ -405,6 +405,10 @@ p{color:var(--sec);margin:0 0 16px}
         return;
       }
       vsShow(me, weekOf(j2), key);
+      // The full comparison (18 Oct 2026): this season's games and every
+      // horizon, weighed on what the reader chooses, at /compare.
+      var mySlug = wanted().slug;
+      if (mySlug) out.insertAdjacentHTML('beforeend', '<p class="pi-note"><a href="/compare?a=' + encodeURIComponent(mySlug) + '&amp;b=' + encodeURIComponent(o.k) + '">Compare them in full: this season so far, the rest of the season and the playoffs &rarr;</a></p>');
     }).catch(function () {
       if (seq !== VS.seq) return;
       out.innerHTML = '<p class="pi-note">The board did not answer. Try again in a moment.</p>';
