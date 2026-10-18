@@ -868,6 +868,14 @@ baseline, measured before Phases 1 to 6 shipped). Branch
   `REQUIRE_BROWSER=1`.
 - **Not built.** The My Week prompt after a second comparison (proposed, not
   approved yet).
+- **Washington (18 Oct 2026, owner: "whatever is safer").** The weekly player
+  page itself was reachable in Washington at `/player/<slug>`: only its older
+  `/in-season/player` address was fenced, and `/api/intel/player` was not.
+  Both are now fenced (451) while the season gate serves the weekly page there,
+  which also removes the comparison and its share button in Washington. The
+  `/player` search page and the off-season draft card stay open (the card's
+  odds section already reads the fenced `/api/player-odds`). Checked through
+  the real worker in `tools/test-the-line.mjs`.
 
 ## Phase 2 requirements, as given (for reference)
 
