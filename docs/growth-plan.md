@@ -125,6 +125,13 @@ manual form and roster screenshot (league_rosters), share links on `/fantasy`,
 `/previews`, `/weekly-wrap`, and the insights email form on 44 pages plus its
 template.
 
+Added 2026-10-18, after /admin showed `/dfs` and `/depth-charts` among the most
+viewed pages with no outcome events: `/dfs` (dfs_optimizer: a solved roster or
+pick board once the reader has chosen a game style, games and payout; `empty`
+when no roster fits; `error` when the slate does not load) and `/depth-charts`
+(depth_charts for the board itself, depth_search for the filter box, reported
+1.2 seconds after typing stops and only for two or more characters).
+
 Not instrumented, deliberately:
 - **Player comparison.** No user-driven comparison tool exists. The `/fantasy`
   flex call compares two players automatically on load, so counting it as a

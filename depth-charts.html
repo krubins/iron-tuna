@@ -186,6 +186,8 @@ p{color:var(--sec);margin:0 0 16px}
 (function () {
   var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
   var $ = function (id) { return document.getElementById(id); };
+  // Queue an outcome for it-metrics.js, which loads deferred and drains the queue.
+  function itm() { (window.ITMetricsQ = window.ITMetricsQ || []).push([].slice.call(arguments)); }
 
   // The feed's shape version, and it has to be in the URL: /api/live is cached
   // at the edge and in the browser BY URL, so a page that asks for a different
@@ -266,7 +268,7 @@ p{color:var(--sec);margin:0 0 16px}
     var names = Object.keys(table).sort(function (a, b) {
       return (TEAMS[a] || a).localeCompare(TEAMS[b] || b);
     });
-    if (!names.length) { fail('The depth chart feed answered without a depth order. It refreshes through the day; try again shortly.'); return; }
+    if (!names.length) { itm('empty', 'depth_charts', 'all', { kind: 'no_order' }); fail('The depth chart feed answered without a depth order. It refreshes through the day; try again shortly.'); return; }
     $('dcGrid').innerHTML = names.map(function (tm) { return card(tm, table[tm]); }).join('');
     var when = '';
     try {
@@ -275,6 +277,7 @@ p{color:var(--sec);margin:0 0 16px}
     $('dcStamp').textContent = names.length + ' clubs, in their published order'
       + (when ? ', as of ' + when : '') + '. The feed is refreshed through the day and read fresh on every load.';
     count(names.length, names.length);
+    itm('success', 'depth_charts', 'all', { rows: names.length });
     wire();
   }
 
@@ -283,7 +286,7 @@ p{color:var(--sec);margin:0 0 16px}
   }
 
   function wire() {
-    var input = $('dcFilter'), cards = [].slice.call(document.querySelectorAll('.dc-team'));
+    var input = $('dcFilter'), cards = [].slice.call(document.querySelectorAll('.dc-team')), settle = null;
     if (!input) return;
     input.addEventListener('input', function () {
       var q = input.value.trim().toLowerCase(), shown = 0;
@@ -296,6 +299,14 @@ p{color:var(--sec);margin:0 0 16px}
       var empty = $('dcEmpty');
       empty.hidden = shown > 0;
       if (!shown) empty.textContent = 'No club or player matches “' + input.value.trim() + '”.';
+      // The search box is the page's one control. Report its outcome once the
+      // reader stops typing, so a half-typed name is not counted as a miss.
+      clearTimeout(settle);
+      settle = setTimeout(function () {
+        if (q.length < 2) return;
+        if (shown) itm('success', 'depth_search', 'filter', { rows: shown });
+        else itm('empty', 'depth_search', 'filter');
+      }, 1200);
     });
   }
 
@@ -307,6 +318,7 @@ p{color:var(--sec);margin:0 0 16px}
   }
 
   fetch(LIVE).then(function (r) { return r.json(); }).then(render).catch(function () {
+    itm('error', 'depth_charts', 'all', { kind: 'network' });
     fail('The depth chart feed did not answer. It is cached and refreshed on a schedule, so a reload in a few minutes usually finds it.');
   });
 })();
