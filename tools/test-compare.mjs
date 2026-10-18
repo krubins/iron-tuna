@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// /compare (compare.html, 18 Oct 2026), in a real browser at 390px.
+// /compare (compare.html, 18 Oct 2026), in a real browser at 390px. Two
+// to four players.
 //
 // Two players, season long or DFS, weighed on the criteria the reader turns
 // on, with one call at the end. The fixture is built so the answer is known
@@ -121,7 +122,8 @@ console.log('\nseason long: the page and a start call');
   await page.goto(BASE + '/compare', { waitUntil: 'networkidle' }); await settle();
   ok('the page rendered with two pickers', await page.isVisible('#cpA') && await page.isVisible('#cpB'));
   ok('"Who to start" is the default purpose', await page.getAttribute('#cpPurpose button[data-k="start"]', 'aria-pressed') === 'true');
-  ok('it asks for two players', /Pick two players/.test(await outText()));
+  ok('it asks for two to four players', /Pick at least two players to compare, up to four\./.test(await outText()));
+  ok('two pickers show, with room to add more', await page.isHidden('#cpCSlot') && await page.isVisible('#cpAdd'));
   await pick('cpA', 'bijan');
   await pick('cpB', 'breece');
   ok('the start call goes to this week’s leader', await call() === 'Start Bijan Robinson.', await call());
@@ -181,6 +183,38 @@ console.log('\na link opens on the comparison');
   ok('a player off the boards is said to be', /Jahmyr Gibbs is not on this season’s boards/.test(await outText()), await outText());
 }
 
+console.log('\nthree and four players');
+{
+  // Worked by hand. Trade weights, Jaxon Smith-Njigba added (no history, so
+  // only the four projections count for his pairs): Breece +.124 on average,
+  // Bijan -.042, Smith-Njigba -.082. Top two .083 apart on the pair scale.
+  await page.goto(BASE + '/compare?a=bijan-robinson&b=breece-hall&for=trade', { waitUntil: 'networkidle' }); await settle();
+  await page.click('#cpAdd'); await settle();
+  ok('a third picker opens', await page.isVisible('#cpCSlot'));
+  await pick('cpC', 'smith-njigba');
+  ok('three players get one call, against the next best', await call() === 'Value Breece Hall more.' &&
+     /^Slight edge over Bijan Robinson, the next best: 3 of the 7 criteria you counted favor Breece Hall over him\. Bijan Robinson is ahead on This week, Recent form, Season to date and Usage\./.test(await why()), await why());
+  ok('three players are ranked', JSON.stringify(await page.$$eval('.cp-rank-name', n => n.map(x => x.textContent))) === JSON.stringify(['Breece Hall', 'Bijan Robinson', 'Jaxon Smith-Njigba']));
+  ok('the table has a column per player', await page.$$eval('.cp-tab thead th', t => t.length) === 5);
+  ok('the third player goes in the address', new URL(page.url()).searchParams.get('c') === 'jaxon-smith-njigba', page.url());
+  // Who to start, Derrick Henry added on his bye: he ranks last and is not
+  // weighed against the three who play. Smith-Njigba .136, Bijan .108.
+  await page.click('#cpAdd'); await settle();
+  await pick('cpD', 'derrick henry');
+  ok('four is the most', await page.isHidden('#cpAdd'));
+  await press('cpPurpose', 'Who to start');
+  ok('a close top two is too close to call, by name', await call() === 'Too close to call between Jaxon Smith-Njigba and Bijan Robinson.', await call());
+  ok('a player on bye ranks last and says why', /Derrick Henry has no game for you this week \(bye\), so he ranks last\./.test(await why()) &&
+     await page.$eval('.cp-rank li:last-child', li => /Derrick Henry/.test(li.textContent) && /cannot play/.test(li.textContent)), await why());
+  ok('no sideways scroll at 390px with four players', await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth) <= 0);
+  const over = await page.$eval('#cpOut .is-scroll', b => b.scrollWidth - b.clientWidth);
+  ok('the four-player table fits a phone without scrolling', over <= 1, 'over by ' + over + 'px');
+  await shot('compare-four');
+  await page.click('#cpCSlot button[data-rm]'); await settle();
+  ok('removing a player closes the gap', await page.inputValue('#cpC') === 'Derrick Henry' && await page.isHidden('#cpDSlot') && await page.isVisible('#cpAdd'));
+  ok('and the call is redrawn without him', await call() === 'Start Bijan Robinson.' && /^Clear edge over Breece Hall/.test(await why()), await call() + ' / ' + await why());
+}
+
 console.log('\nDFS');
 {
   await page.goto(BASE + '/compare', { waitUntil: 'networkidle' }); await settle();
@@ -202,6 +236,10 @@ console.log('\nDFS');
   await shot('compare-dfs');
   await choose('cpB', 'Hurt Receiver · WR · NYG · $5000');
   ok('a player who will not play loses the call', await call() === 'Play Josh Allen in tournaments.' && /Hurt Receiver is not expected to play/.test(await why()), await why());
+  await choose('cpB', 'Lamar Jackson · QB · BAL · $8200');
+  await page.click('#cpAdd'); await settle();
+  await choose('cpC', 'Hurt Receiver · WR · NYG · $5000');
+  ok('on a slate of three, the one who will not play ranks last', await call() === 'Play Lamar Jackson in tournaments.' && /Hurt Receiver is not expected to play, so he ranks last\./.test(await why()), await why());
   await press('cpSite', 'FanDuel');
   ok('a site with no salaries says so', /No FanDuel salaries are loaded for this week yet/.test(await outText()), await outText());
 }
@@ -209,6 +247,7 @@ console.log('\nDFS');
 await page.waitForTimeout(600);
 const succ = track.filter(x => x.event === 'tool_success' && x.props && x.props.tool === 'compare');
 ok('comparisons are tracked as tool_success for compare', succ.length >= 2 && succ.some(x => x.props.mode === 'dfs') && succ.some(x => x.props.mode === 'season'), JSON.stringify(succ.map(x => x.props)));
+ok('the number of players compared is tracked', succ.some(x => x.props.rows === 4) && succ.some(x => x.props.rows === 2), JSON.stringify(succ.map(x => x.props)));
 ok('no page errors', errors.length === 0, errors.join(' | '));
 await browser.close();
 server.close();

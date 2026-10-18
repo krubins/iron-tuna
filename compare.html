@@ -15,19 +15,19 @@
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Compare Two Players: Season Long and DFS | Iron Tuna</title>
-<meta name="description" content="Compare two fantasy football players on this season's results and the projections for this week, the next three weeks, the rest of the season and the playoffs, or on salary and value for DFS. Choose what matters and get one call.">
+<title>Compare Players: Season Long and DFS | Iron Tuna</title>
+<meta name="description" content="Compare two to four fantasy football players on this season's results and the projections for this week, the next three weeks, the rest of the season and the playoffs, or on salary and value for DFS. Choose what matters and get one call.">
 <link rel="canonical" href="https://irontuna.com/compare">
 <!--seo:meta-->
 <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
 <meta property="og:site_name" content="Iron Tuna">
 <meta property="og:locale" content="en_US">
 <meta name="twitter:site" content="@irontunafantasy">
-<meta name="twitter:title" content="Compare two players">
+<meta name="twitter:title" content="Compare players">
 <meta name="twitter:description" content="This season so far and every projection, weighed on what you choose, with one call.">
 <meta name="twitter:image" content="https://irontuna.com/og.png">
 <!--/seo:meta-->
-<meta property="og:title" content="Compare two players">
+<meta property="og:title" content="Compare players">
 <meta property="og:description" content="This season so far and every projection, weighed on what you choose, with one call.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://irontuna.com/compare">
@@ -50,12 +50,19 @@ body{overflow-x:hidden}
 .cp-modes button{font:inherit;font-size:var(--fs-16);font-weight:600;min-height:40px;padding:6px 20px;border:0;border-radius:999px;background:none;color:var(--ink-2);cursor:pointer}
 .cp-modes button[aria-selected="true"]{background:var(--teal);color:#fff}
 .cp-modes button:focus-visible,.cp-seg button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-.cp-pick{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:var(--sp-16);align-items:end;margin-top:var(--sp-32);padding-top:var(--sp-32);border-top:1px solid var(--line)}
-.cp-who label{display:block;font-size:var(--fs-14);font-weight:600;color:var(--ink-2);margin-bottom:6px}
+.cp-pick{margin-top:var(--sp-32);padding-top:var(--sp-32);border-top:1px solid var(--line)}
+.cp-slots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-8) var(--sp-16)}
+.cp-who[hidden]{display:none}
+.cp-who-head{display:flex;justify-content:space-between;align-items:baseline;gap:var(--sp-8);margin-bottom:6px}
+.cp-who label{display:block;font-size:var(--fs-14);font-weight:600;color:var(--ink-2)}
 .cp-who input{font:inherit;font-size:16px;width:100%;min-height:44px;padding:8px 12px;border:1px solid var(--line2);border-radius:6px;background:var(--bg);color:var(--text)}
 .cp-who input:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .cp-chosen{margin:4px 0 0;min-height:1.3em;font-size:var(--fs-13);color:var(--ink-3)}
-.cp-vs{padding-bottom:30px;font-weight:700;color:var(--ink-3)}
+.cp-rm{font:inherit;font-size:var(--fs-13);font-weight:600;color:var(--teal);background:none;border:0;padding:4px 0;min-height:32px;cursor:pointer}
+.cp-add{font:inherit;font-size:var(--fs-14);font-weight:600;min-height:40px;margin-top:var(--sp-8);padding:6px 16px;border:1px dashed var(--line2);border-radius:999px;background:var(--card);color:var(--teal);cursor:pointer}
+.cp-add span{font-weight:500;color:var(--ink-3)}
+.cp-add[hidden]{display:none}
+.cp-rm:focus-visible,.cp-add:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .cp-crit{margin:0 0 var(--sp-48);padding-top:var(--sp-24);border-top:1px solid var(--line)}
 .cp-crit h2,.cp-out h2{margin:0 0 var(--sp-12);font-size:var(--fs-23);font-weight:600;letter-spacing:-.01em;text-transform:none}
 .cp-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-8) var(--sp-12);margin:0 0 var(--sp-12)}
@@ -79,6 +86,15 @@ body{overflow-x:hidden}
 .cp-meter-bar{position:relative;height:10px;border-radius:999px;background:linear-gradient(90deg,var(--teal-tint),var(--line) 50%,var(--teal-tint))}
 .cp-meter-bar::after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--ink-3)}
 .cp-meter-bar i{position:absolute;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:var(--teal);border:2px solid #fff;box-shadow:0 1px 3px rgba(17,20,24,.3)}
+.cp-rank{margin:var(--sp-8) 0 0;padding:0;list-style:none;counter-reset:rk}
+.cp-rank li{display:grid;grid-template-columns:minmax(0,1fr) minmax(40px,24%) auto;gap:var(--sp-12);align-items:center;padding:4px 0;font-size:var(--fs-14);counter-increment:rk}
+.cp-rank-name{font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-rank-name::before{content:counter(rk) ". ";color:var(--ink-3)}
+.cp-rank-bar{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
+.cp-rank-bar i{display:block;height:100%;background:var(--teal);border-radius:999px}
+.cp-rank li:first-child .cp-rank-name{color:var(--teal)}
+.cp-rank-tag{min-width:3.6em;text-align:right;font-size:var(--fs-13);font-variant-numeric:tabular-nums;color:var(--ink-3);white-space:nowrap}
+.cp-rank-note{margin:6px 0 0;font-size:var(--fs-13);color:var(--ink-3)}
 .cp-tab{width:100%;border-collapse:collapse;font-size:15px;margin:0 0 var(--sp-12)}
 .cp-tab th,.cp-tab td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .cp-tab thead th{font-size:var(--fs-13);color:var(--ink-3);font-weight:700}
@@ -92,8 +108,14 @@ body{overflow-x:hidden}
 .cp-fine{font-size:var(--fs-13);color:var(--ink-3)}
 @media(max-width:600px){
   .cp-head{padding-top:var(--sp-32)}
-  .cp-pick{grid-template-columns:minmax(0,1fr);gap:var(--sp-8)}
-  .cp-vs{padding:0;text-align:center}
+  .cp-slots{grid-template-columns:minmax(0,1fr)}
+  .cp-tab-many{font-size:13px}
+  .cp-tab-many th,.cp-tab-many td{padding:6px 3px}
+  .cp-tab-many thead th span{font-size:11px}
+  /* Three or four players on a phone: the criterion's hint and the edge's
+     surname wrap instead of pushing the table wider than the screen. */
+  .cp-tab-many tbody th span{display:none}
+  .cp-tab-many .cp-edge{white-space:normal}
   .cp-w{grid-template-columns:minmax(0,1fr)}
   .cp-call{font-size:var(--fs-23)}
   .cp-tab{font-size:14px}
@@ -101,7 +123,7 @@ body{overflow-x:hidden}
 }
 </style>
 
-<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/compare","name":"Compare Two Players: Season Long and DFS","description":"Compare two fantasy football players on this season's results and the projections for this week, the next three weeks, the rest of the season and the playoffs, or on salary and value for DFS. Choose what matters and get one call.","url":"https://irontuna.com/compare","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/compare"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Compare Two Players: Season Long and DFS"}]}]}</script>
+<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/compare","name":"Compare Players: Season Long and DFS","description":"Compare two to four fantasy football players on this season's results and the projections for this week, the next three weeks, the rest of the season and the playoffs, or on salary and value for DFS. Choose what matters and get one call.","url":"https://irontuna.com/compare","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/compare"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Compare Players: Season Long and DFS"}]}]}</script>
 </head>
 <body class="ln-front">
 <a class="skip-link" href="#main">Skip to content</a>
@@ -150,8 +172,8 @@ body{overflow-x:hidden}
 <!-- ── 1 · the head ─────────────────────────────────────────────────────────
      Which game, the two players, then what matters. -->
 <section class="cp-head" aria-labelledby="cpTitle">
-  <h1 id="cpTitle">Compare two players</h1>
-  <p>What each has done this season and what he is projected to do next, weighed on the things you say matter, with one call at the end.</p>
+  <h1 id="cpTitle">Compare players</h1>
+  <p>Two to four players: what each has done this season and what he is projected to do next, weighed on the things you say matter, with one call at the end.</p>
   <div class="cp-modes" role="tablist" aria-label="Game">
     <button type="button" role="tab" id="cpModeSeason" data-mode="season" aria-selected="true">Season long</button>
     <button type="button" role="tab" id="cpModeDfs" data-mode="dfs" aria-selected="false">DFS</button>
@@ -159,17 +181,29 @@ body{overflow-x:hidden}
 </section>
 
 <section class="cp-pick" aria-label="Players">
-  <div class="cp-who">
-    <label for="cpA">Player A</label>
+<div class="cp-slots">
+  <div class="cp-who" id="cpASlot">
+    <div class="cp-who-head"><label for="cpA">Player A</label></div>
     <input id="cpA" type="search" placeholder="Type a player&rsquo;s name" autocomplete="off" spellcheck="false" aria-expanded="false">
     <p class="cp-chosen" id="cpAChosen"></p>
   </div>
-  <div class="cp-vs" aria-hidden="true">vs</div>
-  <div class="cp-who">
-    <label for="cpB">Player B</label>
+  <div class="cp-who" id="cpBSlot">
+    <div class="cp-who-head"><label for="cpB">Player B</label></div>
     <input id="cpB" type="search" placeholder="Type a player&rsquo;s name" autocomplete="off" spellcheck="false" aria-expanded="false">
     <p class="cp-chosen" id="cpBChosen"></p>
   </div>
+  <div class="cp-who" id="cpCSlot" hidden>
+    <div class="cp-who-head"><label for="cpC">Player C</label><button type="button" class="cp-rm" data-rm="2" aria-label="Remove player C">Remove</button></div>
+    <input id="cpC" type="search" placeholder="Type a player&rsquo;s name" autocomplete="off" spellcheck="false" aria-expanded="false">
+    <p class="cp-chosen" id="cpCChosen"></p>
+  </div>
+  <div class="cp-who" id="cpDSlot" hidden>
+    <div class="cp-who-head"><label for="cpD">Player D</label><button type="button" class="cp-rm" data-rm="3" aria-label="Remove player D">Remove</button></div>
+    <input id="cpD" type="search" placeholder="Type a player&rsquo;s name" autocomplete="off" spellcheck="false" aria-expanded="false">
+    <p class="cp-chosen" id="cpDChosen"></p>
+  </div>
+</div>
+  <button type="button" class="cp-add" id="cpAdd">+ Add a player <span>(up to four)</span></button>
   <datalist id="cpSlate"></datalist>
 </section>
 
@@ -177,7 +211,7 @@ body{overflow-x:hidden}
      Above the weights, so on a phone the call is the first thing under the
      two names and a changed weight redraws it in view. -->
 <section class="cp-out" id="cpOut" aria-live="polite">
-  <p class="cp-empty" id="cpEmpty">Pick two players to compare.</p>
+  <p class="cp-empty" id="cpEmpty">Pick at least two players to compare, up to four.</p>
 </section>
 
 <!-- ── 3 · what matters ─────────────────────────────────────────────────────
@@ -235,12 +269,12 @@ body{overflow-x:hidden}
 <script src="/player-search.js" defer></script>
 <script>
 (function () {
-  // ── COMPARE TWO PLAYERS (18 Oct 2026) ───────────────────────────────────
-  // Ken: one feature in both season long and DFS that compares two players,
-  // with this season's history (recent and season to date) beside the
-  // projections (this week, the next few weeks, the rest of the season and
-  // the playoffs), lets the reader choose what matters, and gives a clear
-  // signal on direction.
+  // ── COMPARE UP TO FOUR PLAYERS (18 Oct 2026) ────────────────────────────
+  // Ken: one feature in both season long and DFS that compares players, with
+  // this season's history (recent and season to date) beside the projections
+  // (this week, the next few weeks, the rest of the season and the
+  // playoffs), lets the reader choose what matters, and gives a clear signal
+  // on direction. Two players to start; up to four the same day.
   //
   // NOTHING NEW IS PROJECTED HERE. Season long reads /api/intel/player, the
   // answer the weekly player page is built from (its `history` is the usage
@@ -248,21 +282,25 @@ body{overflow-x:hidden}
   // only weighs numbers those two already publish, so the call can never
   // disagree with the boards it sits beside.
   //
-  // THE SIGNAL. Each criterion gives a relative edge, (A - B) over the pair's
-  // average, capped at 100% either way so one lopsided number cannot carry
-  // the call alone. The edges are averaged with the reader's weights, and
-  // the average is the meter. Under 5% is a toss-up and says so rather than
-  // dressing a coin flip up as a pick.
+  // THE SIGNAL. Between two players each criterion gives a relative edge,
+  // (A - B) over the pair's average, capped at 100% either way so one
+  // lopsided number cannot carry the call alone, and the reader's weights
+  // average the edges. With three or four, every player is weighed that way
+  // against each of the others and ranked on the average; the call is the
+  // top two, and its strength is the gap between them on the same scale as
+  // a pair (a two-player page is exactly the pairwise call). Under 5% is a
+  // toss-up and says so rather than dressing a coin flip up as a pick.
   var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
   var $ = function (id) { return document.getElementById(id); };
   var n1 = function (v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
   var LEVEL = ['Off', 'Low', 'Normal', 'High'];
   var FLEX = { RB: 1, WR: 1, TE: 1 };
+  var SLOTS = ['cpA', 'cpB', 'cpC', 'cpD'], LETTERS = ['a', 'b', 'c', 'd'], MAX = SLOTS.length;
 
   // ── the criteria ────────────────────────────────────────────────────────
   // `get` reads one player's record (seasonRec / dfsRec below) and answers a
   // number or null. Null means nobody publishes it for him, and the criterion
-  // then drops out of the call for both players rather than counting as zero.
+  // then drops out of that comparison rather than counting as zero.
   var CRIT = {
     season: [
       { k: 'week', label: 'This week', hint: 'projected points', get: function (x) { return x.week; } },
@@ -302,7 +340,8 @@ body{overflow-x:hidden}
   var SCORING = { ppr: 'PPR', half: 'Half PPR', standard: 'Standard' };
   var SITE = { dk: 'DraftKings', fd: 'FanDuel' };
   var ST = { mode: 'season', purpose: { season: 'start', dfs: 'cash' }, w: { season: {}, dfs: {} }, source: 'ironTuna', scoring: 'ppr', site: 'dk',
-             pick: { season: [null, null], dfs: [null, null] }, intel: {}, slate: null, slateFor: '', seq: 0 };
+             pick: { season: [null, null, null, null], dfs: [null, null, null, null] }, slots: { season: 2, dfs: 2 },
+             intel: {}, slate: null, slateFor: '', seq: 0 };
 
   function itm() { (window.ITMetricsQ = window.ITMetricsQ || []).push([].slice.call(arguments)); }
   function league() { var L = window.ITLeague; return L && L.has && L.config && L.config.scoring ? L : null; }
@@ -312,6 +351,7 @@ body{overflow-x:hidden}
     return L.score(stats, position === 'DST' ? 'DEF' : position, L.config.scoring, games);
   }
   function getJson(u) { return fetch(u).then(function (r) { return r.json(); }); }
+  function list(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
 
   // ── one player's record, season long ────────────────────────────────────
   function seasonRec(j) {
@@ -331,7 +371,6 @@ body{overflow-x:hidden}
     // that is a real zero, not a missing number.
     x.week = !w ? null : (x.bye || x.out) ? 0 : pts(hz.week);
     x.next3 = pts(hz.next3); x.ros = pts(hz.ros); x.playoffs = pts(hz.playoffs);
-    x.games = { next3: hz.next3 ? hz.next3.games : null, ros: hz.ros ? hz.ros.games : null, playoffs: hz.playoffs ? hz.playoffs.games : null };
     if (x.bye) x.notes.push(p.name + ' is on bye in Week ' + x.wk + '.');
     else if (x.out) x.notes.push(p.name + ' is listed out for Week ' + x.wk + '.');
     else if (w && w.injury && w.injury.status) x.notes.push(p.name + ' is listed ' + w.injury.status + '. Check the inactive list about 90 minutes before kickoff.');
@@ -382,16 +421,35 @@ body{overflow-x:hidden}
     if (lower) d = -d;
     return Math.max(-1, Math.min(1, d));
   }
+  // One pair, every criterion: the weighted average edge for A, and which
+  // criteria lean which way.
   function judge(A, B) {
-    var crit = CRIT[ST.mode], w = ST.w[ST.mode], num = 0, den = 0, forA = [], forB = [], even = [], rows = [];
-    crit.forEach(function (c) {
-      var va = c.get(A), vb = c.get(B), d = edge(va, vb, c.lower), wt = w[c.k] || 0;
-      rows.push({ c: c, va: va, vb: vb, d: d, wt: wt });
+    var w = ST.w[ST.mode], num = 0, den = 0, forA = [], forB = [], even = [];
+    CRIT[ST.mode].forEach(function (c) {
+      var d = edge(c.get(A), c.get(B), c.lower), wt = w[c.k] || 0;
       if (d == null || !wt) return;
       num += wt * d; den += wt;
       (Math.abs(d) < 0.03 ? even : d > 0 ? forA : forB).push(c.label);
     });
-    return { s: den ? num / den : null, rows: rows, forA: forA, forB: forB, even: even, used: forA.length + forB.length + even.length };
+    return { s: den ? num / den : null, forA: forA, forB: forB, used: forA.length + forB.length + even.length };
+  }
+  // Who cannot play this week is out of a this-week call before any weighing:
+  // a bye or a listed absence when the question is who to start, a player not
+  // expected to play on a DFS slate.
+  function ruledOut(x) { return ST.mode === 'dfs' ? !!x.unavailable : ST.purpose.season === 'start' && x.week === 0; }
+  function whyOut(x) { return ST.mode === 'dfs' ? x.name + ' is not expected to play' : x.name + ' has no game for you this week (' + (x.bye ? 'bye' : 'listed out') + ')'; }
+  // Every player against each of the others, ranked on the average. Ruled-out
+  // players go last whatever their numbers, and are weighed only against one
+  // another: a bye is not allowed to lift the players who can play.
+  function rank(recs) {
+    var R = recs.map(function (x, i) {
+      var t = 0, n = 0, out = ruledOut(x);
+      recs.forEach(function (y, k) { if (k === i || ruledOut(y) !== out) return; var J = judge(x, y); if (J.s != null) { t += J.s; n++; } });
+      return { x: x, i: i, s: n ? t / n : null, out: out };
+    });
+    return R.sort(function (a, b) {
+      return (a.out - b.out) || ((b.s == null ? -9 : b.s) - (a.s == null ? -9 : a.s)) || a.i - b.i;
+    });
   }
   function tier(s) { var a = Math.abs(s); return a < 0.05 ? 'Toss-up' : a < 0.12 ? 'Slight edge' : a < 0.25 ? 'Clear edge' : 'Strong edge'; }
   var VERB = {
@@ -399,62 +457,91 @@ body{overflow-x:hidden}
     playoffs: function (n) { return n + ' for the playoff run.'; }, cash: function (n) { return 'Play ' + n + ' in cash games.'; },
     gpp: function (n) { return 'Play ' + n + ' in tournaments.'; }, custom: function (n) { return n + ' comes out ahead.'; }
   };
-  function verdict(A, B, J) {
-    var purpose = ST.purpose[ST.mode];
-    // Who cannot play decides a this-week call before any weighing does.
-    if (ST.mode === 'dfs' && (A.unavailable || B.unavailable)) {
-      if (A.unavailable && B.unavailable) return { head: 'Neither is expected to play.', sub: '' };
-      var ok = A.unavailable ? B : A;
-      return { head: VERB[purpose === 'gpp' || purpose === 'cash' ? purpose : 'custom'](ok.name), sub: (A.unavailable ? A : B).name + ' is not expected to play, so the weighing below is moot.', forced: ok === A ? 1 : -1 };
+  function verdict(recs, R) {
+    var purpose = ST.purpose[ST.mode], two = recs.length === 2;
+    var ok = R.filter(function (r) { return !r.out; }), off = R.filter(function (r) { return r.out; });
+    var offNote = off.length ? list(off.map(function (r) { return whyOut(r.x); })) : '';
+    if (!ok.length) return { head: ST.mode === 'dfs' ? (two ? 'Neither is expected to play.' : 'None of them is expected to play.') : (two ? 'Neither has a game for you this week.' : 'None of them has a game for you this week.'), sub: '' };
+    if (ok.length === 1) return { head: VERB[purpose](ok[0].x.name), sub: offNote + (ST.mode === 'dfs' ? ', so the weighing below is moot.' : '.'), forced: true };
+    var L = ok[0].x, N = ok[1].x, J = judge(L, N);
+    if (ok[0].s == null || J.s == null) return { head: 'Not enough to go on.', sub: 'None of the criteria you turned on has a number for ' + (two ? 'both players.' : 'the players at the top.') };
+    // The strength is the gap between the top two, on the pair's own scale:
+    // for two players it is exactly the pairwise call.
+    var t = tier((ok[0].s - ok[1].s) / 2);
+    var count = J.forA.length, sub;
+    if (t === 'Toss-up') {
+      sub = two ? 'On what you chose, the two are within 5% of each other. Either is defensible; break the tie on something this page does not weigh.'
+        : 'On what you chose, ' + L.name + ' and ' + N.name + ' are within 5% of each other at the top. Either is defensible; break the tie on something this page does not weigh.';
+    } else {
+      sub = two ? t + ': ' + count + ' of the ' + J.used + ' criteria you counted favor ' + L.name + '.'
+        : t + ' over ' + N.name + ', the next best: ' + count + ' of the ' + J.used + ' criteria you counted favor ' + L.name + ' over him.';
+      if (J.forB.length) sub += ' ' + N.name + ' is ahead on ' + list(J.forB) + '.';
     }
-    if (ST.mode === 'season' && purpose === 'start' && A.week != null && B.week != null && (A.week === 0) !== (B.week === 0)) {
-      var on = A.week === 0 ? B : A, off = on === A ? B : A;
-      return { head: 'Start ' + on.name + '.', sub: off.name + ' has no game for you this week (' + (off.bye ? 'bye' : 'listed out') + ').', forced: on === A ? 1 : -1 };
-    }
-    if (J.s == null) return { head: 'Not enough to go on.', sub: 'None of the criteria you turned on has a number for both players.' };
-    var lead = J.s > 0 ? A : B, trail = J.s > 0 ? B : A, t = tier(J.s);
-    var head = t === 'Toss-up' ? 'Too close to call.' : VERB[purpose](lead.name);
-    var count = (J.s > 0 ? J.forA : J.forB).length;
-    var sub = t === 'Toss-up'
-      ? 'On what you chose, the two are within 5% of each other. Either is defensible; break the tie on something this page does not weigh.'
-      : t + ': ' + count + ' of the ' + J.used + ' criteria you counted favor ' + lead.name + '.';
-    var other = J.s > 0 ? J.forB : J.forA;
-    if (t !== 'Toss-up' && other.length) sub += ' ' + trail.name + ' is ahead on ' + list(other) + '.';
-    return { head: head, sub: sub };
+    if (offNote) sub += ' ' + offNote + ', so ' + (off.length > 1 ? 'they rank' : 'he ranks') + ' last.';
+    return { head: t === 'Toss-up' ? (two ? 'Too close to call.' : 'Too close to call between ' + L.name + ' and ' + N.name + '.') : VERB[purpose](L.name), sub: sub };
   }
-  function list(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
   function fmt(c, v) { return v == null ? '—' : c.unit === '%' ? n1(v) + '%' : c.dp === 2 ? (Math.round(v * 100) / 100).toFixed(2) : n1(v); }
+  function surname(x) { return x.name.split(' ').slice(-1)[0]; }
 
-  function show(A, B, meta) {
-    var J = judge(A, B), V = verdict(A, B, J);
-    var s = V.forced != null ? V.forced : J.s, pctA = s == null ? 50 : Math.round(50 + Math.max(-1, Math.min(1, s / 0.4)) * 50);
-    var row = function (r) {
-      var lead = r.d == null || Math.abs(r.d) < 0.03 ? 0 : r.d > 0 ? 1 : -1;
-      var who = r.d == null ? 'No number for both' : !r.wt ? 'Not counted' : lead === 0 ? 'Even' : (lead > 0 ? A : B).name.split(' ').slice(-1)[0] + ' +' + Math.round(Math.abs(r.d) * 100) + '%';
-      return '<tr class="' + (r.wt ? '' : 'off') + '"><th scope="row">' + e(r.c.label) + '<span>' + e(r.c.hint) + '</span></th>'
-        + '<td class="num' + (lead > 0 && r.wt ? ' lead' : '') + '">' + fmt(r.c, r.va) + '</td><td class="num' + (lead < 0 && r.wt ? ' lead' : '') + '">' + fmt(r.c, r.vb) + '</td>'
-        + '<td class="cp-edge">' + e(who) + '<span>' + LEVEL[r.wt] + '</span></td></tr>';
+  function show(recs, meta) {
+    var R = rank(recs), V = verdict(recs, R), w = ST.w[ST.mode], two = recs.length === 2;
+    // One row per criterion: the best value is marked, and the edge column
+    // says by how much it beats the next best.
+    var row = function (c) {
+      var vals = recs.map(function (x) { return c.get(x); }), wt = w[c.k] || 0;
+      var have = vals.map(function (v, i) { return { v: v, i: i }; }).filter(function (o) { return o.v != null && isFinite(o.v); })
+        .sort(function (a, b) { return c.lower ? a.v - b.v : b.v - a.v; });
+      var d = have.length > 1 ? edge(have[0].v, have[1].v, c.lower) : null;
+      var lead = d != null && d >= 0.03 && wt ? have[0].i : -1;
+      var who = d == null ? (two ? 'No number for both' : 'Too few numbers') : !wt ? (two ? 'Not counted' : '') : lead < 0 ? 'Even' : (two ? surname(recs[lead]) + ' ' : '') + '+' + Math.round(d * 100) + '%';
+      // With three or four players the leader's number is already marked in
+      // its own column, so the edge cell gives only the margin and the table
+      // fits a phone.
+      return '<tr class="' + (wt ? '' : 'off') + '"><th scope="row">' + e(c.label) + '<span>' + e(c.hint) + '</span></th>'
+        + vals.map(function (v, i) { return '<td class="num' + (i === lead ? ' lead' : '') + '">' + fmt(c, v) + '</td>'; }).join('')
+        + '<td class="cp-edge">' + e(who) + '<span>' + LEVEL[wt] + '</span></td></tr>';
     };
     var strip = function (x) {
       if (!x.log || !x.log.length) return '<p class="cp-note">' + e(x.name) + ': no games in this season’s stats yet.</p>';
       return '<p class="cp-note"><b>' + e(x.name) + '</b>, this season: ' + x.log.slice(-6).map(function (g) { return 'Wk ' + g.week + ' ' + n1(g.pts); }).map(e).join(' · ') + (x.log.length > 6 ? ' (last 6 of ' + x.log.length + ' games)' : '') + '</p>';
     };
     var who = function (x) { return e(x.pos + ' · ' + x.team + (x.opp ? ' · ' + x.opp : '') + (x.salary ? ' · $' + x.salary.toLocaleString('en-US') : '')); };
-    var notes = A.notes.concat(B.notes);
-    if (A.pos !== B.pos && !(FLEX[A.pos] && FLEX[B.pos])) notes.push('They play different positions, so the points compare across positions and say nothing about what each is worth at his own spot in your lineup.');
-    else if (A.pos !== B.pos) notes.push('Different positions: the call is on points, and does not weigh how scarce each position is in your league.');
+    var notes = [];
+    recs.forEach(function (x) { notes = notes.concat(x.notes); });
+    var pos = recs.map(function (x) { return x.pos; }), mixed = pos.some(function (p) { return p !== pos[0]; });
+    if (mixed && !pos.every(function (p) { return FLEX[p]; })) notes.push('They play different positions, so the points compare across positions and say nothing about what each is worth at his own spot in your lineup.');
+    else if (mixed) notes.push('Different positions: the call is on points, and does not weigh how scarce each position is in your league.');
+    // Two players: the meter between them. Three or four: the ranking, each
+    // bar the player's average edge over the rest.
+    var lean;
+    if (two) {
+      var sA = V.forced ? (R[0].x === recs[0] ? 1 : -1) : (R.filter(function (r) { return r.x === recs[0]; })[0].s);
+      var pctA = sA == null ? 50 : Math.round(50 + Math.max(-1, Math.min(1, sA / 0.4)) * 50);
+      lean = '<div class="cp-meter" role="img" aria-label="' + e(sA == null ? 'No signal' : (sA > 0 ? recs[0].name : sA < 0 ? recs[1].name : 'Neither') + ' favored') + '"><span class="cp-meter-a">' + e(recs[0].name) + '</span><span class="cp-meter-bar"><i style="left:' + (100 - pctA) + '%"></i></span><span class="cp-meter-b">' + e(recs[1].name) + '</span></div>';
+    } else {
+      lean = '<ol class="cp-rank">' + R.map(function (r) {
+        var pct = r.s == null ? null : Math.round(r.s * 100), width = r.out || r.s == null ? 0 : Math.round(Math.max(4, Math.min(100, 50 + r.s / 0.4 * 50)));
+        var tag = r.out ? 'cannot play' : pct == null ? 'no numbers' : (pct > 0 ? '+' : '') + pct + '%';
+        return '<li><span class="cp-rank-name">' + e(r.x.name) + '</span><span class="cp-rank-bar"><i style="width:' + width + '%"></i></span><span class="cp-rank-tag">' + e(tag) + '</span></li>';
+      }).join('') + '</ol><p class="cp-rank-note">Each bar is the player’s average edge over the others on what you counted.</p>';
+    }
     $('cpOut').innerHTML =
-      '<div class="cp-verdict"><p class="cp-call">' + e(V.head) + '</p><p class="cp-why">' + e(V.sub) + '</p>'
-      + '<div class="cp-meter" role="img" aria-label="' + e(s == null ? 'No signal' : (s > 0 ? A.name : s < 0 ? B.name : 'Neither') + ' favored') + '"><span class="cp-meter-a">' + e(A.name) + '</span><span class="cp-meter-bar"><i style="left:' + (100 - pctA) + '%"></i></span><span class="cp-meter-b">' + e(B.name) + '</span></div></div>'
-      + '<div class="is-scroll"><table class="cp-tab"><thead><tr><th>' + e(meta.title) + '</th><th class="num">' + e(A.name) + '<span>' + who(A) + '</span></th><th class="num">' + e(B.name) + '<span>' + who(B) + '</span></th><th>Edge<span>weight</span></th></tr></thead><tbody>'
-      + J.rows.map(row).join('') + '</tbody></table></div>'
-      + strip(A) + strip(B)
+      '<div class="cp-verdict"><p class="cp-call">' + e(V.head) + '</p><p class="cp-why">' + e(V.sub) + '</p>' + lean + '</div>'
+      + '<div class="is-scroll"><table class="cp-tab' + (two ? '' : ' cp-tab-many') + '"><thead><tr><th>' + e(meta.title) + '</th>'
+      + recs.map(function (x) { return '<th class="num">' + e(x.name) + '<span>' + who(x) + '</span></th>'; }).join('')
+      + '<th>Edge<span>weight</span></th></tr></thead><tbody>'
+      + CRIT[ST.mode].map(row).join('') + '</tbody></table></div>'
+      + recs.map(strip).join('')
       + notes.map(function (t) { return '<p class="cp-note">' + e(t) + '</p>'; }).join('')
-      + '<p class="cp-note cp-fine">' + e(meta.fine) + ' Edge is the gap over the pair’s average, capped at 100%; the call is the weighted average of the edges you counted. Projections are not predictions of the result, and nothing here is betting advice.</p>';
-    var key = (A.name + '-vs-' + B.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 48);
-    itm('success', 'compare', key, { mode: ST.mode, method: ST.purpose[ST.mode] });
+      + '<p class="cp-note cp-fine">' + e(meta.fine) + ' Edge is the gap between the best number and the next over their average, capped at 100%; the call weighs those edges across the criteria you counted' + (two ? '' : ', with each player measured against every other') + '. Projections are not predictions of the result, and nothing here is betting advice.</p>';
+    // The count leads the key: four names run past the 48 characters a key
+    // keeps, and a three- and a four-player comparison must not read as one.
+    var key = (recs.length + '-' + recs.map(function (x) { return x.name; }).join('-vs-')).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 48);
+    itm('success', 'compare', key, { mode: ST.mode, method: ST.purpose[ST.mode], rows: recs.length });
   }
   function say(t) { $('cpOut').innerHTML = '<p class="cp-empty">' + e(t) + '</p>'; }
+  function picked(m) { return ST.pick[m].slice(0, ST.slots[m]).filter(Boolean); }
+  function dupe(names) { for (var i = 0; i < names.length; i++) if (names.indexOf(names[i]) !== i) return names[i]; return null; }
 
   // ── season long: fetch and run ──────────────────────────────────────────
   function intel(p) {
@@ -464,17 +551,18 @@ body{overflow-x:hidden}
     return ST.intel[k];
   }
   function runSeason() {
-    var P = ST.pick.season, seq = ++ST.seq;
-    if (!P[0] || !P[1]) return say('Pick two players to compare.');
-    if (P[0].n === P[1].n) return say('That is the same player twice. Pick a different second player.');
-    say('Reading both players…');
-    Promise.all([intel(P[0]), intel(P[1])]).then(function (js) {
+    var P = picked('season'), seq = ++ST.seq;
+    if (P.length < 2) return say('Pick at least two players to compare, up to four.');
+    var twice = dupe(P.map(function (p) { return p.n; }));
+    if (twice) return say(twice + ' is picked twice. Pick a different player.');
+    say('Reading ' + (P.length === 2 ? 'both' : 'all ' + P.length) + ' players…');
+    Promise.all(P.map(intel)).then(function (js) {
       if (seq !== ST.seq) return;
-      var miss = [0, 1].filter(function (i) { return !js[i]; }).map(function (i) { return P[i].n; });
+      var miss = P.filter(function (p, i) { return !js[i]; }).map(function (p) { return p.n; });
       if (miss.length) { itm('empty', 'compare', 'season', { kind: 'not_on_board' }); return say(list(miss) + (miss.length > 1 ? ' are' : ' is') + ' not on this season’s boards, so there is nothing to compare.'); }
-      var A = seasonRec(js[0]), B = seasonRec(js[1]);
+      var recs = js.map(seasonRec);
       var sc = ST.scoring === 'league' ? 'your league’s scoring' : SCORING[ST.scoring];
-      show(A, B, { title: 'Week ' + (A.wk || ''), fine: SOURCE[ST.source] + ' projections at ' + sc + '. History is this season’s box scores (nflverse) at the same scoring. Vegas numbers are a derived estimate converted from sportsbook lines, not a quoted price.' });
+      show(recs, { title: 'Week ' + (recs[0].wk || ''), fine: SOURCE[ST.source] + ' projections at ' + sc + '. History is this season’s box scores (nflverse) at the same scoring. Vegas numbers are a derived estimate converted from sportsbook lines, not a quoted price.' });
     }).catch(function () {
       if (seq !== ST.seq) return;
       itm('error', 'compare', 'season', { kind: 'fetch' });
@@ -491,8 +579,7 @@ body{overflow-x:hidden}
     return getJson('/api/dfs?site=' + ST.site + '&contest=' + (ST.purpose.dfs === 'cash' ? 'cash' : 'gpp')).then(function (j) {
       if (ST.slateFor !== want) return null;
       ST.slate = j && j.ok && j.players && j.players.length ? j : { ok: false, players: [] };
-      var dl = $('cpSlate');
-      dl.innerHTML = (ST.slate.players || []).filter(function (r) { return r.salary; }).map(function (r) { return '<option value="' + e(slateLabel(r)) + '">'; }).join('');
+      $('cpSlate').innerHTML = (ST.slate.players || []).filter(function (r) { return r.salary; }).map(function (r) { return '<option value="' + e(slateLabel(r)) + '">'; }).join('');
       return ST.slate;
     });
   }
@@ -509,18 +596,23 @@ body{overflow-x:hidden}
     loadSlate().then(function (sl) {
       if (seq !== ST.seq || !sl) return;
       if (!sl.ok) { itm('empty', 'compare', 'dfs', { kind: 'no_slate' }); return say('No ' + SITE[ST.site] + ' salaries are loaded for this week yet, so there is no slate to compare on. Try the other site, or come back once the lobby opens.'); }
-      var P = ST.pick.dfs.map(function (p) { return p ? slateFind(p) : null; });
-      ['cpA', 'cpB'].forEach(function (id, i) { $(id + 'Chosen').textContent = ST.pick.dfs[i] && !P[i] ? 'Not on this ' + SITE[ST.site] + ' slate.' : ''; });
-      if (!P[0] || !P[1]) return say('Pick two players from this week’s ' + SITE[ST.site] + ' slate. Start typing a name and choose from the list.');
-      if (P[0].name === P[1].name) return say('That is the same player twice. Pick a different second player.');
+      var rows = [];
+      for (var i = 0; i < ST.slots.dfs; i++) {
+        var want = ST.pick.dfs[i], r = want ? slateFind(want) : null;
+        $(SLOTS[i] + 'Chosen').textContent = want && !r ? 'Not on this ' + SITE[ST.site] + ' slate.' : '';
+        if (r) rows.push(r);
+      }
+      if (rows.length < 2) return say('Pick at least two players from this week’s ' + SITE[ST.site] + ' slate, up to four. Start typing a name and choose from the list.');
+      var twice = dupe(rows.map(function (r) { return r.name; }));
+      if (twice) return say(twice + ' is picked twice. Pick a different player.');
       // History is the season-long answer for the same player, at PPR: the
       // slate carries his salary and this week, not his past games.
-      var hist = function (r) { return intel({ n: r.name, p: r.position === 'DST' ? 'DST' : r.position }).catch(function () { return null; }); };
-      Promise.all([hist(P[0]), hist(P[1])]).then(function (js) {
+      var hist = function (r) { return intel({ n: r.name, p: r.position }).catch(function () { return null; }); };
+      Promise.all(rows.map(hist)).then(function (js) {
         if (seq !== ST.seq) return;
-        var A = dfsRec(P[0], js[0]), B = dfsRec(P[1], js[1]);
-        var modeled = A.own != null || A.floor != null;
-        show(A, B, { title: SITE[ST.site] + (sl.week ? ', Week ' + sl.week : ''), fine: SOURCE[ST.source] + ' projections at ' + SITE[ST.site] + ' scoring, priced on the ' + (sl.formatLabel || SITE[ST.site]) + ' slate.' + (modeled ? ' Floor, ceiling and ownership are modeled, not a feed.' : ' Floor, ceiling and ownership are not published for this slate.') + ' History is this season’s box scores at PPR.' });
+        var recs = rows.map(function (r, k) { return dfsRec(r, js[k]); });
+        var modeled = recs.some(function (x) { return x.own != null || x.floor != null; });
+        show(recs, { title: SITE[ST.site] + (sl.week ? ', Week ' + sl.week : ''), fine: SOURCE[ST.source] + ' projections at ' + SITE[ST.site] + ' scoring, priced on the ' + (sl.formatLabel || SITE[ST.site]) + ' slate.' + (modeled ? ' Floor, ceiling and ownership are modeled, not a feed.' : ' Floor, ceiling and ownership are not published for this slate.') + ' History is this season’s box scores at PPR.' });
       });
     }).catch(function () {
       if (seq !== ST.seq) return;
@@ -563,30 +655,34 @@ body{overflow-x:hidden}
     paintControls(); run();
   });
 
-  // The two pickers. Season long uses the site's player lookup; DFS lists the
-  // slate itself, because a man the slate does not price cannot be played.
-  var mounted = false;
-  function setMode(m) {
-    ST.mode = m;
-    var a = $('cpA'), b = $('cpB');
-    [a, b].forEach(function (inp, i) {
-      var p = ST.pick[m][i];
+  // The pickers: two to start, up to four. Season long uses the site's
+  // player lookup; DFS lists the slate itself, because a man the slate does
+  // not price cannot be played.
+  function paintPickers() {
+    var m = ST.mode, n = ST.slots[m];
+    SLOTS.forEach(function (id, i) {
+      var inp = $(id), p = ST.pick[m][i];
+      $(id + 'Slot').hidden = i >= n;
       inp.value = !p ? '' : m === 'season' ? p.n : p;
       if (m === 'dfs') inp.setAttribute('list', 'cpSlate'); else inp.removeAttribute('list');
-      $(inp.id + 'Chosen').textContent = '';
+      inp.placeholder = m === 'dfs' ? 'Type a name, then pick from the slate' : 'Type a player’s name';
+      $(id + 'Chosen').textContent = m === 'season' && p ? p.p + (p.t ? ' · ' + p.t : '') : '';
     });
-    a.placeholder = b.placeholder = m === 'dfs' ? 'Type a name, then pick from the slate' : 'Type a player’s name';
-    paintControls();
+    $('cpAdd').hidden = n >= MAX;
+  }
+  function setMode(m) {
+    ST.mode = m;
+    paintPickers(); paintControls();
     if (m === 'dfs') loadSlate().catch(function () {});
     run();
   }
   function mountPickers() {
     var S = window.ITPlayerSearch;
-    ['cpA', 'cpB'].forEach(function (id, i) {
+    SLOTS.forEach(function (id, i) {
       var inp = $(id);
       if (S && S.mount) S.mount(inp, { from: 'compare', onPick: function (p) {
         if (ST.mode !== 'season') return;
-        inp.value = p.n; ST.pick.season[i] = { n: p.n, p: p.p, k: p.k };
+        inp.value = p.n; ST.pick.season[i] = { n: p.n, p: p.p, k: p.k, t: p.t };
         $(id + 'Chosen').textContent = p.p + (p.t ? ' · ' + p.t : '');
         run();
       } });
@@ -598,16 +694,29 @@ body{overflow-x:hidden}
         run();
       });
     });
-    mounted = true;
+    $('cpAdd').addEventListener('click', function () {
+      var m = ST.mode; if (ST.slots[m] >= MAX) return;
+      ST.slots[m]++; paintPickers(); $(SLOTS[ST.slots[m] - 1]).focus();
+    });
+    // Removing a player closes the gap, so the letters stay in order.
+    document.querySelector('.cp-pick').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button[data-rm]'); if (!b) return;
+      var m = ST.mode, i = +b.getAttribute('data-rm');
+      ST.pick[m].splice(i, 1); ST.pick[m].push(null);
+      ST.slots[m] = Math.max(2, ST.slots[m] - 1);
+      paintPickers(); run();
+    });
   }
   // The comparison lives in the address, so a reload or a shared link keeps it.
   function remember() {
     try {
-      var q = new URLSearchParams(), P = ST.pick[ST.mode];
-      if (ST.mode === 'dfs') { q.set('mode', 'dfs'); q.set('site', ST.site); }
-      if (P[0]) q.set('a', ST.mode === 'season' ? P[0].k : String(P[0]).split(' · ')[0]);
-      if (P[1]) q.set('b', ST.mode === 'season' ? P[1].k : String(P[1]).split(' · ')[0]);
-      if (ST.purpose[ST.mode] !== 'custom') q.set('for', ST.purpose[ST.mode]);
+      var q = new URLSearchParams(), m = ST.mode;
+      if (m === 'dfs') { q.set('mode', 'dfs'); q.set('site', ST.site); }
+      for (var i = 0; i < ST.slots[m]; i++) {
+        var p = ST.pick[m][i];
+        if (p) q.set(LETTERS[i], m === 'season' ? p.k : String(p).split(' · ')[0]);
+      }
+      if (ST.purpose[m] !== 'custom') q.set('for', ST.purpose[m]);
       var qs = q.toString();
       history.replaceState(null, '', location.pathname + (qs ? '?' + qs : ''));
     } catch (err) {}
@@ -621,12 +730,14 @@ body{overflow-x:hidden}
     ST.w.season = copy(PURPOSE.season[ST.purpose.season].w);
     ST.w.dfs = copy(PURPOSE.dfs[ST.purpose.dfs].w);
     if (league()) ST.scoring = 'league';
-    ['a', 'b'].forEach(function (k, i) {
+    LETTERS.forEach(function (k, i) {
       var v = q.get(k); if (!v) return;
-      if (m === 'dfs') ST.pick.dfs[i] = v;
-      else { var hit = S && S.get ? S.get(v) || (S.search ? S.search(v.replace(/-/g, ' '), 1)[0] : null) : null; if (hit) ST.pick.season[i] = { n: hit.n, p: hit.p, k: hit.k }; }
+      var got = null;
+      if (m === 'dfs') got = v;
+      else { var hit = S && S.get ? S.get(v) || (S.search ? S.search(v.replace(/-/g, ' '), 1)[0] : null) : null; if (hit) got = { n: hit.n, p: hit.p, k: hit.k, t: hit.t }; }
+      if (got) { ST.pick[m][i] = got; ST.slots[m] = Math.max(ST.slots[m], i + 1); }
     });
-    if (!mounted) mountPickers();
+    mountPickers();
     $('cpModeSeason').onclick = function () { setMode('season'); };
     $('cpModeDfs').onclick = function () { setMode('dfs'); };
     setMode(m);

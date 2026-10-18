@@ -869,7 +869,7 @@ baseline, measured before Phases 1 to 6 shipped). Branch
 - **Not built.** The My Week prompt after a second comparison (proposed, not
   approved yet).
 
-## Follow-up: Compare two players, season long and DFS (2026-10-18)
+## Follow-up: Compare players (two to four), season long and DFS (2026-10-18)
 
 Asked for by the owner: one feature in both season long and DFS that compares
 two players on this season's history (recent and season to date) and the
@@ -907,10 +907,19 @@ Last season is deliberately left out (owner, same day). Branch
   overlay row grows from 415 KB to 834 KB, under D1's 2 MB value cap. The log
   appears after the next `usage-refresh` run; until then recent form and
   season to date print as dashes and drop out of the call.
+- **Up to four players** (owner, same day). Two pickers to start, "+ Add a
+  player" opens a third and a fourth, and each extra can be removed (the
+  slots close up). With three or four, each player is weighed against every
+  other with the same pairwise edge and ranked on the average; the call is the
+  top two, its strength their gap on the pair's scale, so a two-player page
+  gives exactly the pairwise call. A ranking with bars replaces the meter.
+  Players ruled out this week rank last and are weighed only against one
+  another. The address carries `a` to `d`.
 - **Measured** as `tool_success` / `tool_empty` / `tool_error` for tool
-  `compare`, with `mode` (season or dfs) and `method` (the purpose).
+  `compare`, with `mode` (season or dfs), `method` (the purpose) and `rows`
+  (how many players). The key leads with the count.
 - **Verified.** `tools/test-compare.mjs` (new, in CI, browser, 390px): 38
-  checks, with a fixture whose call flips with the purpose and the weights.
+  checks (53 with four players), with a fixture whose call flips with the purpose and the weights.
   `tools/test-stats.mjs` gains three checks on the log. Full node suite passes
   with `REQUIRE_BROWSER=1`.
 
