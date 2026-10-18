@@ -81,7 +81,7 @@ async function rl(env, request, bucket, max, ttlSec) {
 // sitemap while the gate is shut. Spell them out.
 const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
   '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/my-leagues', '/player-intel', '/desk',
-  '/fantasy', '/stats', '/hidden-value', '/previews', '/the-line', '/weekly-wrap', '/value-coach', '/position']);
+  '/fantasy', '/stats', '/hidden-value', '/previews', '/the-line', '/weekly-wrap', '/value-coach', '/position', '/compare']);
 // The HUB is never in that set: it is the page a closed route serves in place of
 // itself, so gating it would be a loop. /post-draft is the name the hub used to
 // carry and 301s here — see the redirect at the top of fetch().
@@ -6505,12 +6505,26 @@ function buildUsageOverlay(season, weekly, snaps) {
     if (!rec.latest || r.week > rec.latest.week) {
       rec.latest = { week: r.week, opponent: r.opponent, stats: r.stats, usage: r.usage };
     }
+    // EVERY GAME, NOT JUST THE LAST ONE (18 Oct 2026). /compare puts a
+    // player's recent form beside his projections, and "the last three
+    // games" cannot be read off a season total and one week. Kept raw, like
+    // the season line, so a page scores it at the reader's rules; zeroes are
+    // dropped and the keys are short because this row is one D1 value
+    // (measured on the full 2025 file: 415 KB before the log, under 1 MB
+    // after, against D1's 2 MB cap).
+    const s0 = {};
+    for (const [sk, sv] of Object.entries(r.stats || {})) if (sv) s0[sk] = sv;
+    (rec.log || (rec.log = [])).push({ w: r.week, o: r.opponent, s: s0, tg: r.usage.targets || 0, ca: r.usage.carries || 0 });
   }
+  for (const rec of Object.values(players)) if (rec.log) rec.log.sort((a, b) => a.w - b.w);
   for (const s of snaps || []) {
     if (s.seasonType !== 'REG' || !s.week) continue;
     const k = key(s.name, s.position);
     const rec = players[k];
-    if (!rec || !rec.latest || rec.latest.week !== s.week) continue;
+    if (!rec) continue;
+    const g = (rec.log || []).find(x => x.w === s.week);
+    if (g && s.snapPct != null) g.sp = s.snapPct;
+    if (!rec.latest || rec.latest.week !== s.week) continue;
     rec.latest.usage = { ...rec.latest.usage, snaps: s.snaps, snapPct: s.snapPct };
   }
   return { season, throughWeek: maxWeek, players, builtAt: Date.now() };
@@ -8952,6 +8966,7 @@ async function playerIntelPayload(env, name, position, opts) {
   const u = usage && usage.players ? usage.players[key] : null;
   const w = rows.week || null;
   const w0 = w && w.weeks ? w.weeks[0] : null;
+  const histRules = scoringRules(o.preset || 'ppr', null);
   return {
     ok: true, contract: 1, season, week, updated,
     player: { name: (w || rows.ros || rows.playoffs || rows.next3).name, position: pos === 'DEF' ? 'DST' : pos, team: (w || rows.ros || rows.playoffs || rows.next3).team, key },
@@ -8970,6 +8985,14 @@ async function playerIntelPayload(env, name, position, opts) {
     tdProbability: w && w.vegas.td ? { probability: w.vegas.td.probability, basis: 'anytime-td-market', books: w.vegas.td.books }
       : w ? { probability: Math.round((1 - Math.exp(-((w.ironTuna.stats.rushTD || 0) + (w.ironTuna.stats.recTD || 0)))) * 1000) / 10, basis: 'derived' } : null,
     usage: u ? { latest: u.latest, season: u.season, throughWeek: usage.throughWeek } : null,
+    // This season's games, one by one, for /compare's recent form and season
+    // average (18 Oct 2026). Points at the preset asked for; the raw line
+    // rides along so a page with a saved league rescores it. A cache built
+    // before the log existed answers null, which the page prints as a dash,
+    // never as a player who scored nothing.
+    history: u && u.log ? { season: usage.season || season, throughWeek: usage.throughWeek || null,
+      games: u.log.map(g => ({ week: g.w, opponent: g.o, stats: g.s, points: _oddsRound(scoreStats(g.s, pos, histRules)),
+        targets: g.tg, carries: g.ca, snapPct: g.sp == null ? null : g.sp })) } : null,
     take: buildTake(rows, mk.props, u)
   };
 }

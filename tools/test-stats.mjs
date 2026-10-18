@@ -106,6 +106,11 @@ console.log('\nthe overlay is folded the same way for either season');
   ok('the latest week is kept whole, with its snaps', a.latest.week === 2 && a.latest.usage.snapPct === 0.8);
   const b = last.players[_oddsNorm('Beta Receiver') + '|WR'];
   ok('and last season’s latest week is his last one, not this year’s', b.latest.week === 18 && b.season.games === 18);
+  // The game log /compare reads for recent form (18 Oct 2026).
+  ok('every game is logged, in week order, zeroes dropped', a.log.length === 2 && a.log[0].w === 1 && a.log[1].w === 2 &&
+     a.log[0].s.recYd === 50 && a.log[0].s.rec === 5 && !('passYd' in a.log[0].s) && a.log[0].tg === 8 && a.log[0].o === 'BBB', JSON.stringify(a.log));
+  ok('each logged game carries its snap share', a.log.every(g => g.sp === 0.8));
+  ok('a game with no snap row has none, not a zero', !('sp' in cur.players[_oddsNorm('Beta Receiver') + '|WR'].log[0]));
 }
 
 console.log('\ntwo rows, two seasons, one board');

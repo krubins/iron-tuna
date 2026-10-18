@@ -941,6 +941,13 @@ jobs:
         env:
           REQUIRE_BROWSER: '1'
         run: node tools/test-player-compare.mjs
+      # /compare: two players, season long and DFS, weighed on the reader's
+      # criteria. The fixture flips the call with the purpose and the weights.
+      - name: Compare two players, season long and DFS, in the browser
+        if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
+        env:
+          REQUIRE_BROWSER: '1'
+        run: node tools/test-compare.mjs
 
       # it-metrics.js in a real browser: attribution and UTM stripping, one
       # visit across internal clicks, one success per result per visit, failure

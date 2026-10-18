@@ -877,6 +877,60 @@ baseline, measured before Phases 1 to 6 shipped). Branch
   odds section already reads the fenced `/api/player-odds`). Checked through
   the real worker in `tools/test-the-line.mjs`.
 
+## Follow-up: Compare players (two to four), season long and DFS (2026-10-18)
+
+Asked for by the owner: one feature in both season long and DFS that compares
+two players on this season's history (recent and season to date) and the
+projections (this week, the near term, the rest of the season, the playoffs),
+lets the reader choose the criteria, and gives a clear signal on direction.
+Last season is deliberately left out (owner, same day). Branch
+`claude/compare-players`.
+
+- **Where.** A new page, `compare.html` at `/compare` (`/compare?mode=dfs`
+  opens the DFS side). Linked from the Fantasy and DFS menus and from the
+  weekly player page's "Start him or someone else?" box.
+- **Season long.** Seven criteria: this week, next 3 weeks, rest of season,
+  playoffs (Weeks 15 to 17), recent form (last 3 games a game), season to date
+  (a game) and usage (targets and carries, last 3, RB/WR/TE only). Purposes set
+  the starting weights: Who to start, Trade/add/drop, Playoff push. Any weight
+  can be changed (Off/Low/Normal/High), which makes it Custom. Projections from
+  Iron Tuna, consensus or Vegas; scoring at PPR, Half, Standard or the saved
+  league.
+- **DFS.** Nine criteria off the `/api/dfs` slate: projection, value per $1K,
+  floor, ceiling, lower ownership, TD chance, team implied total, recent form
+  and season to date (PPR, from `/api/intel/player`). Purposes: Cash game,
+  Tournament. DraftKings or FanDuel. Floor, ceiling and ownership are labelled
+  modeled.
+- **The signal.** Each criterion's edge is (A - B) over the pair's average,
+  capped at 100%. The call is the weighted average: under 5% "Too close to
+  call", then slight (under 12%), clear (under 25%) and strong. One sentence
+  names the pick in the purpose's words ("Start X", "Value X more", "Play X in
+  cash games"), how many criteria agree, and where the other player is ahead.
+  A meter shows the lean. A bye or listed-out player in a start call, or an
+  unavailable player on the slate, decides the call outright.
+- **Data change.** The usage overlay (`buildUsageOverlay`) now keeps a per-game
+  `log` (raw stat line without zeroes, targets, carries, snap share), and
+  `/api/intel/player` returns it as `history`, scored at the preset asked for.
+  Additive: no existing field changed. Measured on the full 2025 file: the
+  overlay row grows from 415 KB to 834 KB, under D1's 2 MB value cap. The log
+  appears after the next `usage-refresh` run; until then recent form and
+  season to date print as dashes and drop out of the call.
+- **Up to four players** (owner, same day). Two pickers to start, "+ Add a
+  player" opens a third and a fourth, and each extra can be removed (the
+  slots close up). With three or four, each player is weighed against every
+  other with the same pairwise edge and ranked on the average; the call is the
+  top two, its strength their gap on the pair's scale, so a two-player page
+  gives exactly the pairwise call. A ranking with bars replaces the meter.
+  Players ruled out this week rank last and are weighed only against one
+  another. The address carries `a` to `d`.
+- **Measured** as `tool_success` / `tool_empty` / `tool_error` for tool
+  `compare`, with `mode` (season or dfs), `method` (the purpose) and `rows`
+  (how many players). The key leads with the count.
+- **Verified.** `tools/test-compare.mjs` (new, in CI, browser, 390px): 38
+  checks (53 with four players), with a fixture whose call flips with the purpose and the weights.
+  `tools/test-stats.mjs` gains three checks on the log. Full node suite passes
+  with `REQUIRE_BROWSER=1`.
+
 ## Phase 2 requirements, as given (for reference)
 
 1. Investigate consistency of season, current NFL week, schedule status,
