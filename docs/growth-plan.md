@@ -832,6 +832,43 @@ After merge, follow the weekly checklist and the 30-day evaluation plan in
 `docs/distribution-playbook.md`, and decide the next initiative from its
 day-30 read.
 
+## Follow-up: "Start him or someone else?" (2026-10-18)
+
+Asked for by the owner to lift one-page visits (89% of visitor-days in the
+baseline, measured before Phases 1 to 6 shipped). Branch
+`claude/player-start-compare`.
+
+- **Where.** The weekly player page (`player-intel.html`), which is what
+  `/player/<slug>` serves while `POST_DRAFT_OPEN=1`. The draft card
+  (`player.html`, with its auction buttons) is not served in season and was
+  not touched: auction work is off until next summer.
+- **What.** Under the Market Delta, a box: pick the player you are deciding
+  between and get one sentence (start X, by N points, Iron Tuna numbers at the
+  page's scoring), a four-column table (Iron Tuna, consensus, Vegas), and
+  notes. Under a point apart is "too close to separate". A bye or a listed-out
+  player answers with the other. A kicked-off game is called locked. A QB
+  against a WR is refused before any request. When the Vegas numbers point
+  the other way it says so, labelled a derived estimate with its source
+  (player props or the game line). An injury designation adds the
+  inactive-list check.
+- **No new computation.** The second player comes from the same
+  `/api/intel/player` the page is built from, scored by the page's own
+  `score()`. `player-search.js` gains an optional `onPick` so the lookup box
+  can pick a player without leaving the page.
+- **Address and sharing.** The pair is kept as `?vs=<slug>`. "Share this
+  comparison" uses the existing dated-finding flow (`/api/share/compare`),
+  offered only at PPR (a saved league's scoring is not a preset) for two
+  skill players whose games are still to be played.
+- **Measured** as `tool_success` / `tool_empty` / `tool_error` for tool
+  `player_compare`, key `<a>-vs-<b>`. On /admin, compare its successes with
+  player-page visits after a week.
+- **Verified.** `tools/test-player-compare.mjs` (new, in CI, browser, 390px):
+  25 checks. Two deliberate breaks (the market clause, the one-point floor)
+  each fail it. Full node suite less `test-dry-run` passes with
+  `REQUIRE_BROWSER=1`.
+- **Not built.** The My Week prompt after a second comparison (proposed, not
+  approved yet).
+
 ## Phase 2 requirements, as given (for reference)
 
 1. Investigate consistency of season, current NFL week, schedule status,

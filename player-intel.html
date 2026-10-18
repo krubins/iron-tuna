@@ -69,6 +69,16 @@ p{color:var(--sec);margin:0 0 16px}
 #piFresh{margin:4px 0 14px}
 .pi-state{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line2);border-radius:10px;padding:14px 16px;margin:0 0 12px}
 .pi-state b{display:block;font-size:18px;color:var(--text);margin-bottom:2px}
+.pi-vs{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:18px 0}
+.pi-vs h2{margin:0 0 4px;font-size:20px}
+.pi-vs input{font:inherit;font-size:16px;width:100%;max-width:420px;min-height:44px;padding:8px 12px;border:1px solid var(--line2);border-radius:6px;background:var(--bg);color:var(--text);margin:6px 0 4px}
+.pi-vs input:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.pi-vs-tab{width:100%;border-collapse:collapse;font-size:15.5px;margin:12px 0 6px}
+.pi-vs-tab th,.pi-vs-tab td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.pi-vs-tab th{font-size:13px;color:var(--muted);font-weight:700}
+.pi-vs-tab td.num,.pi-vs-tab th.num{text-align:right;font-variant-numeric:tabular-nums}
+.pi-vs-tab td.lead{color:var(--teal);font-weight:800}
+.pi-vs-call{font-size:17.5px;color:var(--text);margin:10px 0 4px;line-height:1.45}
 </style>
 </head>
 <body>
@@ -124,6 +134,13 @@ p{color:var(--sec);margin:0 0 16px}
 <div id="piBody" hidden>
   <div class="pi-boards" id="piBoards"></div>
   <div id="piDelta"></div>
+  <section class="pi-vs" id="piVs" hidden aria-labelledby="piVsHead">
+    <h2 id="piVsHead">Start him or someone else?</h2>
+    <p class="pi-note" id="piVsSub">Pick the player you are deciding between.</p>
+    <label class="sr-only" for="piVsInput">Player to compare with</label>
+    <input id="piVsInput" type="search" placeholder="Type a player&rsquo;s name" autocomplete="off" spellcheck="false" aria-expanded="false">
+    <div id="piVsOut" aria-live="polite"></div>
+  </section>
 
   <h2>Every horizon</h2>
   <div class="is-scroll"><table class="is-table" id="piHorizons"><thead><tr><th>Horizon</th><th class="num">Iron Tuna</th><th class="num">Consensus</th><th class="num">Vegas</th><th class="num">Points</th><th class="num">Games</th><th>Bye</th><th>Schedule</th><th>Confidence</th><th>Vegas basis</th></tr></thead><tbody></tbody></table></div>
@@ -166,6 +183,7 @@ p{color:var(--sec);margin:0 0 16px}
 <script src="/it-season.js" defer></script>
 <script src="/it-league.js" defer></script>
 <script src="/player-search.js" defer></script>
+<script src="/it-share.js" defer></script>
 <script>
 (function () {
   var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
@@ -279,6 +297,131 @@ p{color:var(--sec);margin:0 0 16px}
       $('piUsage').textContent = 'No weekly usage has been published for him yet. Targets, carries, snaps and shares appear here after his first game.';
     }
     $('piBody').hidden = false; $('piEmpty').hidden = true;
+    vsSetup(j, mine);
+  }
+  // ── START HIM OR SOMEONE ELSE? (18 Oct 2026) ─────────────────────────────
+  // Nearly nine in ten visits were one page long: a reader got one player's
+  // number and had nothing to do with it. The question they usually bring is
+  // a lineup call between two players, so the page now answers it. Nothing
+  // new is computed: the second player comes from the same /api/intel/player
+  // answer this page is built from, scored by the same score() at the same
+  // rules, so the call can never disagree with the boards above it.
+  var FLEX = { RB: 1, WR: 1, TE: 1 };
+  var SLOT_WORD = { QB: 'another quarterback', K: 'another kicker', DST: 'another defense', DEF: 'another defense' };
+  var VS = { j: null, mine: false, seq: 0 };
+  function itm() { (window.ITMetricsQ = window.ITMetricsQ || []).push([].slice.call(arguments)); }
+  function weekOf(j) {
+    var p = j.player, w = j.thisWeek, pos = p.position;
+    var o = { name: p.name, pos: pos, team: p.team, week: (w && w.week) || j.week, bye: !!(w && w.bye), out: !!(w && w.out), none: !w };
+    if (!w) return o;
+    o.opp = w.opponent ? (w.home ? 'vs ' : 'at ') + w.opponent : '';
+    o.kickoff = w.kickoff || null;
+    o.started = w.gameState === 'in_progress' || w.gameState === 'completed';
+    o.done = w.gameState === 'completed';
+    o.upcoming = w.gameState === 'upcoming';
+    o.injury = !o.out && w.injury && w.injury.status ? String(w.injury.status) : '';
+    if (!o.bye && !o.out && w.ironTuna) {
+      var pts = function (b) { if (!w[b]) return null; var m = score(w[b].stats, pos, 1); return m != null ? m : (w[b].points != null ? w[b].points : null); };
+      o.it = pts('ironTuna'); o.cons = pts('consensus'); o.vegas = pts('vegas');
+      o.vegasBasis = w.vegas ? w.vegas.basis : '';
+    }
+    return o;
+  }
+  function sameSlot(a, b) { return a === b || (a === 'DST' && b === 'DEF') || (a === 'DEF' && b === 'DST') || !!(FLEX[a] && FLEX[b]); }
+  function vsAway(x) {
+    return x.bye ? x.name + ' is on bye in Week ' + x.week + '.'
+      : x.out ? x.name + ' is listed out for Week ' + x.week + '.'
+      : x.none ? x.name + ' has no game on this week’s board.' : '';
+  }
+  // The call, in one sentence, off the Iron Tuna numbers (the board the
+  // lineup calls on this site use). Under a point apart is reported as too
+  // close to separate rather than dressed up as a pick. The market is quoted
+  // only when it points the other way, and as what it is: a derived estimate.
+  function vsCall(a, b, mine) {
+    var sc = mine ? 'at your league’s scoring' : 'at PPR';
+    var ua = vsAway(a), ub = vsAway(b);
+    if (ua && ub) return ua + ' ' + ub + ' Neither can score for you this week.';
+    if (ua || ub) return (ua || ub) + ' Start ' + (ua ? b : a).name + '.';
+    if (a.it == null || b.it == null) return 'One of them has no projection on this week’s board, so there is no call to make.';
+    var d = Math.round((a.it - b.it) * 10) / 10, gap = Math.abs(d), lead = d >= 0 ? a : b, trail = d >= 0 ? b : a;
+    var s = gap < 1
+      ? 'Too close to separate. Iron Tuna projects ' + a.name + ' ' + n1(a.it) + ' and ' + b.name + ' ' + n1(b.it) + ' points, ' + sc + '.'
+      : 'Start ' + lead.name + '. Iron Tuna projects him ' + n1(gap) + ' points ahead of ' + trail.name + ' (' + n1(lead.it) + ' to ' + n1(trail.it) + ', ' + sc + ').';
+    if (gap >= 1 && a.vegas != null && b.vegas != null) {
+      var dv = Math.round((a.vegas - b.vegas) * 10) / 10;
+      if (dv !== 0 && (dv > 0) !== (d > 0)) s += ' The betting market leans the other way: its derived estimate has ' + (dv > 0 ? a : b).name + ' ahead, ' + n1(Math.max(a.vegas, b.vegas)) + ' to ' + n1(Math.min(a.vegas, b.vegas)) + '.';
+    }
+    return s;
+  }
+  function vsNotes(x) {
+    var n = [];
+    if (x.started) n.push(x.name + '’s game has ' + (x.done ? 'finished' : 'kicked off') + ', so his lineup spot is already locked. These are his numbers from before kickoff.');
+    else if (x.injury) n.push(x.name + ' is listed ' + x.injury + '. Check the inactive list, posted about 90 minutes before his kickoff.');
+    return n;
+  }
+  function vsShow(a, b, key) {
+    var out = $('piVsOut'), mine = VS.mine;
+    var basis = function (x) { return x.vegasBasis === 'props' ? 'from player props' : 'from the game line'; };
+    var cell = function (v, lead) { return '<td class="num' + (lead ? ' lead' : '') + '">' + (v == null ? '&mdash;' : n1(v)) + '</td>'; };
+    var both = a.it != null && b.it != null, aLead = both && a.it > b.it, bLead = both && b.it > a.it;
+    // Four columns, the game folded under the name, so the table fits a
+    // phone without scrolling sideways.
+    var row = function (x, lead) {
+      var game = vsAway(x) ? (x.bye ? 'bye' : x.out ? 'out' : 'no game') : x.opp + (x.kickoff && window.ITSeason ? ', ' + ITSeason.kickoff(x.kickoff) : '');
+      return '<tr><td><b>' + e(x.name) + '</b><br><span class="is-status">' + e(x.pos + ' · ' + x.team + ' · ' + game) + '</span></td>'
+        + cell(x.it, lead) + cell(x.cons) + cell(x.vegas) + '</tr>';
+    };
+    var vegasFrom = [a, b].filter(function (x) { return x.vegas != null; }).map(function (x) { return x.name + ' ' + basis(x); });
+    if (a.vegas != null && b.vegas != null && basis(a) === basis(b)) vegasFrom = ['both ' + basis(a)];
+    var notes = vsNotes(a).concat(vsNotes(b));
+    // Shareable only where a dated finding can be cut: the public PPR board
+    // (a saved league's scoring is not a preset, and a share must never carry
+    // league data), two skill players, both games still to be played.
+    var shareable = !mine && both && a.upcoming && b.upcoming && /^(QB|RB|WR|TE)$/.test(a.pos) && /^(QB|RB|WR|TE)$/.test(b.pos);
+    out.innerHTML = '<p class="pi-vs-call">' + e(vsCall(a, b, mine)) + '</p>'
+      + '<div class="is-scroll"><table class="pi-vs-tab"><thead><tr><th>Week ' + e(a.week) + '</th><th class="num">Iron Tuna</th><th class="num">Consensus</th><th class="num">Vegas</th></tr></thead><tbody>'
+      + row(a, aLead) + row(b, bLead) + '</tbody></table></div>'
+      + notes.map(function (t) { return '<p class="pi-note">' + e(t) + '</p>'; }).join('')
+      + '<p class="pi-note">Points ' + (mine ? 'at your league’s scoring' : 'at PPR') + '. Vegas points are a derived estimate, converted from sportsbook lines, not a quoted price' + (vegasFrom.length ? ' (' + e(vegasFrom.join('; ')) + ')' : '') + '. Projections, not predictions of the result, and not betting advice.</p>'
+      + (shareable ? '<p><button type="button" class="hm-share" data-it-share-a="' + e(a.name) + '" data-it-share-b="' + e(b.name) + '" data-it-share-scoring="ppr">Share this comparison</button></p>' : '');
+    itm('success', 'player_compare', key, { pos: a.pos, scoring: mine ? 'league' : 'ppr' });
+  }
+  function vsLoad(o) {
+    var out = $('piVsOut'), me = weekOf(VS.j), seq = ++VS.seq;
+    var key = (VS.j.player.name + '-vs-' + o.n).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 48);
+    if (o.n === VS.j.player.name) { out.innerHTML = '<p class="pi-note">That is the player on this page. Pick the one you are deciding between.</p>'; return; }
+    if (!sameSlot(me.pos, o.p)) {
+      out.innerHTML = '<p class="pi-note">' + e(o.n + ' (' + o.p + ') and ' + me.name + ' (' + me.pos + ') do not compete for the same lineup spot. Pick ' + (FLEX[me.pos] ? 'a running back, receiver or tight end' : SLOT_WORD[me.pos] || 'a player at his position') + '.') + '</p>';
+      return;
+    }
+    // The pair goes in the address, so a reload or a copied link keeps it.
+    try { var qs = new URLSearchParams(location.search); qs.set('vs', o.k); history.replaceState(null, '', location.pathname + '?' + qs.toString()); } catch (err) {}
+    out.innerHTML = '<p class="pi-note">Reading ' + e(o.n) + '&hellip;</p>';
+    fetch('/api/intel/player?name=' + encodeURIComponent(o.n) + '&pos=' + encodeURIComponent(o.p)).then(function (r) { return r.json(); }).then(function (j2) {
+      if (seq !== VS.seq) return;
+      if (!j2 || !j2.ok || !j2.player) {
+        out.innerHTML = '<p class="pi-note">' + e(o.n) + ' is not on this week’s board, so there is nothing to compare him with.</p>';
+        itm('empty', 'player_compare', key, { kind: 'not_on_board' });
+        return;
+      }
+      vsShow(me, weekOf(j2), key);
+    }).catch(function () {
+      if (seq !== VS.seq) return;
+      out.innerHTML = '<p class="pi-note">The board did not answer. Try again in a moment.</p>';
+      itm('error', 'player_compare', key, { kind: 'fetch' });
+    });
+  }
+  function vsSetup(j, mine) {
+    var me = weekOf(j), S = window.ITPlayerSearch, inp = $('piVsInput');
+    // No weekly row means no Week answer to compare against; the box stays
+    // hidden rather than offering a call it cannot make.
+    if (me.none || !S || !S.mount) return;
+    VS.j = j; VS.mine = mine;
+    $('piVsSub').textContent = 'Pick the player you are deciding between. Both are scored for Week ' + me.week + (mine ? ' at your league’s scoring' : ' at PPR') + ', off the same board as the numbers above.';
+    $('piVs').hidden = false;
+    S.mount(inp, { from: 'player_compare', onPick: function (p) { inp.value = p.n; vsLoad({ n: p.n, p: p.p, k: p.k }); } });
+    var want = new URLSearchParams(location.search).get('vs'), hit = want ? S.get(want) : null;
+    if (hit) { inp.value = hit.n; vsLoad({ n: hit.n, p: hit.p, k: hit.k }); }
   }
   function boot() {
     var w = wanted(), who = resolve(w);
