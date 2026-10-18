@@ -866,8 +866,13 @@ baseline, measured before Phases 1 to 6 shipped). Branch
   25 checks. Two deliberate breaks (the market clause, the one-point floor)
   each fail it. Full node suite less `test-dry-run` passes with
   `REQUIRE_BROWSER=1`.
-- **Not built.** The My Week prompt after a second comparison (proposed, not
-  approved yet).
+- **My Week offer (added 18 Oct 2026, owner approved).** After a reader's
+  second distinct comparison on a page, one line under the answer: "Deciding
+  more than one spot? Save your league once and My Week makes these calls
+  for your whole roster", linking to `/my-leagues#connect` with
+  `data-it-surface="player_compare"`, so /admin's surfaces table reports
+  clicks, then results, then saved leagues. Never shown to a reader with a
+  saved league. "No thanks" keeps it away in that browser (`it.vsNext`).
 - **Washington (18 Oct 2026, owner: "whatever is safer").** The weekly player
   page itself was reachable in Washington at `/player/<slug>`: only its older
   `/in-season/player` address was fenced, and `/api/intel/player` was not.

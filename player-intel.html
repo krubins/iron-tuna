@@ -79,6 +79,9 @@ p{color:var(--sec);margin:0 0 16px}
 .pi-vs-tab td.num,.pi-vs-tab th.num{text-align:right;font-variant-numeric:tabular-nums}
 .pi-vs-tab td.lead{color:var(--teal);font-weight:800}
 .pi-vs-call{font-size:17.5px;color:var(--text);margin:10px 0 4px;line-height:1.45}
+.pi-vs-next{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}
+.pi-vs-next p{margin:0 0 8px;color:var(--text)}
+.pi-vs-next a{font-weight:700;margin-right:14px}
 </style>
 </head>
 <body>
@@ -313,7 +316,24 @@ p{color:var(--sec);margin:0 0 16px}
   // rules, so the call can never disagree with the boards above it.
   var FLEX = { RB: 1, WR: 1, TE: 1 };
   var SLOT_WORD = { QB: 'another quarterback', K: 'another kicker', DST: 'another defense', DEF: 'another defense' };
-  var VS = { j: null, mine: false, seq: 0 };
+  var VS = { j: null, mine: false, seq: 0, seen: {} };
+  // AFTER THE SECOND CALL (18 Oct 2026): a reader who has made two lineup
+  // calls on this page is deciding more than one spot, which is what My Week
+  // does for a whole roster. One line, offered only to a reader with no
+  // saved league, under the answer and never in its way, and "No thanks"
+  // keeps it away in this browser.
+  function vsNextOff() { try { return localStorage.getItem('it.vsNext') === '0'; } catch (err) { return false; } }
+  function vsNext(out) {
+    var n = 0; for (var k in VS.seen) n++;
+    if (VS.mine || n < 2 || vsNextOff()) return;
+    var d = document.createElement('div');
+    d.className = 'pi-vs-next';
+    d.innerHTML = '<p><b>Deciding more than one spot?</b> Save your league once and My Week makes these calls for your whole roster, at your league&rsquo;s own scoring, every week.</p>'
+      + '<a href="/my-leagues#connect" data-it-surface="player_compare">Set up My Week &rarr;</a>'
+      + '<button type="button" class="hm-share" data-vs-no>No thanks</button>';
+    d.querySelector('[data-vs-no]').addEventListener('click', function () { try { localStorage.setItem('it.vsNext', '0'); } catch (err) {} d.remove(); });
+    out.appendChild(d);
+  }
   function itm() { (window.ITMetricsQ = window.ITMetricsQ || []).push([].slice.call(arguments)); }
   function weekOf(j) {
     var p = j.player, w = j.thisWeek, pos = p.position;
@@ -390,6 +410,7 @@ p{color:var(--sec);margin:0 0 16px}
       + '<p class="pi-note">Points ' + (mine ? 'at your league’s scoring' : 'at PPR') + '. Vegas points are a derived estimate, converted from sportsbook lines, not a quoted price' + (vegasFrom.length ? ' (' + e(vegasFrom.join('; ')) + ')' : '') + '. Projections, not predictions of the result, and not betting advice.</p>'
       + (shareable ? '<p><button type="button" class="hm-share" data-it-share-a="' + e(a.name) + '" data-it-share-b="' + e(b.name) + '" data-it-share-scoring="ppr">Share this comparison</button></p>' : '');
     itm('success', 'player_compare', key, { pos: a.pos, scoring: mine ? 'league' : 'ppr' });
+    VS.seen[key] = 1;
   }
   function vsLoad(o) {
     var out = $('piVsOut'), me = weekOf(VS.j), seq = ++VS.seq;
@@ -414,6 +435,7 @@ p{color:var(--sec);margin:0 0 16px}
       // horizon, weighed on what the reader chooses, at /compare.
       var mySlug = wanted().slug;
       if (mySlug) out.insertAdjacentHTML('beforeend', '<p class="pi-note"><a href="/compare?a=' + encodeURIComponent(mySlug) + '&amp;b=' + encodeURIComponent(o.k) + '">Compare them in full: this season so far, the rest of the season and the playoffs &rarr;</a></p>');
+      vsNext(out);
     }).catch(function () {
       if (seq !== VS.seq) return;
       out.innerHTML = '<p class="pi-note">The board did not answer. Try again in a moment.</p>';

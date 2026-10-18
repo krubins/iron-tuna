@@ -20057,13 +20057,18 @@ export default {
         //
         // A visitor id is minted fresh at UTC midnight, so a session can never span
         // two days — the gap rule is doing the work inside a day, not across them.
+        //
+        // It reads the last 7 days whatever the selected window (2026-10-18), so
+        // the figure describes recent visits rather than averaging in up to 90
+        // days of older ones. A window shorter than 7 days keeps its own length.
         const SESSION_GAP_MS = 1800000;   // 30 minutes, the same idle window as activeNow
+        const TIME_DAYS = Math.min(days, 7);
         const visits = await rows(
           'WITH v AS (SELECT visitor, ts, ts - LAG(ts) OVER (PARTITION BY visitor ORDER BY ts) AS gap FROM page_views WHERE ts >= ?' + mine + '), ' +
           'b AS (SELECT visitor, ts, CASE WHEN gap IS NULL OR gap > ? THEN 1 ELSE 0 END AS started FROM v), ' +
           's AS (SELECT visitor, ts, SUM(started) OVER (PARTITION BY visitor ORDER BY ts ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS visit FROM b) ' +
           'SELECT COUNT(*) AS views, MAX(ts) - MIN(ts) AS ms FROM s GROUP BY visitor, visit',
-          since, SESSION_GAP_MS);
+          now - TIME_DAYS * 86400000, SESSION_GAP_MS);
         const secs = visits.map(r => Math.max(0, Number(r.ms) || 0) / 1000);
         const engaged = visits.filter(r => (Number(r.views) || 0) > 1).map(r => Math.max(0, Number(r.ms) || 0) / 1000);
         const sum = a => a.reduce((s, n) => s + n, 0);
@@ -20080,6 +20085,7 @@ export default {
           singlePageVisits: secs.length - engaged.length,
           totalSec: sum(secs),
           gapMinutes: SESSION_GAP_MS / 60000,
+          days: TIME_DAYS,
         };
 
         out.topPages = (await rows('SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor) AS users FROM page_views WHERE ts >= ?' + mine + ' GROUP BY path ORDER BY views DESC LIMIT 25', since))
