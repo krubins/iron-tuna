@@ -1232,6 +1232,14 @@
     for (var i = 0; i < boxes.length; i++) {
       mount(boxes[i], { from: boxes[i].getAttribute('data-player-search') || 'page', tools: boxes[i].hasAttribute('data-search-tools') });
     }
+    // Fetched by the ribbon's box on a page that never asked for this file
+    // (build-chrome.mjs, NAV_JS): the box is all it is there for, and linking
+    // names and adding faces to a page built without them is not its call.
+    if (root.__itSearchOnly) {
+      root.__itPlayerSearchReady = true;
+      return;
+    }
+
     // The stories already in the served HTML — the drop pages, /the-pick,
     // /play-caller-premium. Pages that paint their stories from data call
     // linkAllPlayers again once they have.
