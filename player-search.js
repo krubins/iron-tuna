@@ -1140,6 +1140,71 @@
     return made;
   }
 
+  // ── typing a roster ───────────────────────────────────────────────────────
+  // The roster boxes (My Leagues by hand, the FAAB Advisor) take one player per
+  // line, and a reader with no screenshot to hand was left typing two hundred
+  // characters of names from memory with nothing to check them against. This
+  // hangs the start/sit box's typeahead under such a textarea: pick a face and
+  // the board's own spelling lands as the next line, "Name POS", which every
+  // one of those parsers already reads. The textarea stays the record and stays
+  // editable, so a starter mark or an IR line is still typed where it was.
+  //
+  // A name the board does not carry (a kicker off the index, a rookie signed
+  // on Tuesday) still goes in: Enter with no match, or Add, takes it as typed,
+  // and the page's own resolver says what it could not place, as it always has.
+  function rosterField(area, opts) {
+    if (!area || area.__plRoster || !area.parentNode) return null;
+    area.__plRoster = true;
+    opts = opts || {};
+    var doc = root.document;
+    var wrap = doc.createElement('div');
+    wrap.className = 'pl-add';
+    var input = doc.createElement('input');
+    input.type = 'text';
+    input.className = 'is-input';
+    input.setAttribute('autocomplete', 'off');
+    input.setAttribute('spellcheck', 'false');
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-expanded', 'false');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-label', opts.label || 'Add a player to your roster');
+    input.placeholder = opts.placeholder || 'Add a player: start typing a name';
+    var btn = doc.createElement('button');
+    btn.type = 'button';
+    btn.className = 'is-btn sec';
+    btn.textContent = 'Add';
+    wrap.appendChild(input);
+    wrap.appendChild(btn);
+    area.parentNode.insertBefore(wrap, area.nextSibling);
+
+    function add(line) {
+      line = String(line || '').replace(/\s+/g, ' ').trim();
+      if (!line) return;
+      var v = area.value.replace(/\s+$/, '');
+      area.value = (v ? v + '\n' : '') + line;
+      area.scrollTop = area.scrollHeight;
+      // The pages save and re-read on `input`; a value set from script fires none.
+      try { area.dispatchEvent(new root.Event('input', { bubbles: true })); } catch (e) {}
+      input.value = '';
+      input.focus();
+    }
+    // A typed name that IS a board name exactly is filed under the board's
+    // spelling and position; anything else goes in as the reader wrote it.
+    function typed() {
+      var q = fold(input.value);
+      var exact = q ? search(input.value, MAX_HITS).filter(function (p) { return p.f === q; })[0] : null;
+      add(exact ? exact.n + ' ' + exact.p : input.value);
+    }
+    // Registered before mount() so it answers first: with no match on the
+    // board, mount's Enter has nothing to pick and would otherwise do nothing.
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && fold(input.value) && !search(input.value, 1).length) { e.preventDefault(); typed(); }
+    });
+    btn.addEventListener('click', typed);
+    mount(input, { from: opts.from || 'roster', onPick: function (p) { add(p.n + ' ' + p.p); } });
+    return input;
+  }
+
   root.ITPlayerSearch = {
     players: players,
     get: function (k) { return byKey[k] || null; },
@@ -1154,6 +1219,7 @@
     fold: fold,
     tools: searchTools,
     mount: mount,
+    rosterField: rosterField,
     linkPlayers: linkPlayers,
     linkAllPlayers: linkAllPlayers,
     decorateTables: decorateTables,
