@@ -223,10 +223,8 @@ beside every percentage and `n/a` where there is no denominator:
 
 - **Merge and deploy** `claude/growth-phase-6` (owner). Phases 1 to 5 merged
   as #442, #443, #444, #445 and #446.
-- **Privacy policy, Phase 6 addition** (owner). A Sunday-email sign-up now
-  also stores the source labels of the visit it happened in (site name or
-  UTM source, medium, campaign; never the browser id). Mention it when the
-  policy is updated for the Sunday email.
+- **Privacy policy, Phase 6 addition**: covered by the Sunday email section
+  added to `/privacy` (branch `claude/privacy-sunday-email`).
 - **Turn on the Sunday email** (owner, Phase 5). Until all of these are set,
   the sign-up form does not appear anywhere, `/newsletter` says sign-up is not
   open, and the Sunday job logs "disabled": `RESEND_API_KEY` (already used by
@@ -237,11 +235,11 @@ beside every percentage and `n/a` where there is no denominator:
   domain must be verified in Resend. Before switching it on, send yourself a
   test from /admin (Operator tools, Sunday email), which works with the mail
   settings alone, and read the preview at each scoring.
-- **Privacy policy** (owner). `/privacy` does not yet describe the Sunday
-  email (what is stored: address, scoring, where they signed up, the consent
-  wording and times; Resend as processor; how to unsubscribe). The sign-up
-  form links to it, so it should say so before the switch is turned on. Not
-  edited here: a policy is the owner's statement, not copy to draft unasked.
+- **Privacy policy**: drafted on branch `claude/privacy-sunday-email` at the
+  owner's request (2026-10-17): what the sign-up stores, confirmation, delivery
+  records, the 10-minute IP rate limit, Resend, unsubscribe and the suppression
+  list. Owner to review before merge. Deletion of a subscriber record is by
+  hand; there is no self-serve delete.
 - **Washington.** Sign-up is not offered to visitors located in Washington,
   matching the market lane's removal there. An email cannot be geofenced: a
   subscriber who signed up elsewhere still receives it in Washington. Owner

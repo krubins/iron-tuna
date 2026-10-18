@@ -160,7 +160,9 @@ function seed(db, ts, event, uid, props, internal = 0) {
 // ── 4. seven-day return and the weekly read ──
 {
   const db = makeDb(), h = harness(db);
-  const now = Date.now();
+  // Noon UTC yesterday, so the "same day" seed an hour later never crosses
+  // midnight (it did when the suite ran between 23:00 and 24:00 UTC).
+  const now = Math.floor(Date.now() / DAY) * DAY - DAY / 2;
   const at = n => now - n * DAY;
   // Mature cohort, 10 days ago: three new browsers.
   seed(db, at(10), 'visit_start', 'ret00001', { vid: 'a', new: 1, fs: dayOf(at(10)) });
