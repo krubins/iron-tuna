@@ -1345,6 +1345,11 @@ body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);
 (function () {
   var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
   var $ = function (id) { return document.getElementById(id); };
+  // Queue an outcome for it-metrics.js, which loads deferred and drains the queue.
+  // build() only solves once the reader has picked a game style, games and a
+  // payout, so a success here is a roster they asked for, never one drawn on load.
+  function itm() { (window.ITMetricsQ = window.ITMetricsQ || []).push([].slice.call(arguments)); }
+  function dfsKey() { return site + '|' + gameStyle + '|' + contest + '|' + mode; }
   var n1 = function (v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
   var money = function (v) { return v == null ? '—' : '$' + Number(v).toLocaleString('en-US'); };
   var SECS = { lineup: 1, values: 1, stacks: 1, td: 1, dash: 1 };
@@ -3328,7 +3333,8 @@ body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);
     var stat = gameStyle === 'single-stat-touchdowns' ? 'touchdowns' : gameStyle === 'single-stat-yards' ? 'yards' : 'points';
     var r = ITDfs.pickBoard(players, { stat: stat, picks: gameStyle === 'pick6' ? 6 : 12 });
     var gs = GAME_STYLES[gameStyle] || {};
-    if (!r.ok) { $('dfLineups').innerHTML = '<div class="is-empty"><b>' + e(gs.label || gameStyle) + '.</b> ' + e(r.note) + '</div>'; coachSync(); return; }
+    if (!r.ok) { itm('empty', 'dfs_optimizer', dfsKey(), { mode: 'picks', kind: 'no_picks' }); $('dfLineups').innerHTML = '<div class="is-empty"><b>' + e(gs.label || gameStyle) + '.</b> ' + e(r.note) + '</div>'; coachSync(); return; }
+    itm('success', 'dfs_optimizer', dfsKey(), { mode: 'picks', rows: r.picks.length });
     var headStat = stat === 'touchdowns' ? 'Touchdown odds' : 'Market read';
     var rows = r.picks.map(function (q, i) {
       return '<tr><td class="num">' + (i + 1) + '</td>'
@@ -3629,6 +3635,7 @@ body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);
       maxPerTeam: teamCap, lineups: parseInt($('dfN').value, 10) || 1, seed: 7 });
     built = r.ok ? r : null;
     if (!r.ok) {
+      itm('empty', 'dfs_optimizer', dfsKey(), { mode: mode, kind: 'no_lineup' });
       renderConstraints(null);
       // The reader's own constraints first, because those are the ones they
       // can undo in a click; then the board's own reason, which is usually
@@ -3641,6 +3648,7 @@ body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);
       coachSync();
       return;
     }
+    itm('success', 'dfs_optimizer', dfsKey(), { mode: mode, rows: r.lineups.length });
     var lead = r.lineups[0];
     var alts = r.lineups.slice(1);
     renderConstraints(lead);
@@ -4301,7 +4309,7 @@ body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);
       if (j && Array.isArray(j.singleGames)) availableSingles = j.singleGames;
       if (!j || !j.ok) { slateNone((j && j.note) || 'No salaries are loaded for this week.', j && j.label, j && j.games); return; }
       slateOk(j);
-    }).catch(function () { $('dfNote').textContent = 'The slate did not answer.'; });
+    }).catch(function () { $('dfNote').textContent = 'The slate did not answer.'; itm('error', 'dfs_optimizer', site + '|slate', { kind: 'network' }); });
   }
   function applyGameStyle() {
     $('dfConfig').hidden = false;
