@@ -708,6 +708,10 @@
       }
       var p = h.player;
       try { if (typeof root.gtag === 'function') root.gtag('event', 'player_search', { player: p.k, from: opts.from || 'ribbon' }); } catch (e) {}
+      // A box that picks a player for the page it sits on (the weekly page's
+      // "Start him or someone else?", 18 Oct 2026) keeps the reader where
+      // they are instead of sending them to the card.
+      if (typeof opts.onPick === 'function') { close(); opts.onPick(p); return; }
       root.location.href = href(p);
     }
 
