@@ -132,6 +132,7 @@ console.log('\na clear call, with the market leaning the other way');
 console.log('\nsharing the comparison');
 {
   ok('a PPR comparison of two games still to play can be shared', await page.isVisible('#piVsOut button[data-it-share-a]'));
+  ok('no My Week offer after one comparison', !(await page.$('.pi-vs-next')));
   await page.click('#piVsOut button[data-it-share-a]'); await settle();
   ok('the share asks the worker for the pair at PPR, names only', shares.length === 1 && shares[0].a === 'Bijan Robinson' && shares[0].b === 'Jaxon Smith-Njigba' && shares[0].scoring === 'ppr', JSON.stringify(shares));
 }
@@ -140,6 +141,10 @@ console.log('\ntoo close, the same slot, a bye, a locked game');
 {
   await pick('breece');
   ok('under a point apart is too close to separate, not a pick', /^Too close to separate\. Iron Tuna projects Bijan Robinson 18\.4 and Breece Hall 18\.0 points, at PPR\./.test((await out()).trim()), await out());
+  ok('after the second comparison, My Week is offered under the answer', await page.isVisible('#piVsOut .pi-vs-next')
+     && /Save your league once and My Week makes these calls for your whole roster/.test(await page.textContent('.pi-vs-next')));
+  ok('it links to league setup, tagged as a surface', await page.$eval('.pi-vs-next a', a => a.getAttribute('href') === '/my-leagues#connect' && a.getAttribute('data-it-surface') === 'player_compare'));
+  await shot('compare-myweek');
   const before = asked.length;
   await pick('josh allen');
   ok('a QB is refused for an RB, without a request', /do not compete for the same lineup spot\. Pick a running back, receiver or tight end\./.test(await out()) && asked.length === before, await out());
@@ -157,6 +162,18 @@ console.log('\na link with ?vs= opens on the comparison');
   await page.goto(BASE + '/player/bijan-robinson?vs=jaxon-smith-njigba', { waitUntil: 'networkidle' }); await settle();
   ok('the comparison is drawn from the address', /Start Bijan Robinson\./.test(await out()) && await page.inputValue('#piVsInput') === 'Jaxon Smith-Njigba', await out());
   ok('no sideways scroll at 390px', await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth) <= 0);
+}
+
+console.log('\n"No thanks" keeps the offer away');
+{
+  await page.goto(BASE + '/player/bijan-robinson', { waitUntil: 'networkidle' }); await settle();
+  await pick('smith-nj'); await pick('breece');
+  ok('the offer is back on a fresh page after two comparisons', await page.isVisible('.pi-vs-next'));
+  await page.click('.pi-vs-next [data-vs-no]');
+  ok('"No thanks" removes it', !(await page.$('.pi-vs-next')));
+  await page.goto(BASE + '/player/bijan-robinson', { waitUntil: 'networkidle' }); await settle();
+  await pick('smith-nj'); await pick('breece');
+  ok('and it stays away in this browser', !(await page.$('.pi-vs-next')));
 }
 
 console.log('\na player not on the board');
