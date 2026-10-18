@@ -972,10 +972,13 @@ Wk 4 - Tyler Allgeier - $12" spellcheck="false"></textarea></label>
   var saved = readState();
   var savedManual = readManual();
   if (savedManual) fillManual(savedManual);
-  // Your roster takes the start/sit box's typeahead. /player-search.js loads
-  // deferred, after this script, so it is hung once the page is parsed.
+  // Your roster and the wire take the start/sit box's typeahead.
+  // /player-search.js loads deferred, after this script, so they are hung once
+  // the page is parsed.
   document.addEventListener('DOMContentLoaded', function () {
-    if (window.ITPlayerSearch && ITPlayerSearch.rosterField) ITPlayerSearch.rosterField($('fm-mine'), { from: 'roster_faab' });
+    if (!window.ITPlayerSearch || !ITPlayerSearch.rosterField) return;
+    ITPlayerSearch.rosterField($('fm-wire'), { from: 'wire_faab', label: 'Add a free agent you are weighing' });
+    ITPlayerSearch.rosterField($('fm-mine'), { from: 'roster_faab' });
   });
   if (saved && saved.lg && saved.ro) boot(saved);
   else if (savedManual && savedManual.ran) { $('fa-manual').hidden = false; manualBoot(); }
