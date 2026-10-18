@@ -953,6 +953,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     // the second is only the visits where there was something to measure.
     var ts = d.timeOnSite || {};
     var oneP = ts.singlePageVisits || 0, engV = ts.engagedVisits || 0;
+    var tsDays = ts.days || 7, tsLabel = ', last ' + tsDays + ' day' + (tsDays === 1 ? '' : 's');
 
     $('trafTiles').innerHTML =
       tile('Unique users today', num(u.today), vs, true) +
@@ -961,18 +962,18 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       tile('User-days', num(userDays), 'daily uniques added up, not people') +
       tile('Page views', num(views), (perUser ? perUser.toFixed(1) : '0') + ' per user-day') +
       tile('Active now', num(t.activeNow), 'last 30 minutes') +
-      tile('Time on site', dur(ts.avgSec), ts.visits
+      tile('Time on site' + tsLabel, dur(ts.avgSec), ts.visits
         ? 'average of ' + num(ts.visits) + ' visit' + (ts.visits === 1 ? '' : 's') + ', median ' + dur(ts.medianSec)
         : 'nothing recorded yet') +
-      tile('Time on site, 2+ pages', dur(ts.avgEngagedSec), engV
+      tile('Time on site, 2+ pages' + tsLabel, dur(ts.avgEngagedSec), engV
         ? num(engV) + ' of ' + num(ts.visits) + ' visit' + (ts.visits === 1 ? '' : 's') + ' turned a page'
         : (oneP ? 'every visit so far was one page' : 'nothing recorded yet'));
 
     $('timeNote').textContent = !ts.visits
       ? 'Time on site starts reading once there are page views to measure between.'
       : 'Time on site is measured between page views: a visit runs from its first page to its last, and a gap of ' +
-        (ts.gapMinutes || 30) + ' minutes or more starts a new visit. The last page of a visit has no next view to measure against, so ' +
-        (oneP ? num(oneP) + ' one-page visit' + (oneP === 1 ? '' : 's') + ' in this window read' + (oneP === 1 ? 's' : '') + ' as 0:00'
+        (ts.gapMinutes || 30) + ' minutes or more starts a new visit. It covers the last ' + tsDays + ' day' + (tsDays === 1 ? '' : 's') + ', whatever range is selected above. The last page of a visit has no next view to measure against, so ' +
+        (oneP ? num(oneP) + ' one-page visit' + (oneP === 1 ? '' : 's') + ' in those days read' + (oneP === 1 ? 's' : '') + ' as 0:00'
               : 'a one-page visit reads as 0:00') +
         ' and the first figure understates. The second counts only the visits where there was something to measure.';
 

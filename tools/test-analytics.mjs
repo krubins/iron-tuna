@@ -245,6 +245,22 @@ const track = (h, body) => h.hit('/api/track', { method: 'POST', headers: { 'use
   ok('the long visit is measured whole', ts.totalSec === 1800, `got ${ts.totalSec}`);
 }
 
+// ── 4c-3. time on site reads the last 7 days, whatever the window ──
+{
+  const db = makeDb(), h = harness(makeEnv(db));
+  const at = (visitor, ts) => db.sqlite.prepare('INSERT INTO page_views (ts, day, path, visitor, source, country, internal) VALUES (?,?,?,?,?,?,?)')
+    .run(ts, new Date(ts).toISOString().slice(0, 10), '/guides', visitor, '', '', 0);
+  const recent = Date.now() - 2 * 3600000, old = Date.now() - 10 * 86400000;
+  at('new', recent); at('new', recent + 60000);    // one minute, this week
+  at('old', old); at('old', old + 600000);         // ten minutes, ten days ago
+  const ts = (await traffic(h, '&days=30')).timeOnSite;
+  ok('a visit older than 7 days stays out of time on site', ts.visits === 1 && ts.totalSec === 60, JSON.stringify(ts));
+  ok('the 7 days it covers are on the payload', ts.days === 7, JSON.stringify(ts));
+  const j = await traffic(h, '&days=30');
+  ok('while the window totals still count the older views', j.totals.window.views === 4, JSON.stringify(j.totals));
+  ok('a shorter window keeps its own length', (await traffic(h, '&days=1')).timeOnSite.days === 1);
+}
+
 // ── 4d. the operator's own browsing does not cloud the data ──
 {
   const db = makeDb(), h = harness(makeEnv(db));
